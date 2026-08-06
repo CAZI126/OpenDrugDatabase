@@ -216,3 +216,23 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# OpenDrugDatabase runtime artifacts
+data/raw/*
+!data/raw/.gitkeep
+data/normalized/*
+!data/normalized/.gitkeep
+data/quarantine/*
+!data/quarantine/.gitkeep
+data/database/*
+!data/database/.gitkeep
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.sqlite3-journal
+.env
+coverage.json
+.pytest-tmp/
+.tmp/
+.odd-demo*/

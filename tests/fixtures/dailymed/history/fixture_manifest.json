@@ -1,0 +1,34 @@
+{
+  "fixture_status": "genuine_dailymed_source_fixture",
+  "purpose": "ODD-002 reproducible two-version ingestion and temporal-diff tests",
+  "source_document_id": "e9481622-7cc6-418a-acb6-c5450daae9b0",
+  "source_provider": "DailyMed",
+  "authority": "FDA",
+  "jurisdiction": "United States",
+  "history": {
+    "file": "eliquis_history.json",
+    "source_url": "https://dailymed.nlm.nih.gov/dailymed/services/v2/spls/e9481622-7cc6-418a-acb6-c5450daae9b0/history.json",
+    "raw_sha256": "d4d0c59ec6a6b4451cf7ecae369fc9de201db5ae14519c2a9b8a6e8d657b6526"
+  },
+  "versions": [
+    {
+      "effective_date": "2021-09-30",
+      "file": "apixaban_eliquis_v29.xml",
+      "publication_date": "2023-01-30",
+      "raw_sha256": "ac5703e97b6c5f095ed319cdfd87d36b80a5cef0e0946251eae5587e4ceb8716",
+      "source_instance_id": "a260aeff-75b6-4468-bc8a-c2f8d6ac66e3",
+      "source_url": "https://dailymed.nlm.nih.gov/dailymed/getFile.cfm?type=zip&setid=e9481622-7cc6-418a-acb6-c5450daae9b0&version=29",
+      "source_version": "29"
+    },
+    {
+      "effective_date": "2025-04-17",
+      "file": "apixaban_eliquis_v30.xml",
+      "publication_date": "2025-05-05",
+      "raw_sha256": "d6549bce376b88394da0a802a479a7bea699a48f6da3ae0be087f927e101e1aa",
+      "source_instance_id": "c6b2240a-a9d6-4dd9-9bc4-b42dc90c0d2f",
+      "source_url": "https://dailymed.nlm.nih.gov/dailymed/services/v2/spls/e9481622-7cc6-418a-acb6-c5450daae9b0.xml",
+      "source_version": "30"
+    }
+  ],
+  "notice": "These exact XML bytes are retained only as two focused regulatory-source test fixtures. This manifest is provenance evidence, not a general redistribution-license determination."
+}

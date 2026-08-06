@@ -1,0 +1,38 @@
+name: ODD CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  odd-001-002:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+      - name: Lint
+        run: python -m ruff check .
+      - name: Type check ODD-001 and ODD-002
+        run: python -m mypy src/odd
+      - name: Verify raw fixture integrity
+        run: python scripts/verify_fixture_integrity.py
+      - name: Verify genuine two-version temporal artifact independently
+        run: python scripts/verify_temporal_diff.py
+      - name: Test
+        run: python -m pytest
+      - name: Verify deterministic serialization independently
+        run: >-
+          python -m pytest
+          tests/parsers/test_spl_parser.py::test_repeated_parsing_is_byte_deterministic
+      - name: Verify deterministic temporal diff independently
+        run: >-
+          python -m pytest
+          tests/diffs/test_genuine_temporal_diff.py::test_canonical_diff_is_timestamp_independent_and_idempotent

@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "opendrugdatabase"
+version = "0.2.0"
+description = "Provenance-preserving DailyMed ingestion and temporal source diffs"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { file = "LICENSE" }
+authors = [{ name = "OpenDrugDatabase contributors" }]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "mypy>=1.11,<2",
+    "pytest>=8.3,<10",
+    "ruff>=0.9,<1",
+]
+
+[project.scripts]
+odd = "odd.cli.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers -p no:cacheprovider"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["odd"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+pretty = true
+show_error_codes = true
+warn_unreachable = true

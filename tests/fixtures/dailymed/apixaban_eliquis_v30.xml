@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- REDUCED OFFLINE TEST FIXTURE: this is not the complete official ELIQUIS label. -->
+<document xmlns="urn:hl7-org:v3">
+  <id root="c6b2240a-a9d6-4dd9-9bc4-b42dc90c0d2f"/>
+  <code code="34391-3" displayName="HUMAN PRESCRIPTION DRUG LABEL"/>
+  <title>ELIQUIS (apixaban) tablets, for oral use — reduced ODD test fixture</title>
+  <effectiveTime value="20250417"/>
+  <setId root="e9481622-7cc6-418a-acb6-c5450daae9b0"/>
+  <versionNumber value="30"/>
+  <languageCode code="en-US"/>
+  <subject>
+    <manufacturedProduct>
+      <manufacturedProduct>
+        <code code="0003-0893"/>
+        <name>ELIQUIS</name>
+        <formCode code="C42931" displayName="TABLET, FILM COATED"/>
+        <asEntityWithGeneric>
+          <genericMedicine><name>apixaban</name></genericMedicine>
+        </asEntityWithGeneric>
+        <ingredient classCode="ACTIB">
+          <quantity>
+            <numerator value="2.5" unit="mg"/>
+            <denominator value="1" unit="1"/>
+          </quantity>
+          <ingredientSubstance><name>apixaban</name></ingredientSubstance>
+        </ingredient>
+        <routeCode code="C38288" displayName="ORAL"/>
+      </manufacturedProduct>
+    </manufacturedProduct>
+  </subject>
+  <component>
+    <structuredBody>
+      <component>
+        <section>
+          <code code="34066-1" displayName="BOXED WARNING SECTION"/>
+          <title>WARNING: PREMATURE DISCONTINUATION INCREASES THE RISK OF THROMBOTIC EVENTS</title>
+          <text>
+            <paragraph>Premature discontinuation of ELIQUIS increases the risk of thrombotic events.</paragraph>
+            <paragraph>Do not discontinue ELIQUIS without considering alternative anticoagulation.</paragraph>
+          </text>
+        </section>
+      </component>
+      <component>
+        <section>
+          <code code="34067-9" displayName="INDICATIONS &amp; USAGE SECTION"/>
+          <title>1 INDICATIONS AND USAGE</title>
+          <text>
+            <paragraph>ELIQUIS is indicated to reduce the risk of stroke and systemic embolism.</paragraph>
+          </text>
+          <component>
+            <section>
+              <code code="42229-5"/>
+              <title>1.1 Adult patients</title>
+              <text><paragraph>The source hierarchy remains explicit.</paragraph></text>
+            </section>
+          </component>
+        </section>
+      </component>
+      <component>
+        <section>
+          <code code="34068-7" displayName="DOSAGE &amp; ADMINISTRATION SECTION"/>
+          <title>2 DOSAGE AND ADMINISTRATION</title>
+          <text>
+            <paragraph>The recommended dose is 5 mg taken orally twice daily.</paragraph>
+            <paragraph>Use 2.5 mg twice daily when at least two characteristics are present: age ≥ 80 years, body weight ≤ 60 kg, or serum creatinine ≥ 1.5 mg/dL.</paragraph>
+            <paragraph>Do not double the dose to make up for a missed dose.</paragraph>
+          </text>
+        </section>
+      </component>
+      <component>
+        <section>
+          <code code="43678-2" displayName="DOSAGE FORMS AND STRENGTHS SECTION"/>
+          <title>3 DOSAGE FORMS AND STRENGTHS</title>
+          <text><paragraph>Tablets: 2.5 mg and 5 mg.</paragraph></text>
+        </section>
+      </component>
+      <component>
+        <section>
+          <code code="34070-3" displayName="CONTRAINDICATIONS SECTION"/>
+          <title>4 CONTRAINDICATIONS</title>
+          <text>
+            <list>
+              <item>Active pathological bleeding.</item>
+              <item>Severe hypersensitivity reaction to apixaban.</item>
+            </list>
+          </text>
+        </section>
+      </component>
+      <component>
+        <section>
+          <code code="43685-7" displayName="WARNINGS AND PRECAUTIONS SECTION"/>
+          <title>5 WARNINGS AND PRECAUTIONS</title>
+          <text>
+            <paragraph>ELIQUIS increases the risk of bleeding and can cause serious, potentially fatal bleeding.</paragraph>
+            <paragraph>Concomitant medicines affecting hemostasis may increase this risk; use is not recommended when evidence is insufficient.</paragraph>
+          </text>
+        </section>
+      </component>
+      <component>
+        <section>
+          <code code="34084-4" displayName="ADVERSE REACTIONS SECTION"/>
+          <title>6 ADVERSE REACTIONS</title>
+          <text><paragraph>The most common adverse reactions involve bleeding.</paragraph></text>
+        </section>
+      </component>
+      <component>
+        <section>
+          <code code="34073-7" displayName="DRUG INTERACTIONS SECTION"/>
+          <title>7 DRUG INTERACTIONS</title>
+          <text>
+            <paragraph>Combined P-gp and strong CYP3A4 inhibitors increase blood levels of apixaban.</paragraph>
+            <table>
+              <thead>
+                <tr><th>Concomitant drug</th><th>Source-label instruction</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Strong dual inhibitors</td><td>Reduce the dose by 50% in specified patients.</td></tr>
+                <tr><td>Rifampin</td><td>Avoid concomitant use.</td></tr>
+              </tbody>
+            </table>
+          </text>
+        </section>
+      </component>
+      <component>
+        <section>
+          <code code="43684-0" displayName="USE IN SPECIFIC POPULATIONS SECTION"/>
+          <title>8 USE IN SPECIFIC POPULATIONS</title>
+          <text><paragraph>Population-specific source subsections follow.</paragraph></text>
+          <component>
+            <section>
+              <code code="42228-7" displayName="PREGNANCY SECTION"/>
+              <title>8.1 Pregnancy</title>
+              <text><paragraph>Available data are insufficient to inform a drug-associated risk.</paragraph></text>
+            </section>
+          </component>
+          <component>
+            <section>
+              <code code="77290-5" displayName="LACTATION SECTION"/>
+              <title>8.2 Lactation</title>
+              <text/>
+            </section>
+          </component>
+          <component>
+            <section>
+              <code code="34081-0" displayName="PEDIATRIC USE SECTION"/>
+              <title>8.4 Pediatric Use</title>
+              <text><paragraph>Use only the source-described pediatric presentation and dose.</paragraph></text>
+            </section>
+          </component>
+          <component>
+            <section>
+              <code code="34082-8" displayName="GERIATRIC USE SECTION"/>
+              <title>8.5 Geriatric Use</title>
+              <text><paragraph>No clinically significant differences were observed in the cited studies.</paragraph></text>
+            </section>
+          </component>
+          <component>
+            <section>
+              <code code="42229-5"/>
+              <title>8.6 Renal Impairment</title>
+              <text><paragraph>Renal-impairment wording is preserved without inference.</paragraph></text>
+            </section>
+          </component>
+          <component>
+            <section>
+              <code code="42229-5"/>
+              <title>8.7 Hepatic Impairment</title>
+              <text><paragraph>Hepatic-impairment wording is preserved without inference.</paragraph></text>
+            </section>
+          </component>
+        </section>
+      </component>
+      <component>
+        <section>
+          <code code="34088-5" displayName="OVERDOSAGE SECTION"/>
+          <title>10 OVERDOSAGE</title>
+          <text><paragraph>Overdose increases the risk of bleeding.</paragraph></text>
+        </section>
+      </component>
+      <component>
+        <section>
+          <code code="34090-1" displayName="CLINICAL PHARMACOLOGY SECTION"/>
+          <title>12 CLINICAL PHARMACOLOGY</title>
+          <text><paragraph>Apixaban is a selective inhibitor of Factor Xa.</paragraph></text>
+        </section>
+      </component>
+      <component>
+        <section>
+          <code code="34069-5" displayName="HOW SUPPLIED SECTION"/>
+          <title>16 HOW SUPPLIED/STORAGE AND HANDLING</title>
+          <text><paragraph>ELIQUIS tablets are supplied in labeled containers.</paragraph></text>
+          <component>
+            <section>
+              <code code="44425-7" displayName="STORAGE AND HANDLING SECTION"/>
+              <title>Storage and Handling</title>
+              <text><paragraph>Store at 20°C to 25°C (68°F to 77°F).</paragraph></text>
+            </section>
+          </component>
+        </section>
+      </component>
+      <component>
+        <section>
+          <code code="99999-9" displayName="FIXTURE UNKNOWN SECTION"/>
+          <title>FIXTURE UNKNOWN SOURCE SECTION</title>
+          <text><paragraph>This source section is retained without a semantic mapping.</paragraph></text>
+        </section>
+      </component>
+    </structuredBody>
+  </component>
+</document>
