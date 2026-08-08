@@ -3,3 +3,5 @@ tests/fixtures/dailymed/*.xml -text
 tests/fixtures/dailymed/*.json -text
 tests/fixtures/dailymed/history/*.xml -text
 tests/fixtures/dailymed/history/*.json -text
+tests/fixtures/dailymed/odd003/*.json -text
+tests/fixtures/dailymed/odd003/*.xml -text

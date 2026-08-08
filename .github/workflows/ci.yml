@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  odd-001-002:
+  odd-001-002-003:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,12 +21,14 @@ jobs:
         run: python -m pip install -e ".[dev]"
       - name: Lint
         run: python -m ruff check .
-      - name: Type check ODD-001 and ODD-002
+      - name: Type check ODD-001 through ODD-003 (strict)
         run: python -m mypy src/odd
       - name: Verify raw fixture integrity
         run: python scripts/verify_fixture_integrity.py
       - name: Verify genuine two-version temporal artifact independently
         run: python scripts/verify_temporal_diff.py
+      - name: Verify ODD-003 utilization-list integrity
+        run: python scripts/verify_odd003_utilization.py
       - name: Test
         run: python -m pytest
       - name: Verify deterministic serialization independently
@@ -37,3 +39,19 @@ jobs:
         run: >-
           python -m pytest
           tests/diffs/test_genuine_temporal_diff.py::test_canonical_diff_is_timestamp_independent_and_idempotent
+      - name: Verify ODD-003 candidate-selection determinism independently
+        run: >-
+          python -m pytest
+          tests/connectors/test_dailymed_batch_selection.py::test_response_order_does_not_change_winner_or_evidence_order
+      - name: Verify ODD-003 batch-report determinism independently
+        run: >-
+          python -m pytest
+          tests/batch/test_batch_execution.py::test_batch_report_items_and_diagnostics_are_deterministic
+      - name: Verify database v2 to v3 migration independently
+        run: >-
+          python -m pytest
+          tests/storage/test_batch_storage.py::test_v2_to_v3_migration_preserves_source_diff_and_verification
+      - name: Verify batch artifact integrity independently
+        run: >-
+          python -m pytest
+          tests/storage/test_batch_storage.py::test_batch_artifact_is_idempotent_and_integrity_checked

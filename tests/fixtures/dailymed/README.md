@@ -1,8 +1,8 @@
 # DailyMed test fixtures
 
-These files are intentionally small, offline inputs for ODD-001 and ODD-002 tests. They are not a
-DailyMed corpus mirror, and retaining them here is not a general determination about redistribution
-rights for DailyMed collections.
+These files are intentionally small, offline inputs for ODD-001 through ODD-003 tests. They are not
+a DailyMed corpus mirror, and retaining them here is not a general determination about
+redistribution rights for DailyMed collections.
 
 - `apixaban_eliquis_v30.xml` is a deliberately reduced derivative test fixture. Its XML comment
   explicitly states that it is not the complete official ELIQUIS label.
@@ -17,3 +17,7 @@ rights for DailyMed collections.
 
 `SHA256SUMS` pins every DailyMed data fixture and the ODD-002 provenance manifest. Tests and
 `scripts/verify_fixture_integrity.py` fail if any pinned bytes change.
+
+`odd003/` is separately documented synthetic candidate metadata used only for offline selection
+and batch-control tests. Its own SHA-256 manifest is checked by the same integrity script; it is
+not represented as a genuine DailyMed response.

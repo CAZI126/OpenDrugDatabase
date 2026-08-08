@@ -4,7 +4,7 @@ OpenDrugDatabase (ODD) is an open-source version-control foundation for global r
 knowledge. Regulatory source documents are primary data. Normalized mappings and temporal diffs
 are reproducible derivative data that retain traceability to exact source bytes.
 
-## Implemented scope: ODD-001 and ODD-002
+## Implemented scope: ODD-001 through ODD-003
 
 ODD currently implements one production-oriented United States DailyMed SPL vertical slice for
 apixaban/Eliquis.
@@ -36,6 +36,22 @@ ODD-002 adds:
 
 Internal UUIDs are deterministic ODD identifiers, not FDA or DailyMed regulatory identifiers.
 Textual similarity and diffs are not clinical interpretation.
+
+ODD-003 adds a deliberately narrow generalization test across this fixed rank-only utilization
+input: atorvastatin, metformin, levothyroxine, lisinopril, amlodipine, metoprolol, albuterol,
+losartan, gabapentin, and omeprazole. The list is a versioned external utilization input supplied
+for ODD-003, not FDA or DailyMed data. Exact prescription counts were not independently archived,
+so they are intentionally omitted.
+
+For each ingredient ODD preserves the exact lookup response, classifies every candidate, records
+accepted and rejected evidence, and either selects one validation label or exposes an unresolved
+state. The `dailymed-top10-validation-selection/1.0.0` policy requires explicit human, current,
+prescription, single-ingredient metadata; excludes combinations, repackaged, archived, non-human,
+OTC, incomplete, and unsupported candidates; then prefers exact name, higher numeric source
+version, and later publication date. Candidates still tied on authoritative fields require manual
+review—response order and lexical `set_id` never manufacture a winner. One selected label is only
+one deterministic validation label; it does not represent every formulation, route, manufacturer,
+or product for that ingredient.
 
 ## Installation
 
@@ -95,6 +111,28 @@ odd --data-dir ./demo-data --database ./demo.sqlite3 history apixaban
 
 Equivalent environment variables are `ODD_DATA_DIR` and `ODD_DATABASE_PATH`.
 
+Inspect the ranked input, plan without downloading XML, and run or audit a batch:
+
+```console
+odd utilization list
+odd utilization show --list us-top10-2023
+odd batch plan --list us-top10-2023
+odd batch fetch --list us-top10-2023
+odd batch ingest --list us-top10-2023
+odd batch verify --list us-top10-2023
+odd batch run --list us-top10-2023
+odd batch status --run <BATCH_RUN_ID>
+odd batch report --run <BATCH_RUN_ID>
+odd batch report --run <BATCH_RUN_ID> --format json
+odd candidates --ingredient albuterol
+```
+
+Planning is non-fatal even when it exposes ambiguity. End-to-end batch commands return `0` when
+all requested items verify, `2` for completed partial/unresolved results, and `1` for fatal command
+or batch failure. Successful items are committed independently and reused on resume. Ambiguous
+selection is not quarantined; malformed/failing selected source data can be quarantined without
+deleting immutable raw bytes.
+
 ## Provenance and data layers
 
 Current XML is stored as:
@@ -123,6 +161,8 @@ The data boundaries are:
 - normalized SQLite rows and canonical normalized JSON are deterministic derivatives;
 - official history responses are independently hashed ordering evidence;
 - temporal diffs are generated artifacts stored separately from regulatory source tables;
+- utilization ranks, candidate evidence, batch state, parser-compatibility results, and canonical
+  batch reports live in separate derivative/evidence tables;
 - unknown and absent sections are not invented or silently discarded;
 - every section diff retains old/new wording, headings, hashes, locators, concepts, and match method.
 
@@ -146,8 +186,12 @@ python -m ruff check .
 python -m mypy src/odd
 python scripts\verify_fixture_integrity.py
 python scripts\verify_temporal_diff.py
+python scripts\verify_odd003_utilization.py
 python -m pytest tests\parsers\test_spl_parser.py::test_repeated_parsing_is_byte_deterministic
 python -m pytest tests\diffs\test_genuine_temporal_diff.py::test_canonical_diff_is_timestamp_independent_and_idempotent
+python -m pytest tests\connectors\test_dailymed_batch_selection.py::test_response_order_does_not_change_winner_or_evidence_order
+python -m pytest tests\batch\test_batch_execution.py::test_batch_report_items_and_diagnostics_are_deterministic
+python -m pytest tests\storage\test_batch_storage.py::test_v2_to_v3_migration_preserves_source_diff_and_verification
 ```
 
 CI runs these checks independently on Python 3.12.
@@ -164,6 +208,13 @@ CI runs these checks independently on Python 3.12.
 - Source publication metadata can disagree across DailyMed endpoints. ODD records both values and
   exposes the discrepancy rather than silently selecting one.
 - Live fetch depends on DailyMed availability and its response contract; CI is fully offline.
+- DailyMed candidate metadata can be incomplete. ODD does not infer chemical equivalence for
+  salts, esters, complexes, formulations, or combination products and may require manual review.
+- `FULLY_PARSED` means no empty or unmapped sections were observed by the current parser; it is not
+  clinical validation. Other explicit states report unmapped sections, unsupported structures,
+  partial parsing, parser failure, or a document that was not ingested.
+- The top-ten rank input may lag current prescribing patterns, and no exact utilization counts are
+  asserted. Mocked candidate fixtures prove deterministic behavior, not current live availability.
 - Broader redistribution and licensing questions for DailyMed collections are unresolved. Only
   two focused source-version fixtures are retained here for reproducible verification.
 - EMA, PMDA, cross-regulatory comparison, REST/API changes, SDK, Web UI, AI/LLM/MCP changes,

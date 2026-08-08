@@ -14,6 +14,7 @@ from typing import Any
 from odd.diffs.source_identifiers import extract_section_xml_identifiers
 from odd.errors import (
     AmbiguousDocumentVersion,
+    BatchArtifactConflict,
     DatabaseFailure,
     DiffArtifactConflict,
     DuplicateDocument,
@@ -23,16 +24,34 @@ from odd.errors import (
     SourceNotFound,
 )
 from odd.models import (
+    BatchArtifactResult,
+    BatchItem,
+    BatchReport,
+    BatchRun,
+    BatchStatus,
+    CandidateClassification,
+    CandidateEvidence,
+    CandidateLookup,
+    CandidateSelection,
+    DailyMedCandidate,
     DailyMedHistory,
     DailyMedHistoryEntry,
+    DiscoveryStatus,
     DocumentDiff,
+    IngestionStatus,
     NormalizedDocument,
+    ParserCompatibilityStatus,
     RawDocument,
+    SelectionStatus,
     SourceIdentity,
     StoredDocumentVersion,
     StoredSection,
+    UtilizationEntry,
+    UtilizationList,
+    VerificationStatus,
 )
 from odd.provenance.canonical import (
+    canonical_batch_report_json_bytes,
     canonical_diff_json_bytes,
     canonical_json_bytes,
     canonical_normalized_json_bytes,
@@ -40,6 +59,7 @@ from odd.provenance.canonical import (
 )
 from odd.provenance.hashing import sha256_bytes
 from odd.provenance.identifiers import (
+    batch_artifact_id,
     document_lineage_id,
     history_snapshot_id,
     ingredient_id,
@@ -49,7 +69,7 @@ from odd.provenance.identifiers import (
     version_edge_id,
 )
 
-DATABASE_SCHEMA_VERSION = "2"
+DATABASE_SCHEMA_VERSION = "3"
 _DAILYMED_DATE = re.compile(r"^([A-Za-z]{3}) (\d{2}), (\d{4})$")
 _MONTHS = {
     "Jan": 1,
@@ -307,6 +327,199 @@ MIGRATION_2_STATEMENTS = (
     "CREATE INDEX idx_section_diffs_document ON section_diffs(document_diff_id, sequence_index)",
 )
 
+MIGRATION_3_STATEMENTS = (
+    """
+    CREATE TABLE utilization_lists (
+        id TEXT PRIMARY KEY,
+        schema_version TEXT NOT NULL,
+        jurisdiction TEXT NOT NULL,
+        dataset_name TEXT NOT NULL,
+        dataset_version TEXT NOT NULL,
+        measurement_year INTEGER NOT NULL,
+        metric TEXT NOT NULL,
+        source_reference TEXT NOT NULL,
+        retrieved_at TEXT NOT NULL,
+        license_or_terms_status TEXT NOT NULL,
+        source_status TEXT NOT NULL,
+        notes TEXT NOT NULL,
+        canonical_json BLOB NOT NULL,
+        canonical_sha256 TEXT NOT NULL CHECK(length(canonical_sha256) = 64)
+    )
+    """,
+    """
+    CREATE TABLE utilization_entries (
+        utilization_list_id TEXT NOT NULL REFERENCES utilization_lists(id),
+        rank INTEGER NOT NULL CHECK(rank > 0),
+        ingredient_id TEXT NOT NULL,
+        ingredient_name TEXT NOT NULL,
+        normalized_ingredient_name TEXT NOT NULL,
+        metric_value REAL,
+        metric_unit TEXT,
+        source_row_identifier TEXT,
+        PRIMARY KEY(utilization_list_id, rank),
+        UNIQUE(utilization_list_id, normalized_ingredient_name)
+    )
+    """,
+    """
+    CREATE TABLE candidate_discovery_runs (
+        id TEXT PRIMARY KEY,
+        utilization_list_id TEXT NOT NULL REFERENCES utilization_lists(id),
+        ingredient_id TEXT NOT NULL,
+        query_text TEXT NOT NULL,
+        connector_version TEXT NOT NULL,
+        source_url TEXT NOT NULL,
+        retrieved_at TEXT NOT NULL,
+        raw_metadata BLOB NOT NULL,
+        raw_metadata_sha256 TEXT NOT NULL CHECK(length(raw_metadata_sha256) = 64),
+        status TEXT NOT NULL,
+        error_category TEXT,
+        diagnostic_message TEXT,
+        UNIQUE(utilization_list_id, ingredient_id, connector_version, raw_metadata_sha256)
+    )
+    """,
+    """
+    CREATE TABLE label_candidates (
+        id TEXT PRIMARY KEY,
+        discovery_run_id TEXT NOT NULL REFERENCES candidate_discovery_runs(id),
+        candidate_index INTEGER NOT NULL CHECK(candidate_index >= 0),
+        set_id TEXT,
+        source_version TEXT,
+        title TEXT,
+        published_date TEXT,
+        generic_name TEXT,
+        brand_name TEXT,
+        active_ingredients_json TEXT NOT NULL,
+        dosage_form TEXT,
+        route TEXT,
+        labeler TEXT,
+        marketing_category TEXT,
+        product_type TEXT,
+        source_status TEXT,
+        source_url TEXT,
+        raw_metadata_json TEXT NOT NULL,
+        raw_metadata_sha256 TEXT NOT NULL CHECK(length(raw_metadata_sha256) = 64),
+        classifications_json TEXT NOT NULL,
+        accepted_for_selection INTEGER NOT NULL CHECK(accepted_for_selection IN (0, 1)),
+        rejection_reasons_json TEXT NOT NULL,
+        duplicate_of_candidate_id TEXT REFERENCES label_candidates(id),
+        UNIQUE(discovery_run_id, candidate_index)
+    )
+    """,
+    """
+    CREATE TABLE candidate_decisions (
+        id TEXT PRIMARY KEY,
+        discovery_run_id TEXT NOT NULL REFERENCES candidate_discovery_runs(id),
+        ingredient_id TEXT NOT NULL,
+        selection_rule_version TEXT NOT NULL,
+        selection_status TEXT NOT NULL,
+        selected_candidate_id TEXT REFERENCES label_candidates(id),
+        selected_set_id TEXT,
+        selected_source_version TEXT,
+        selection_reason TEXT NOT NULL,
+        applied_rules_json TEXT NOT NULL,
+        manual_review_required INTEGER NOT NULL CHECK(manual_review_required IN (0, 1)),
+        selection_scope TEXT NOT NULL,
+        canonical_json BLOB NOT NULL,
+        canonical_sha256 TEXT NOT NULL CHECK(length(canonical_sha256) = 64),
+        UNIQUE(discovery_run_id, selection_rule_version)
+    )
+    """,
+    """
+    CREATE TABLE batch_runs (
+        id TEXT PRIMARY KEY,
+        utilization_list_id TEXT NOT NULL REFERENCES utilization_lists(id),
+        selection_rule_version TEXT NOT NULL,
+        connector_version TEXT NOT NULL,
+        parser_version TEXT NOT NULL,
+        schema_version TEXT NOT NULL,
+        mapping_version TEXT NOT NULL,
+        started_at TEXT NOT NULL,
+        completed_at TEXT,
+        status TEXT NOT NULL,
+        requested_count INTEGER NOT NULL CHECK(requested_count >= 0),
+        selected_count INTEGER NOT NULL DEFAULT 0 CHECK(selected_count >= 0),
+        fetched_count INTEGER NOT NULL DEFAULT 0 CHECK(fetched_count >= 0),
+        ingested_count INTEGER NOT NULL DEFAULT 0 CHECK(ingested_count >= 0),
+        verified_count INTEGER NOT NULL DEFAULT 0 CHECK(verified_count >= 0),
+        quarantined_count INTEGER NOT NULL DEFAULT 0 CHECK(quarantined_count >= 0),
+        unresolved_count INTEGER NOT NULL DEFAULT 0 CHECK(unresolved_count >= 0),
+        failed_count INTEGER NOT NULL DEFAULT 0 CHECK(failed_count >= 0),
+        canonical_report_sha256 TEXT,
+        UNIQUE(
+            utilization_list_id, selection_rule_version, connector_version,
+            parser_version, schema_version, mapping_version
+        )
+    )
+    """,
+    """
+    CREATE TABLE batch_items (
+        batch_run_id TEXT NOT NULL REFERENCES batch_runs(id),
+        rank INTEGER NOT NULL CHECK(rank > 0),
+        ingredient_id TEXT NOT NULL,
+        ingredient_name TEXT NOT NULL,
+        discovery_status TEXT NOT NULL,
+        selection_status TEXT NOT NULL,
+        selected_set_id TEXT,
+        selected_source_version TEXT,
+        document_id TEXT REFERENCES regulatory_documents(id),
+        raw_sha256 TEXT,
+        ingestion_status TEXT NOT NULL,
+        verification_status TEXT NOT NULL,
+        quarantine_record_id TEXT,
+        error_category TEXT,
+        diagnostic_message TEXT,
+        manual_review_required INTEGER NOT NULL CHECK(manual_review_required IN (0, 1)),
+        parser_compatibility_status TEXT NOT NULL,
+        source_section_count INTEGER,
+        mapped_section_count INTEGER,
+        unmapped_section_count INTEGER,
+        unsupported_structure_count INTEGER NOT NULL DEFAULT 0,
+        empty_section_count INTEGER NOT NULL DEFAULT 0,
+        parser_warnings_json TEXT NOT NULL,
+        discovery_run_id TEXT REFERENCES candidate_discovery_runs(id),
+        decision_id TEXT REFERENCES candidate_decisions(id),
+        retry_eligible INTEGER NOT NULL CHECK(retry_eligible IN (0, 1)),
+        query_text TEXT NOT NULL,
+        candidate_count INTEGER NOT NULL CHECK(candidate_count >= 0),
+        selection_reason TEXT,
+        PRIMARY KEY(batch_run_id, rank),
+        UNIQUE(batch_run_id, ingredient_id)
+    )
+    """,
+    """
+    CREATE TABLE parser_compatibility_results (
+        batch_run_id TEXT NOT NULL,
+        rank INTEGER NOT NULL,
+        document_id TEXT REFERENCES regulatory_documents(id),
+        status TEXT NOT NULL,
+        source_section_count INTEGER,
+        mapped_section_count INTEGER,
+        unmapped_section_count INTEGER,
+        unsupported_structure_count INTEGER NOT NULL,
+        empty_section_count INTEGER NOT NULL,
+        parser_warnings_json TEXT NOT NULL,
+        quarantine_reason TEXT,
+        PRIMARY KEY(batch_run_id, rank),
+        FOREIGN KEY(batch_run_id, rank) REFERENCES batch_items(batch_run_id, rank)
+    )
+    """,
+    """
+    CREATE TABLE batch_artifacts (
+        id TEXT PRIMARY KEY,
+        batch_run_id TEXT NOT NULL REFERENCES batch_runs(id),
+        report_version TEXT NOT NULL,
+        canonical_json BLOB NOT NULL,
+        canonical_sha256 TEXT NOT NULL CHECK(length(canonical_sha256) = 64),
+        generated_at TEXT NOT NULL,
+        UNIQUE(batch_run_id, report_version, canonical_sha256)
+    )
+    """,
+    "CREATE INDEX idx_utilization_entries_name ON utilization_entries(normalized_ingredient_name)",
+    "CREATE INDEX idx_discovery_ingredient ON candidate_discovery_runs(ingredient_id)",
+    "CREATE INDEX idx_candidates_discovery ON label_candidates(discovery_run_id, candidate_index)",
+    "CREATE INDEX idx_batch_items_status ON batch_items(batch_run_id, rank)",
+)
+
 
 class SQLiteRepository:
     """Narrow repository with explicit transactions and read models."""
@@ -328,7 +541,7 @@ class SQLiteRepository:
                     str(row[0])
                     for row in connection.execute("SELECT version FROM schema_migrations")
                 }
-                if DATABASE_SCHEMA_VERSION not in applied:
+                if "2" not in applied:
                     connection.execute("BEGIN IMMEDIATE")
                     try:
                         for statement in MIGRATION_2_STATEMENTS:
@@ -336,7 +549,20 @@ class SQLiteRepository:
                         self._backfill_lineages(connection)
                         connection.execute(
                             "INSERT INTO schema_migrations(version) VALUES (?)",
-                            (DATABASE_SCHEMA_VERSION,),
+                            ("2",),
+                        )
+                        connection.commit()
+                    except Exception:
+                        connection.rollback()
+                        raise
+                if "3" not in applied:
+                    connection.execute("BEGIN IMMEDIATE")
+                    try:
+                        for statement in MIGRATION_3_STATEMENTS:
+                            connection.execute(statement)
+                        connection.execute(
+                            "INSERT INTO schema_migrations(version) VALUES (?)",
+                            ("3",),
                         )
                         connection.commit()
                     except Exception:
@@ -431,6 +657,671 @@ class SQLiteRepository:
             (lineage_identifier, source_row_id, publication_date, status),
         )
         return lineage_identifier
+
+    def schema_versions(self) -> tuple[str, ...]:
+        """Return applied schema migrations in deterministic numeric order."""
+
+        try:
+            with self._connect() as connection:
+                rows = connection.execute(
+                    "SELECT version FROM schema_migrations ORDER BY CAST(version AS INTEGER)"
+                ).fetchall()
+                return tuple(str(row[0]) for row in rows)
+        except sqlite3.Error as exc:
+            raise DatabaseFailure(f"SQLite schema version lookup failed: {exc}") from exc
+
+    def store_utilization_list(self, value: UtilizationList) -> bool:
+        """Persist one external utilization input without mixing it with source data."""
+
+        canonical = canonical_json_bytes(value)
+        digest = sha256_bytes(canonical)
+        try:
+            with self._connect() as connection:
+                connection.execute("BEGIN IMMEDIATE")
+                existing = connection.execute(
+                    "SELECT canonical_json FROM utilization_lists WHERE id = ?",
+                    (value.utilization_list_id,),
+                ).fetchone()
+                if existing is not None:
+                    if bytes(existing["canonical_json"]) != canonical:
+                        raise DatabaseFailure(
+                            "utilization-list identity already stores different canonical data"
+                        )
+                    connection.rollback()
+                    return False
+                connection.execute(
+                    """
+                    INSERT INTO utilization_lists(
+                        id, schema_version, jurisdiction, dataset_name, dataset_version,
+                        measurement_year, metric, source_reference, retrieved_at,
+                        license_or_terms_status, source_status, notes, canonical_json,
+                        canonical_sha256
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        value.utilization_list_id,
+                        value.schema_version,
+                        value.jurisdiction,
+                        value.dataset_name,
+                        value.dataset_version,
+                        value.measurement_year,
+                        value.metric,
+                        value.source_reference,
+                        _iso_utc(value.retrieved_at),
+                        value.license_or_terms_status,
+                        value.source_status,
+                        value.notes,
+                        canonical,
+                        digest,
+                    ),
+                )
+                for entry in value.entries:
+                    connection.execute(
+                        """
+                        INSERT INTO utilization_entries(
+                            utilization_list_id, rank, ingredient_id, ingredient_name,
+                            normalized_ingredient_name, metric_value, metric_unit,
+                            source_row_identifier
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            value.utilization_list_id,
+                            entry.rank,
+                            ingredient_id(entry.normalized_ingredient_name),
+                            entry.ingredient_name,
+                            entry.normalized_ingredient_name,
+                            entry.metric_value,
+                            entry.metric_unit,
+                            entry.source_row_identifier,
+                        ),
+                    )
+                connection.commit()
+                return True
+        except DatabaseFailure:
+            raise
+        except sqlite3.Error as exc:
+            raise DatabaseFailure(f"SQLite utilization-list storage failed: {exc}") from exc
+
+    def list_utilization_lists(self) -> list[dict[str, Any]]:
+        try:
+            with self._connect() as connection:
+                rows = connection.execute(
+                    """
+                    SELECT ul.id AS utilization_list_id, ul.jurisdiction,
+                           ul.dataset_name, ul.dataset_version, ul.measurement_year,
+                           ul.metric, ul.source_status, ul.canonical_sha256,
+                           COUNT(ue.rank) AS entry_count
+                    FROM utilization_lists ul
+                    LEFT JOIN utilization_entries ue ON ue.utilization_list_id = ul.id
+                    GROUP BY ul.id
+                    ORDER BY ul.id
+                    """
+                ).fetchall()
+                return [dict(row) for row in rows]
+        except sqlite3.Error as exc:
+            raise DatabaseFailure(f"SQLite utilization-list lookup failed: {exc}") from exc
+
+    def get_utilization_list(self, list_id: str) -> UtilizationList | None:
+        try:
+            with self._connect() as connection:
+                row = connection.execute(
+                    "SELECT canonical_json FROM utilization_lists WHERE id = ?", (list_id,)
+                ).fetchone()
+                if row is None:
+                    return None
+                payload = json.loads(bytes(row["canonical_json"]))
+                return _utilization_list_from_stored(payload)
+        except (json.JSONDecodeError, sqlite3.Error, TypeError, ValueError) as exc:
+            raise DatabaseFailure(f"SQLite utilization-list read failed: {exc}") from exc
+
+    def store_candidate_selection(
+        self,
+        *,
+        utilization_list_id: str,
+        query_text: str,
+        connector_version: str,
+        lookup: CandidateLookup,
+        selection: CandidateSelection,
+        status: DiscoveryStatus = DiscoveryStatus.DISCOVERED,
+    ) -> bool:
+        """Atomically retain exact lookup bytes, every candidate, and the decision."""
+
+        raw_sha256 = sha256_bytes(lookup.raw_body)
+        decision_canonical = canonical_json_bytes(selection)
+        decision_sha256 = sha256_bytes(decision_canonical)
+        try:
+            with self._connect() as connection:
+                connection.execute("BEGIN IMMEDIATE")
+                existing = connection.execute(
+                    "SELECT canonical_json FROM candidate_decisions WHERE id = ?",
+                    (selection.decision_id,),
+                ).fetchone()
+                if existing is not None:
+                    if bytes(existing["canonical_json"]) != decision_canonical:
+                        raise DatabaseFailure(
+                            "candidate-decision identity already stores different evidence"
+                        )
+                    connection.rollback()
+                    return False
+                connection.execute(
+                    """
+                    INSERT OR IGNORE INTO candidate_discovery_runs(
+                        id, utilization_list_id, ingredient_id, query_text,
+                        connector_version, source_url, retrieved_at, raw_metadata,
+                        raw_metadata_sha256, status, error_category, diagnostic_message
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)
+                    """,
+                    (
+                        selection.discovery_run_id,
+                        utilization_list_id,
+                        selection.ingredient_id,
+                        query_text,
+                        connector_version,
+                        lookup.source_url,
+                        _iso_utc(lookup.retrieved_at),
+                        lookup.raw_body,
+                        raw_sha256,
+                        status.value,
+                    ),
+                )
+                for candidate in selection.candidates:
+                    connection.execute(
+                        """
+                        INSERT INTO label_candidates(
+                            id, discovery_run_id, candidate_index, set_id,
+                            source_version, title, published_date, generic_name,
+                            brand_name, active_ingredients_json, dosage_form, route,
+                            labeler, marketing_category, product_type, source_status,
+                            source_url, raw_metadata_json, raw_metadata_sha256,
+                            classifications_json, accepted_for_selection,
+                            rejection_reasons_json, duplicate_of_candidate_id
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                                  ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            candidate.candidate_id,
+                            candidate.discovery_run_id,
+                            candidate.candidate_index,
+                            candidate.set_id,
+                            candidate.source_version,
+                            candidate.title,
+                            candidate.published_date,
+                            candidate.generic_name,
+                            candidate.brand_name,
+                            canonical_json_bytes(candidate.active_ingredients).decode("utf-8"),
+                            candidate.dosage_form,
+                            candidate.route,
+                            candidate.labeler,
+                            candidate.marketing_category,
+                            candidate.product_type,
+                            candidate.source_status,
+                            candidate.source_url,
+                            canonical_json_bytes(candidate.raw_metadata).decode("utf-8"),
+                            candidate.raw_metadata_sha256,
+                            canonical_json_bytes(candidate.classifications).decode("utf-8"),
+                            int(candidate.accepted_for_selection),
+                            canonical_json_bytes(candidate.rejection_reasons).decode("utf-8"),
+                            candidate.duplicate_of_candidate_id,
+                        ),
+                    )
+                connection.execute(
+                    """
+                    INSERT INTO candidate_decisions(
+                        id, discovery_run_id, ingredient_id, selection_rule_version,
+                        selection_status, selected_candidate_id, selected_set_id,
+                        selected_source_version, selection_reason, applied_rules_json,
+                        manual_review_required, selection_scope, canonical_json,
+                        canonical_sha256
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        selection.decision_id,
+                        selection.discovery_run_id,
+                        selection.ingredient_id,
+                        selection.selection_rule_version,
+                        selection.selection_status.value,
+                        selection.selected_candidate_id,
+                        selection.selected_set_id,
+                        selection.selected_source_version,
+                        selection.selection_reason,
+                        canonical_json_bytes(selection.applied_rules).decode("utf-8"),
+                        int(selection.manual_review_required),
+                        selection.selection_scope,
+                        decision_canonical,
+                        decision_sha256,
+                    ),
+                )
+                connection.commit()
+                return True
+        except DatabaseFailure:
+            raise
+        except sqlite3.Error as exc:
+            raise DatabaseFailure(f"SQLite candidate evidence storage failed: {exc}") from exc
+
+    def record_candidate_lookup_failure(
+        self,
+        *,
+        discovery_run_id: str,
+        utilization_list_id: str,
+        ingredient_id_value: str,
+        query_text: str,
+        connector_version: str,
+        recorded_at: datetime,
+        error_category: str,
+        diagnostic_message: str,
+    ) -> None:
+        try:
+            with self._connect() as connection:
+                connection.execute(
+                    """
+                    INSERT OR REPLACE INTO candidate_discovery_runs(
+                        id, utilization_list_id, ingredient_id, query_text,
+                        connector_version, source_url, retrieved_at, raw_metadata,
+                        raw_metadata_sha256, status, error_category, diagnostic_message
+                    ) VALUES (?, ?, ?, ?, ?, '', ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        discovery_run_id,
+                        utilization_list_id,
+                        ingredient_id_value,
+                        query_text,
+                        connector_version,
+                        _iso_utc(recorded_at),
+                        b"",
+                        sha256_bytes(b""),
+                        DiscoveryStatus.LOOKUP_FAILED.value,
+                        error_category,
+                        diagnostic_message,
+                    ),
+                )
+                connection.commit()
+        except sqlite3.Error as exc:
+            raise DatabaseFailure(f"SQLite candidate failure storage failed: {exc}") from exc
+
+    def get_candidate_selection(self, decision_id: str) -> CandidateSelection | None:
+        try:
+            with self._connect() as connection:
+                row = connection.execute(
+                    "SELECT canonical_json FROM candidate_decisions WHERE id = ?",
+                    (decision_id,),
+                ).fetchone()
+                if row is None:
+                    return None
+                return _candidate_selection_from_stored(
+                    json.loads(bytes(row["canonical_json"]))
+                )
+        except (json.JSONDecodeError, sqlite3.Error, TypeError, ValueError) as exc:
+            raise DatabaseFailure(f"SQLite candidate-decision read failed: {exc}") from exc
+
+    def get_candidate_lookup(self, discovery_run_id: str) -> CandidateLookup | None:
+        try:
+            with self._connect() as connection:
+                row = connection.execute(
+                    "SELECT * FROM candidate_discovery_runs WHERE id = ?",
+                    (discovery_run_id,),
+                ).fetchone()
+                if row is None or not row["raw_metadata"]:
+                    return None
+                raw_body = bytes(row["raw_metadata"])
+                payload = json.loads(raw_body)
+                candidates = connection.execute(
+                    """
+                    SELECT raw_metadata_json FROM label_candidates
+                    WHERE discovery_run_id = ? ORDER BY candidate_index
+                    """,
+                    (discovery_run_id,),
+                ).fetchall()
+                values = tuple(
+                    _daily_med_candidate_from_metadata(json.loads(item["raw_metadata_json"]))
+                    for item in candidates
+                )
+                return CandidateLookup(
+                    candidates=values,
+                    source_url=str(row["source_url"]),
+                    retrieved_at=_parse_datetime(str(row["retrieved_at"])),
+                    raw_body=raw_body,
+                    payload=dict(payload),
+                )
+        except (json.JSONDecodeError, sqlite3.Error, TypeError, ValueError) as exc:
+            raise DatabaseFailure(f"SQLite candidate lookup reconstruction failed: {exc}") from exc
+
+    def candidates_for_ingredient(self, normalized_name: str) -> list[dict[str, Any]]:
+        try:
+            with self._connect() as connection:
+                rows = connection.execute(
+                    """
+                    SELECT cdr.query_text, cdr.retrieved_at, cdr.raw_metadata_sha256,
+                           cd.selection_status, cd.selection_reason,
+                           cd.manual_review_required, lc.*
+                    FROM utilization_entries ue
+                    JOIN candidate_discovery_runs cdr
+                      ON cdr.utilization_list_id = ue.utilization_list_id
+                     AND cdr.ingredient_id = ue.ingredient_id
+                    JOIN candidate_decisions cd ON cd.discovery_run_id = cdr.id
+                    JOIN label_candidates lc ON lc.discovery_run_id = cdr.id
+                    WHERE ue.normalized_ingredient_name = ?
+                    ORDER BY cdr.retrieved_at DESC, cdr.id, lc.candidate_index
+                    """,
+                    (normalized_name,),
+                ).fetchall()
+                result: list[dict[str, Any]] = []
+                for row in rows:
+                    item = dict(row)
+                    for key in (
+                        "active_ingredients_json",
+                        "classifications_json",
+                        "rejection_reasons_json",
+                        "raw_metadata_json",
+                    ):
+                        if item.get(key) is not None:
+                            item[key.removesuffix("_json")] = json.loads(item.pop(key))
+                    result.append(item)
+                return result
+        except (json.JSONDecodeError, sqlite3.Error) as exc:
+            raise DatabaseFailure(f"SQLite candidate audit lookup failed: {exc}") from exc
+
+    def create_batch_run(self, run: BatchRun, items: tuple[BatchItem, ...]) -> bool:
+        """Create a resumable batch and its rank-ordered item state atomically."""
+
+        try:
+            with self._connect() as connection:
+                connection.execute("BEGIN IMMEDIATE")
+                existing = connection.execute(
+                    "SELECT id FROM batch_runs WHERE id = ?", (run.batch_run_id,)
+                ).fetchone()
+                if existing is not None:
+                    connection.rollback()
+                    return False
+                connection.execute(
+                    """
+                    INSERT INTO batch_runs(
+                        id, utilization_list_id, selection_rule_version,
+                        connector_version, parser_version, schema_version,
+                        mapping_version, started_at, completed_at, status,
+                        requested_count, selected_count, fetched_count,
+                        ingested_count, verified_count, quarantined_count,
+                        unresolved_count, failed_count, canonical_report_sha256
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    _batch_run_values(run),
+                )
+                for item in sorted(items, key=lambda value: value.rank):
+                    self._write_batch_item(connection, item, replace_existing=False)
+                connection.commit()
+                return True
+        except sqlite3.Error as exc:
+            raise DatabaseFailure(f"SQLite batch creation failed: {exc}") from exc
+
+    def save_batch_item(self, item: BatchItem) -> None:
+        """Commit one item independently so later item failures do not roll it back."""
+
+        try:
+            with self._connect() as connection:
+                connection.execute("BEGIN IMMEDIATE")
+                self._write_batch_item(connection, item, replace_existing=True)
+                connection.commit()
+        except sqlite3.Error as exc:
+            raise DatabaseFailure(f"SQLite batch-item storage failed: {exc}") from exc
+
+    @staticmethod
+    def _write_batch_item(
+        connection: sqlite3.Connection,
+        item: BatchItem,
+        *,
+        replace_existing: bool,
+    ) -> None:
+        values = _batch_item_values(item)
+        if replace_existing:
+            cursor = connection.execute(
+                """
+                UPDATE batch_items SET
+                    ingredient_id = ?, ingredient_name = ?, discovery_status = ?,
+                    selection_status = ?, selected_set_id = ?, selected_source_version = ?,
+                    document_id = ?, raw_sha256 = ?, ingestion_status = ?,
+                    verification_status = ?, quarantine_record_id = ?, error_category = ?,
+                    diagnostic_message = ?, manual_review_required = ?,
+                    parser_compatibility_status = ?, source_section_count = ?,
+                    mapped_section_count = ?, unmapped_section_count = ?,
+                    unsupported_structure_count = ?, empty_section_count = ?,
+                    parser_warnings_json = ?, discovery_run_id = ?, decision_id = ?,
+                    retry_eligible = ?, query_text = ?, candidate_count = ?,
+                    selection_reason = ?
+                WHERE batch_run_id = ? AND rank = ?
+                """,
+                (*values[2:], *values[:2]),
+            )
+            if cursor.rowcount == 1:
+                return
+        connection.execute(
+            """
+            INSERT INTO batch_items(
+                batch_run_id, rank, ingredient_id, ingredient_name,
+                discovery_status, selection_status, selected_set_id,
+                selected_source_version, document_id, raw_sha256,
+                ingestion_status, verification_status, quarantine_record_id,
+                error_category, diagnostic_message, manual_review_required,
+                parser_compatibility_status, source_section_count,
+                mapped_section_count, unmapped_section_count,
+                unsupported_structure_count, empty_section_count,
+                parser_warnings_json, discovery_run_id, decision_id,
+                retry_eligible, query_text, candidate_count, selection_reason
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                      ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            values,
+        )
+
+    def save_parser_compatibility(
+        self,
+        item: BatchItem,
+        *,
+        quarantine_reason: str | None = None,
+    ) -> None:
+        try:
+            with self._connect() as connection:
+                connection.execute(
+                    """
+                    INSERT OR REPLACE INTO parser_compatibility_results(
+                        batch_run_id, rank, document_id, status,
+                        source_section_count, mapped_section_count,
+                        unmapped_section_count, unsupported_structure_count,
+                        empty_section_count, parser_warnings_json, quarantine_reason
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        item.batch_run_id,
+                        item.rank,
+                        item.document_id,
+                        item.parser_compatibility_status.value,
+                        item.source_section_count,
+                        item.mapped_section_count,
+                        item.unmapped_section_count,
+                        item.unsupported_structure_count,
+                        item.empty_section_count,
+                        canonical_json_bytes(item.parser_warnings).decode("utf-8"),
+                        quarantine_reason,
+                    ),
+                )
+                connection.commit()
+        except sqlite3.Error as exc:
+            raise DatabaseFailure(f"SQLite parser compatibility storage failed: {exc}") from exc
+
+    def update_batch_run(self, run: BatchRun) -> None:
+        try:
+            with self._connect() as connection:
+                cursor = connection.execute(
+                    """
+                    UPDATE batch_runs SET
+                        completed_at = ?, status = ?, requested_count = ?,
+                        selected_count = ?, fetched_count = ?, ingested_count = ?,
+                        verified_count = ?, quarantined_count = ?, unresolved_count = ?,
+                        failed_count = ?, canonical_report_sha256 = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        _iso_utc(run.completed_at) if run.completed_at else None,
+                        run.status.value,
+                        run.requested_count,
+                        run.selected_count,
+                        run.fetched_count,
+                        run.ingested_count,
+                        run.verified_count,
+                        run.quarantined_count,
+                        run.unresolved_count,
+                        run.failed_count,
+                        run.canonical_report_sha256,
+                        run.batch_run_id,
+                    ),
+                )
+                if cursor.rowcount != 1:
+                    raise DatabaseFailure("batch run was not found for update")
+                connection.commit()
+        except DatabaseFailure:
+            raise
+        except sqlite3.Error as exc:
+            raise DatabaseFailure(f"SQLite batch update failed: {exc}") from exc
+
+    def get_batch_run(self, run_id: str) -> BatchRun | None:
+        try:
+            with self._connect() as connection:
+                row = connection.execute(
+                    "SELECT * FROM batch_runs WHERE id = ?", (run_id,)
+                ).fetchone()
+                return _batch_run_from_row(row) if row is not None else None
+        except (sqlite3.Error, ValueError) as exc:
+            raise DatabaseFailure(f"SQLite batch lookup failed: {exc}") from exc
+
+    def find_batch_run(
+        self,
+        *,
+        utilization_list_id: str,
+        selection_rule_version: str,
+        connector_version: str,
+        parser_version: str,
+        schema_version: str,
+        mapping_version: str,
+    ) -> BatchRun | None:
+        try:
+            with self._connect() as connection:
+                row = connection.execute(
+                    """
+                    SELECT * FROM batch_runs
+                    WHERE utilization_list_id = ? AND selection_rule_version = ?
+                      AND connector_version = ? AND parser_version = ?
+                      AND schema_version = ? AND mapping_version = ?
+                    """,
+                    (
+                        utilization_list_id,
+                        selection_rule_version,
+                        connector_version,
+                        parser_version,
+                        schema_version,
+                        mapping_version,
+                    ),
+                ).fetchone()
+                return _batch_run_from_row(row) if row is not None else None
+        except (sqlite3.Error, ValueError) as exc:
+            raise DatabaseFailure(f"SQLite batch identity lookup failed: {exc}") from exc
+
+    def get_batch_items(self, run_id: str) -> tuple[BatchItem, ...]:
+        try:
+            with self._connect() as connection:
+                rows = connection.execute(
+                    "SELECT * FROM batch_items WHERE batch_run_id = ? ORDER BY rank",
+                    (run_id,),
+                ).fetchall()
+                return tuple(_batch_item_from_row(row) for row in rows)
+        except (json.JSONDecodeError, sqlite3.Error, ValueError) as exc:
+            raise DatabaseFailure(f"SQLite batch-item lookup failed: {exc}") from exc
+
+    def store_batch_artifact(self, report: BatchReport) -> BatchArtifactResult:
+        canonical = canonical_batch_report_json_bytes(report)
+        digest = sha256_bytes(canonical)
+        identifier = batch_artifact_id(
+            report.batch_run.batch_run_id,
+            report.report_version,
+            digest,
+        )
+        try:
+            with self._connect() as connection:
+                connection.execute("BEGIN IMMEDIATE")
+                existing = connection.execute(
+                    "SELECT canonical_json, canonical_sha256 FROM batch_artifacts WHERE id = ?",
+                    (identifier,),
+                ).fetchone()
+                if existing is not None:
+                    if (
+                        bytes(existing["canonical_json"]) != canonical
+                        or str(existing["canonical_sha256"]) != digest
+                    ):
+                        raise BatchArtifactConflict(
+                            "batch artifact identity already stores different canonical bytes"
+                        )
+                    connection.rollback()
+                    return BatchArtifactResult(report, canonical, digest, True)
+                connection.execute(
+                    """
+                    INSERT INTO batch_artifacts(
+                        id, batch_run_id, report_version, canonical_json,
+                        canonical_sha256, generated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        identifier,
+                        report.batch_run.batch_run_id,
+                        report.report_version,
+                        canonical,
+                        digest,
+                        _iso_utc(report.generated_at),
+                    ),
+                )
+                connection.execute(
+                    "UPDATE batch_runs SET canonical_report_sha256 = ? WHERE id = ?",
+                    (digest, report.batch_run.batch_run_id),
+                )
+                connection.commit()
+                return BatchArtifactResult(report, canonical, digest, False)
+        except BatchArtifactConflict:
+            raise
+        except sqlite3.Error as exc:
+            raise DatabaseFailure(f"SQLite batch-artifact storage failed: {exc}") from exc
+
+    def get_batch_artifact(self, artifact_or_run_id: str) -> dict[str, Any] | None:
+        try:
+            with self._connect() as connection:
+                row = connection.execute(
+                    """
+                    SELECT * FROM batch_artifacts
+                    WHERE id = ? OR batch_run_id = ?
+                    ORDER BY rowid DESC LIMIT 1
+                    """,
+                    (artifact_or_run_id, artifact_or_run_id),
+                ).fetchone()
+                return dict(row) if row is not None else None
+        except sqlite3.Error as exc:
+            raise DatabaseFailure(f"SQLite batch-artifact lookup failed: {exc}") from exc
+
+    def batch_artifact_integrity(self, artifact_or_run_id: str) -> dict[str, Any]:
+        artifact = self.get_batch_artifact(artifact_or_run_id)
+        if artifact is None:
+            return {
+                "found": False,
+                "hash_matches": False,
+                "item_ordered": False,
+                "run_hash_matches": False,
+            }
+        canonical = bytes(artifact["canonical_json"])
+        payload = json.loads(canonical)
+        ranks = [int(item["rank"]) for item in payload.get("items", [])]
+        run = self.get_batch_run(str(artifact["batch_run_id"]))
+        return {
+            "found": True,
+            "hash_matches": sha256_bytes(canonical) == artifact["canonical_sha256"],
+            "item_ordered": ranks == sorted(ranks) and len(ranks) == len(set(ranks)),
+            "run_hash_matches": bool(
+                run and run.canonical_report_sha256 == artifact["canonical_sha256"]
+            ),
+        }
 
     def start_ingestion_run(self, identity: SourceIdentity, started_at: datetime) -> int:
         try:
@@ -1389,6 +2280,15 @@ class SQLiteRepository:
             "document_version_edges",
             "document_diffs",
             "section_diffs",
+            "utilization_lists",
+            "utilization_entries",
+            "candidate_discovery_runs",
+            "label_candidates",
+            "candidate_decisions",
+            "batch_runs",
+            "batch_items",
+            "batch_artifacts",
+            "parser_compatibility_results",
         }
         if table not in allowed:
             raise ValueError(f"unsupported table name: {table}")
@@ -1663,6 +2563,298 @@ class SQLiteRepository:
             yield connection
         finally:
             connection.close()
+
+
+def _utilization_list_from_stored(payload: dict[str, Any]) -> UtilizationList:
+    entries = tuple(
+        UtilizationEntry(
+            utilization_list_id=str(item["utilization_list_id"]),
+            rank=int(item["rank"]),
+            ingredient_name=str(item["ingredient_name"]),
+            normalized_ingredient_name=str(item["normalized_ingredient_name"]),
+            metric_value=(
+                float(item["metric_value"]) if item.get("metric_value") is not None else None
+            ),
+            metric_unit=str(item["metric_unit"]) if item.get("metric_unit") else None,
+            source_row_identifier=(
+                str(item["source_row_identifier"])
+                if item.get("source_row_identifier")
+                else None
+            ),
+        )
+        for item in payload["entries"]
+    )
+    return UtilizationList(
+        utilization_list_id=str(payload["utilization_list_id"]),
+        schema_version=str(payload["schema_version"]),
+        jurisdiction=str(payload["jurisdiction"]),
+        dataset_name=str(payload["dataset_name"]),
+        dataset_version=str(payload["dataset_version"]),
+        measurement_year=int(payload["measurement_year"]),
+        metric=str(payload["metric"]),
+        source_reference=str(payload["source_reference"]),
+        retrieved_at=_parse_datetime(str(payload["retrieved_at"])),
+        license_or_terms_status=str(payload["license_or_terms_status"]),
+        source_status=str(payload["source_status"]),
+        notes=str(payload["notes"]),
+        entries=entries,
+    )
+
+
+def _candidate_selection_from_stored(payload: dict[str, Any]) -> CandidateSelection:
+    candidates = tuple(
+        CandidateEvidence(
+            candidate_id=str(item["candidate_id"]),
+            discovery_run_id=str(item["discovery_run_id"]),
+            candidate_index=int(item["candidate_index"]),
+            set_id=str(item["set_id"]) if item.get("set_id") is not None else None,
+            source_version=(
+                str(item["source_version"])
+                if item.get("source_version") is not None
+                else None
+            ),
+            title=str(item["title"]) if item.get("title") is not None else None,
+            published_date=(
+                str(item["published_date"])
+                if item.get("published_date") is not None
+                else None
+            ),
+            generic_name=(
+                str(item["generic_name"]) if item.get("generic_name") is not None else None
+            ),
+            brand_name=(
+                str(item["brand_name"]) if item.get("brand_name") is not None else None
+            ),
+            active_ingredients=tuple(str(value) for value in item["active_ingredients"]),
+            dosage_form=(
+                str(item["dosage_form"]) if item.get("dosage_form") is not None else None
+            ),
+            route=str(item["route"]) if item.get("route") is not None else None,
+            labeler=str(item["labeler"]) if item.get("labeler") is not None else None,
+            marketing_category=(
+                str(item["marketing_category"])
+                if item.get("marketing_category") is not None
+                else None
+            ),
+            product_type=(
+                str(item["product_type"])
+                if item.get("product_type") is not None
+                else None
+            ),
+            source_status=(
+                str(item["source_status"])
+                if item.get("source_status") is not None
+                else None
+            ),
+            source_url=(
+                str(item["source_url"]) if item.get("source_url") is not None else None
+            ),
+            raw_metadata=dict(item["raw_metadata"]),
+            raw_metadata_sha256=str(item["raw_metadata_sha256"]),
+            classifications=tuple(
+                CandidateClassification(str(value)) for value in item["classifications"]
+            ),
+            accepted_for_selection=bool(item["accepted_for_selection"]),
+            rejection_reasons=tuple(str(value) for value in item["rejection_reasons"]),
+            duplicate_of_candidate_id=(
+                str(item["duplicate_of_candidate_id"])
+                if item.get("duplicate_of_candidate_id") is not None
+                else None
+            ),
+        )
+        for item in payload["candidates"]
+    )
+    return CandidateSelection(
+        decision_id=str(payload["decision_id"]),
+        discovery_run_id=str(payload["discovery_run_id"]),
+        ingredient_id=str(payload["ingredient_id"]),
+        selection_rule_version=str(payload["selection_rule_version"]),
+        selection_status=SelectionStatus(str(payload["selection_status"])),
+        selected_candidate_id=(
+            str(payload["selected_candidate_id"])
+            if payload.get("selected_candidate_id") is not None
+            else None
+        ),
+        selected_set_id=(
+            str(payload["selected_set_id"])
+            if payload.get("selected_set_id") is not None
+            else None
+        ),
+        selected_source_version=(
+            str(payload["selected_source_version"])
+            if payload.get("selected_source_version") is not None
+            else None
+        ),
+        selection_reason=str(payload["selection_reason"]),
+        applied_rules=tuple(str(value) for value in payload["applied_rules"]),
+        manual_review_required=bool(payload["manual_review_required"]),
+        selection_scope=str(payload["selection_scope"]),
+        candidates=candidates,
+    )
+
+
+def _daily_med_candidate_from_metadata(metadata: dict[str, Any]) -> DailyMedCandidate:
+    set_id = metadata.get("setid", metadata.get("set_id"))
+    source_version = metadata.get("spl_version", metadata.get("source_version"))
+    title = metadata.get("title")
+    published_date = metadata.get("published_date", "")
+    if set_id is None or source_version is None or title is None:
+        raise ValueError("stored candidate metadata lacks its DailyMed identity")
+    return DailyMedCandidate(
+        set_id=str(set_id),
+        source_version=str(source_version),
+        title=str(title),
+        published_date=str(published_date),
+        metadata=metadata,
+    )
+
+
+def _batch_run_values(run: BatchRun) -> tuple[Any, ...]:
+    return (
+        run.batch_run_id,
+        run.utilization_list_id,
+        run.selection_rule_version,
+        run.connector_version,
+        run.parser_version,
+        run.schema_version,
+        run.mapping_version,
+        _iso_utc(run.started_at),
+        _iso_utc(run.completed_at) if run.completed_at else None,
+        run.status.value,
+        run.requested_count,
+        run.selected_count,
+        run.fetched_count,
+        run.ingested_count,
+        run.verified_count,
+        run.quarantined_count,
+        run.unresolved_count,
+        run.failed_count,
+        run.canonical_report_sha256,
+    )
+
+
+def _batch_item_values(item: BatchItem) -> tuple[Any, ...]:
+    return (
+        item.batch_run_id,
+        item.rank,
+        item.ingredient_id,
+        item.ingredient_name,
+        item.discovery_status.value,
+        item.selection_status.value,
+        item.selected_set_id,
+        item.selected_source_version,
+        item.document_id,
+        item.raw_sha256,
+        item.ingestion_status.value,
+        item.verification_status.value,
+        item.quarantine_record_id,
+        item.error_category,
+        item.diagnostic_message,
+        int(item.manual_review_required),
+        item.parser_compatibility_status.value,
+        item.source_section_count,
+        item.mapped_section_count,
+        item.unmapped_section_count,
+        item.unsupported_structure_count,
+        item.empty_section_count,
+        canonical_json_bytes(item.parser_warnings).decode("utf-8"),
+        item.discovery_run_id,
+        item.decision_id,
+        int(item.retry_eligible),
+        item.query_text,
+        item.candidate_count,
+        item.selection_reason,
+    )
+
+
+def _batch_run_from_row(row: sqlite3.Row) -> BatchRun:
+    return BatchRun(
+        batch_run_id=str(row["id"]),
+        utilization_list_id=str(row["utilization_list_id"]),
+        selection_rule_version=str(row["selection_rule_version"]),
+        connector_version=str(row["connector_version"]),
+        parser_version=str(row["parser_version"]),
+        schema_version=str(row["schema_version"]),
+        mapping_version=str(row["mapping_version"]),
+        started_at=_parse_datetime(str(row["started_at"])),
+        completed_at=(
+            _parse_datetime(str(row["completed_at"])) if row["completed_at"] else None
+        ),
+        status=BatchStatus(str(row["status"])),
+        requested_count=int(row["requested_count"]),
+        selected_count=int(row["selected_count"]),
+        fetched_count=int(row["fetched_count"]),
+        ingested_count=int(row["ingested_count"]),
+        verified_count=int(row["verified_count"]),
+        quarantined_count=int(row["quarantined_count"]),
+        unresolved_count=int(row["unresolved_count"]),
+        failed_count=int(row["failed_count"]),
+        canonical_report_sha256=(
+            str(row["canonical_report_sha256"])
+            if row["canonical_report_sha256"]
+            else None
+        ),
+    )
+
+
+def _batch_item_from_row(row: sqlite3.Row) -> BatchItem:
+    return BatchItem(
+        batch_run_id=str(row["batch_run_id"]),
+        rank=int(row["rank"]),
+        ingredient_id=str(row["ingredient_id"]),
+        ingredient_name=str(row["ingredient_name"]),
+        discovery_status=DiscoveryStatus(str(row["discovery_status"])),
+        selection_status=SelectionStatus(str(row["selection_status"])),
+        selected_set_id=(str(row["selected_set_id"]) if row["selected_set_id"] else None),
+        selected_source_version=(
+            str(row["selected_source_version"])
+            if row["selected_source_version"]
+            else None
+        ),
+        document_id=str(row["document_id"]) if row["document_id"] else None,
+        raw_sha256=str(row["raw_sha256"]) if row["raw_sha256"] else None,
+        ingestion_status=IngestionStatus(str(row["ingestion_status"])),
+        verification_status=VerificationStatus(str(row["verification_status"])),
+        quarantine_record_id=(
+            str(row["quarantine_record_id"]) if row["quarantine_record_id"] else None
+        ),
+        error_category=str(row["error_category"]) if row["error_category"] else None,
+        diagnostic_message=(
+            str(row["diagnostic_message"]) if row["diagnostic_message"] else None
+        ),
+        manual_review_required=bool(row["manual_review_required"]),
+        parser_compatibility_status=ParserCompatibilityStatus(
+            str(row["parser_compatibility_status"])
+        ),
+        source_section_count=(
+            int(row["source_section_count"])
+            if row["source_section_count"] is not None
+            else None
+        ),
+        mapped_section_count=(
+            int(row["mapped_section_count"])
+            if row["mapped_section_count"] is not None
+            else None
+        ),
+        unmapped_section_count=(
+            int(row["unmapped_section_count"])
+            if row["unmapped_section_count"] is not None
+            else None
+        ),
+        unsupported_structure_count=int(row["unsupported_structure_count"]),
+        empty_section_count=int(row["empty_section_count"]),
+        parser_warnings=tuple(json.loads(str(row["parser_warnings_json"]))),
+        discovery_run_id=(
+            str(row["discovery_run_id"]) if row["discovery_run_id"] else None
+        ),
+        decision_id=str(row["decision_id"]) if row["decision_id"] else None,
+        retry_eligible=bool(row["retry_eligible"]),
+        query_text=str(row["query_text"]),
+        candidate_count=int(row["candidate_count"]),
+        selection_reason=(
+            str(row["selection_reason"]) if row["selection_reason"] else None
+        ),
+    )
 
 
 def _iso_utc(value: datetime) -> str:

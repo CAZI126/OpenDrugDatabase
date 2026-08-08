@@ -143,3 +143,119 @@ def document_diff_id(
 
 def section_diff_id(diff_identifier: str, sequence_index: int) -> str:
     return str(uuid5(ODD_UUID_NAMESPACE, f"section-diff|{diff_identifier}|{sequence_index}"))
+
+
+def candidate_discovery_id(
+    utilization_list_id: str,
+    ingredient_identifier: str,
+    connector_version: str,
+    raw_metadata_sha256: str,
+) -> str:
+    return str(
+        uuid5(
+            ODD_UUID_NAMESPACE,
+            "|".join(
+                (
+                    "candidate-discovery",
+                    utilization_list_id,
+                    ingredient_identifier,
+                    connector_version,
+                    raw_metadata_sha256,
+                )
+            ),
+        )
+    )
+
+
+def candidate_evidence_id(
+    discovery_identifier: str,
+    set_id: str,
+    source_version: str,
+    raw_metadata_sha256: str,
+    occurrence_index: int,
+) -> str:
+    return str(
+        uuid5(
+            ODD_UUID_NAMESPACE,
+            "|".join(
+                (
+                    "label-candidate",
+                    discovery_identifier,
+                    set_id.casefold(),
+                    source_version,
+                    raw_metadata_sha256,
+                    str(occurrence_index),
+                )
+            ),
+        )
+    )
+
+
+def candidate_decision_id(discovery_identifier: str, rule_version: str) -> str:
+    return str(
+        uuid5(
+            ODD_UUID_NAMESPACE,
+            f"candidate-decision|{discovery_identifier}|{rule_version}",
+        )
+    )
+
+
+def batch_run_id(
+    utilization_list_id: str,
+    selection_rule_version: str,
+    connector_version: str,
+    parser_version: str,
+    schema_version: str,
+    mapping_version: str,
+) -> str:
+    return str(
+        uuid5(
+            ODD_UUID_NAMESPACE,
+            "|".join(
+                (
+                    "batch-run",
+                    utilization_list_id,
+                    selection_rule_version,
+                    connector_version,
+                    parser_version,
+                    schema_version,
+                    mapping_version,
+                )
+            ),
+        )
+    )
+
+
+def batch_artifact_id(
+    batch_identifier: str,
+    report_version: str,
+    canonical_sha256: str,
+) -> str:
+    return str(
+        uuid5(
+            ODD_UUID_NAMESPACE,
+            f"batch-artifact|{batch_identifier}|{report_version}|{canonical_sha256}",
+        )
+    )
+
+
+def quarantine_record_id(
+    batch_identifier: str,
+    ingredient_identifier: str,
+    stage: str,
+    raw_sha256: str | None,
+) -> str:
+    return str(
+        uuid5(
+            ODD_UUID_NAMESPACE,
+            "|".join(
+                (
+                    "quarantine",
+                    batch_identifier,
+                    ingredient_identifier,
+                    stage,
+                    raw_sha256 or "unknown",
+                )
+            ),
+        )
+    )

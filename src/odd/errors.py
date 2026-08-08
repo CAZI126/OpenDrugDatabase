@@ -23,6 +23,15 @@ class ErrorCategory(StrEnum):
     AMBIGUOUS_DOCUMENT_VERSION = "ambiguous_document_version"
     DIFF_ARTIFACT_CONFLICT = "diff_artifact_conflict"
     DIFF_VERIFICATION_FAILURE = "diff_verification_failure"
+    UTILIZATION_INPUT_INVALID = "utilization_input_invalid"
+    CANDIDATE_LOOKUP_FAILED = "candidate_lookup_failed"
+    CANDIDATE_METADATA_INVALID = "candidate_metadata_invalid"
+    NO_CANDIDATE = "no_candidate"
+    NO_ACCEPTABLE_CANDIDATE = "no_acceptable_candidate"
+    AMBIGUOUS_SELECTION = "ambiguous_selection"
+    RAW_FETCH_FAILED = "raw_fetch_failed"
+    VERIFICATION_FAILED = "verification_failed"
+    BATCH_ARTIFACT_CONFLICT = "batch_artifact_conflict"
 
 
 class ODDError(Exception):
@@ -105,3 +114,39 @@ class DiffArtifactConflict(ODDError):
 
 class DiffVerificationFailure(ODDError):
     category = ErrorCategory.DIFF_VERIFICATION_FAILURE
+
+
+class UtilizationInputInvalid(ODDError):
+    category = ErrorCategory.UTILIZATION_INPUT_INVALID
+
+
+class CandidateLookupFailed(ODDError):
+    category = ErrorCategory.CANDIDATE_LOOKUP_FAILED
+
+
+class CandidateMetadataInvalid(ODDError):
+    category = ErrorCategory.CANDIDATE_METADATA_INVALID
+
+
+class NoCandidate(ODDError):
+    category = ErrorCategory.NO_CANDIDATE
+
+
+class NoAcceptableCandidate(ODDError):
+    category = ErrorCategory.NO_ACCEPTABLE_CANDIDATE
+
+
+class AmbiguousSelection(ODDError):
+    category = ErrorCategory.AMBIGUOUS_SELECTION
+
+
+class RawFetchFailed(ODDError):
+    category = ErrorCategory.RAW_FETCH_FAILED
+
+
+class VerificationFailed(ODDError):
+    category = ErrorCategory.VERIFICATION_FAILED
+
+
+class BatchArtifactConflict(ODDError):
+    category = ErrorCategory.BATCH_ARTIFACT_CONFLICT

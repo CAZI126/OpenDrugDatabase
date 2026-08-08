@@ -26,7 +26,7 @@ from odd.models import (
 
 DEFAULT_BASE_URL = "https://dailymed.nlm.nih.gov/dailymed/services/v2"
 DEFAULT_ARCHIVE_BASE_URL = "https://dailymed.nlm.nih.gov/dailymed"
-DEFAULT_USER_AGENT = "OpenDrugDatabase/0.2 (ODD-002)"
+DEFAULT_USER_AGENT = "OpenDrugDatabase/0.3 (ODD-003)"
 MAX_ARCHIVED_XML_BYTES = 64 * 1024 * 1024
 _DAILYMED_DATE = re.compile(r"^([A-Za-z]{3}) (\d{2}), (\d{4})$")
 _MONTHS = {

@@ -16,7 +16,15 @@ from odd.errors import (
     ODDError,
     ProvenanceValidationFailure,
 )
-from odd.models import ChangeCause, DiffGenerationResult, DiffOperation
+from odd.models import (
+    BatchArtifactResult,
+    BatchItem,
+    BatchRun,
+    BatchStatus,
+    ChangeCause,
+    DiffGenerationResult,
+    DiffOperation,
+)
 from odd.provenance.canonical import canonical_json_bytes
 from odd.service import ODDService, create_service
 
@@ -77,6 +85,34 @@ def build_parser() -> argparse.ArgumentParser:
 
     verify_diff = commands.add_parser("verify-diff", help="verify a stored diff artifact")
     verify_diff.add_argument("--diff", required=True, dest="diff_id")
+
+    utilization = commands.add_parser(
+        "utilization", help="inspect versioned external utilization inputs"
+    )
+    utilization_commands = utilization.add_subparsers(
+        dest="utilization_command", required=True
+    )
+    utilization_commands.add_parser("list", help="list stored utilization inputs")
+    utilization_show = utilization_commands.add_parser(
+        "show", help="show one ranked utilization input"
+    )
+    utilization_show.add_argument("--list", required=True, dest="list_id")
+
+    batch = commands.add_parser("batch", help="run the ODD-003 ranked validation batch")
+    batch_commands = batch.add_subparsers(dest="batch_command", required=True)
+    for name in ("plan", "fetch", "ingest", "verify", "run"):
+        phase = batch_commands.add_parser(name)
+        phase.add_argument("--list", required=True, dest="list_id")
+    batch_status = batch_commands.add_parser("status")
+    batch_status.add_argument("--run", required=True, dest="run_id")
+    batch_report = batch_commands.add_parser("report")
+    batch_report.add_argument("--run", required=True, dest="run_id")
+    batch_report.add_argument("--format", choices=("text", "json"), default="text")
+
+    candidates = commands.add_parser(
+        "candidates", help="audit accepted and rejected DailyMed candidates"
+    )
+    candidates.add_argument("--ingredient", required=True)
     return parser
 
 
@@ -155,6 +191,57 @@ def run_cli(
             payload = application.verify_diff(arguments.diff_id)
             _write_json(output, payload)
             return 0 if payload.ok else 1
+        elif arguments.command == "utilization":
+            if arguments.utilization_command == "list":
+                values = application.utilization_lists()
+                payload = {"count": len(values), "lists": values, "status": "ok"}
+            else:
+                payload = application.utilization_show(arguments.list_id)
+        elif arguments.command == "batch":
+            if arguments.batch_command == "plan":
+                run, items = application.batch_plan(arguments.list_id)
+                payload = _batch_payload(run, items)
+                _write_json(output, payload)
+                return 0
+            if arguments.batch_command == "fetch":
+                run, items = application.batch_fetch(arguments.list_id)
+                payload = _batch_payload(run, items)
+            elif arguments.batch_command == "ingest":
+                run, items = application.batch_ingest(arguments.list_id)
+                payload = _batch_payload(run, items)
+            elif arguments.batch_command == "verify":
+                run, items = application.batch_verify(arguments.list_id)
+                payload = _batch_payload(run, items)
+            elif arguments.batch_command == "run":
+                artifact = application.batch_run(arguments.list_id)
+                payload = _batch_artifact_payload(artifact)
+                run = artifact.report.batch_run
+                items = artifact.report.items
+            elif arguments.batch_command == "status":
+                run, items = application.batch_status(arguments.run_id)
+                payload = _batch_payload(run, items)
+                _write_json(output, payload)
+                return 0
+            elif arguments.batch_command == "report":
+                artifact = application.batch_report(arguments.run_id)
+                run = artifact.report.batch_run
+                items = artifact.report.items
+                if arguments.format == "text":
+                    _write_batch_report_text(output, artifact)
+                    return _batch_exit_code(run.status, items)
+                payload = _batch_artifact_payload(artifact)
+            else:  # pragma: no cover - argparse enforces the subcommand set
+                raise AssertionError(f"unhandled batch command: {arguments.batch_command}")
+            _write_json(output, payload)
+            return _batch_exit_code(run.status, items)
+        elif arguments.command == "candidates":
+            values = application.candidates(arguments.ingredient)
+            payload = {
+                "candidate_count": len(values),
+                "candidates": values,
+                "ingredient": arguments.ingredient,
+                "status": "ok",
+            }
         else:  # pragma: no cover - argparse enforces the command set
             raise AssertionError(f"unhandled command: {arguments.command}")
         _write_json(output, payload)
@@ -168,6 +255,82 @@ def _write_json(stream: TextIO, value: Any) -> None:
     primitive = json.loads(canonical_json_bytes(value))
     json.dump(primitive, stream, ensure_ascii=False, indent=2, sort_keys=True)
     stream.write("\n")
+
+
+def _batch_payload(run: BatchRun, items: tuple[BatchItem, ...]) -> dict[str, Any]:
+    return {
+        "batch_run": run,
+        "items": items,
+        "retry_eligible_ranks": [item.rank for item in items if item.retry_eligible],
+        "status": "ok",
+        "unresolved_ranks": [
+            item.rank
+            for item in items
+            if item.manual_review_required or item.selection_status.value != "SELECTED"
+        ],
+    }
+
+
+def _batch_artifact_payload(artifact: BatchArtifactResult) -> dict[str, Any]:
+    return {
+        "already_stored": artifact.already_stored,
+        "artifact": json.loads(artifact.canonical_json),
+        "canonical_report_sha256": artifact.canonical_sha256,
+        "generation_metadata": {"generated_at": artifact.report.generated_at},
+        "status": "ok",
+    }
+
+
+def _batch_exit_code(
+    status: BatchStatus,
+    items: tuple[BatchItem, ...] = (),
+) -> int:
+    if status is BatchStatus.FAILED:
+        return 1
+    if status in {
+        BatchStatus.PARTIAL_FAILURE,
+        BatchStatus.COMPLETED_WITH_UNRESOLVED_ITEMS,
+    }:
+        return 2
+    if status is BatchStatus.RUNNING and any(
+        item.error_category is not None
+        or item.manual_review_required
+        or item.quarantine_record_id is not None
+        for item in items
+    ):
+        return 2
+    return 0
+
+
+def _write_batch_report_text(stream: TextIO, artifact: BatchArtifactResult) -> None:
+    run = artifact.report.batch_run
+    stream.write("ODD-003 derivative batch report — not regulatory source data\n")
+    stream.write(f"Batch run ID: {run.batch_run_id}\n")
+    stream.write(f"Utilization list: {run.utilization_list_id}\n")
+    stream.write(f"Status: {run.status.value}\n")
+    stream.write(f"Canonical report SHA-256: {artifact.canonical_sha256}\n")
+    stream.write(
+        "Counts: "
+        f"requested={run.requested_count} selected={run.selected_count} "
+        f"fetched={run.fetched_count} ingested={run.ingested_count} "
+        f"verified={run.verified_count} quarantined={run.quarantined_count} "
+        f"unresolved={run.unresolved_count} failed={run.failed_count}\n"
+    )
+    stream.write(
+        "rank ingredient selection version sections mapped unmapped "
+        "compatibility verify\n"
+    )
+    for item in artifact.report.items:
+        stream.write(
+            f"{item.rank:>2} {item.ingredient_name} {item.selection_status.value} "
+            f"{item.selected_source_version or '-'} "
+            f"{item.source_section_count if item.source_section_count is not None else '-'} "
+            f"{item.mapped_section_count if item.mapped_section_count is not None else '-'} "
+            f"{item.unmapped_section_count if item.unmapped_section_count is not None else '-'} "
+            f"{item.parser_compatibility_status.value} {item.verification_status.value}\n"
+        )
+        if item.diagnostic_message:
+            stream.write(f"   diagnostic: {item.diagnostic_message}\n")
 
 
 def _run_diff(application: ODDService, arguments: argparse.Namespace) -> DiffGenerationResult:

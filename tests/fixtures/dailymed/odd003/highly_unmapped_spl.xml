@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- synthetic_test_fixture: parser compatibility only; not a DailyMed source document -->
+<document xmlns="urn:hl7-org:v3">
+  <id root="bbbbbbbb-1111-4111-8111-bbbbbbbbbbbb"/>
+  <code code="34391-3" codeSystem="2.16.840.1.113883.6.1" displayName="HUMAN PRESCRIPTION DRUG LABEL"/>
+  <title>SYNTHETIC HIGHLY UNMAPPED LABEL</title>
+  <setId root="bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb"/>
+  <versionNumber value="1"/>
+  <languageCode code="en-US"/>
+  <effectiveTime value="20260807"/>
+  <component>
+    <structuredBody>
+      <component><section><id root="bbbbbbbb-3001-4301-8301-bbbbbbbbbbbb"/><code code="ODD-X1"/><title>UNMAPPED ALPHA</title><text>Alpha source wording 5 mg.</text></section></component>
+      <component><section><id root="bbbbbbbb-3002-4302-8302-bbbbbbbbbbbb"/><code code="ODD-X2"/><title>UNMAPPED BETA</title><text>Beta source wording must not be inferred.</text></section></component>
+      <component><section><id root="bbbbbbbb-3003-4303-8303-bbbbbbbbbbbb"/><code code="ODD-X3"/><title>UNMAPPED GAMMA</title><text>Gamma source wording is preserved.</text></section></component>
+      <component><section><id root="bbbbbbbb-3004-4304-8304-bbbbbbbbbbbb"/><code code="ODD-X4"/><title>UNMAPPED DELTA</title><text>Delta source wording is not a clinical claim.</text></section></component>
+      <component><section><id root="bbbbbbbb-3005-4305-8305-bbbbbbbbbbbb"/><code code="ODD-X5"/><title>UNMAPPED EPSILON</title><text>Epsilon source wording remains traceable.</text></section></component>
+    </structuredBody>
+  </component>
+</document>

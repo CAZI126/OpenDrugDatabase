@@ -1,0 +1,26 @@
+{
+  "dataset_name": "ODD-003 task-provided U.S. top 10 prescribed active ingredients",
+  "dataset_version": "2023.1",
+  "entries": [
+    {"ingredient_name": "atorvastatin", "rank": 1, "source_row_identifier": "rank-1"},
+    {"ingredient_name": "metformin", "rank": 2, "source_row_identifier": "rank-2"},
+    {"ingredient_name": "levothyroxine", "rank": 3, "source_row_identifier": "rank-3"},
+    {"ingredient_name": "lisinopril", "rank": 4, "source_row_identifier": "rank-4"},
+    {"ingredient_name": "amlodipine", "rank": 5, "source_row_identifier": "rank-5"},
+    {"ingredient_name": "metoprolol", "rank": 6, "source_row_identifier": "rank-6"},
+    {"ingredient_name": "albuterol", "rank": 7, "source_row_identifier": "rank-7"},
+    {"ingredient_name": "losartan", "rank": 8, "source_row_identifier": "rank-8"},
+    {"ingredient_name": "gabapentin", "rank": 9, "source_row_identifier": "rank-9"},
+    {"ingredient_name": "omeprazole", "rank": 10, "source_row_identifier": "rank-10"}
+  ],
+  "jurisdiction": "United States",
+  "license_or_terms_status": "upstream_utilization_terms_not_resolved",
+  "measurement_year": 2023,
+  "metric": "rank_only",
+  "notes": "The ordered names were supplied as the ODD-003 utilization input. No prescription counts were supplied or independently archived, so metric values are intentionally null. This ranking is not FDA or DailyMed regulatory data.",
+  "retrieved_at": "2026-08-07T00:00:00Z",
+  "schema_version": "odd-utilization-list/1.0.0",
+  "source_reference": "ODD-003 task-provided ranked ingredient list; upstream utilization publication not archived",
+  "source_status": "user_supplied_rank_only; exact_counts_not_verified",
+  "utilization_list_id": "us-top10-2023"
+}

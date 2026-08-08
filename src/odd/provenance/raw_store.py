@@ -393,6 +393,12 @@ class QuarantineStore:
         recorded_at: datetime,
         raw_bytes: bytes | None = None,
         raw_path: Path | None = None,
+        batch_run_id: str | None = None,
+        ingredient_id: str | None = None,
+        ingredient_name: str | None = None,
+        rank: int | None = None,
+        candidate_metadata: dict[str, Any] | None = None,
+        quarantine_record_id: str | None = None,
     ) -> Path:
         safe_set_id = _quarantine_segment(set_id)
         safe_version = _quarantine_segment(source_version)
@@ -408,20 +414,33 @@ class QuarantineStore:
             if not label_path.exists():
                 _atomic_create(label_path, raw_bytes)
         diagnostic = {
+            "batch_run_id": batch_run_id,
+            "candidate_metadata": candidate_metadata,
             "diagnostic_message": error.message,
             "error_category": error.category.value,
             "error_details": error.details,
             "failure_stage": stage,
+            "ingredient": {
+                "ingredient_id": ingredient_id,
+                "ingredient_name": ingredient_name,
+                "rank": rank,
+            },
             "original_raw_hash": raw_sha256,
             "raw_path": str(raw_path) if raw_path is not None else None,
             "recorded_at": _iso_utc(recorded_at),
+            "quarantine_record_id": quarantine_record_id,
             "source_identity": {
                 "provider": "DailyMed",
                 "set_id": set_id,
                 "source_version": source_version,
             },
         }
-        diagnostic_path = directory / "failure.json"
+        diagnostic_name = (
+            f"failure-{_quarantine_segment(quarantine_record_id)}.json"
+            if quarantine_record_id
+            else "failure.json"
+        )
+        diagnostic_path = directory / diagnostic_name
         if not diagnostic_path.exists():
             _atomic_create(diagnostic_path, canonical_json_bytes(diagnostic) + b"\n")
         return diagnostic_path

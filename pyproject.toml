@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opendrugdatabase"
-version = "0.2.0"
-description = "Provenance-preserving DailyMed ingestion and temporal source diffs"
+version = "0.3.0"
+description = "Provenance-preserving DailyMed ingestion, temporal diffs, and ranked batches"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { file = "LICENSE" }
@@ -24,6 +24,9 @@ odd = "odd.cli.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+odd = ["resources/*.json"]
 
 [tool.pytest.ini_options]
 addopts = "--strict-config --strict-markers -p no:cacheprovider"

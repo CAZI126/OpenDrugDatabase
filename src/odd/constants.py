@@ -9,6 +9,11 @@ RAW_MANIFEST_VERSION = "odd-raw-manifest/1.0.0"
 SELECTION_RULE_VERSION = "dailymed-apixaban-selection/1.0.0"
 HISTORICAL_SELECTION_RULE_VERSION = "dailymed-explicit-history-version/1.0.0"
 DIFF_ENGINE_VERSION = "section-diff/1.0.0"
+CONNECTOR_VERSION = "dailymed-connector/3.0.0"
+BATCH_SELECTION_RULE_VERSION = "dailymed-top10-validation-selection/1.0.0"
+BATCH_REPORT_VERSION = "odd-batch-report/1.0.0"
+UTILIZATION_LIST_SCHEMA_VERSION = "odd-utilization-list/1.0.0"
+SELECTION_SCOPE = "one deterministic validation label for this active ingredient"
 CONTENT_ASSISTED_MATCH_THRESHOLD = 0.92
 
 # This namespace is an ODD internal implementation constant. UUIDs derived from it

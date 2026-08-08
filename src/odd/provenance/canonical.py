@@ -9,7 +9,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, cast
 
-from odd.models import DocumentDiff, NormalizedDocument, SourceIdentity
+from odd.models import BatchReport, DocumentDiff, NormalizedDocument, SourceIdentity
 
 
 def canonical_json_bytes(value: Any) -> bytes:
@@ -64,6 +64,24 @@ def canonical_diff_json_bytes(value: DocumentDiff) -> bytes:
                 "label.xml",
             )
         )
+    return canonical_json_bytes(payload)
+
+
+def canonical_batch_report_json_bytes(value: BatchReport) -> bytes:
+    """Serialize a derivative batch report without operational timestamps.
+
+    The utilization-list retrieval timestamp remains part of the versioned external
+    input. Batch start, completion, and report-generation times describe execution,
+    so they cannot change the identity of a report regenerated from the same stored
+    item results.
+    """
+
+    payload = _primitive(value)
+    payload["generated_at"] = None
+    batch_run = payload["batch_run"]
+    batch_run["started_at"] = None
+    batch_run["completed_at"] = None
+    batch_run["canonical_report_sha256"] = None
     return canonical_json_bytes(payload)
 
 

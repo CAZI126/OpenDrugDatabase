@@ -7,18 +7,23 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from odd.batch import BatchCoordinator
 from odd.connectors.dailymed.client import DailyMedConnector
 from odd.connectors.dailymed.selection import candidate_payload, select_apixaban_candidate
 from odd.constants import HISTORICAL_SELECTION_RULE_VERSION
 from odd.diffs.engine import DiffEngine
 from odd.errors import ODDError, RawHashConflict, UnsupportedDocumentStructure
 from odd.models import (
+    BatchArtifactResult,
+    BatchItem,
+    BatchRun,
     DailyMedCandidate,
     DiffGenerationResult,
     DiffVerificationResult,
     IngestionOutcome,
     RawDocument,
     SelectionDecision,
+    UtilizationList,
     VerificationResult,
 )
 from odd.parsers.spl.parser import SPLParser
@@ -52,6 +57,15 @@ class ODDService:
         self.diff_engine = diff_engine or DiffEngine()
         self.clock = clock or (lambda: datetime.now(UTC))
         self.repository.initialize_schema()
+        self.batch = BatchCoordinator(
+            repository=self.repository,
+            raw_store=self.raw_store,
+            quarantine_store=self.quarantine_store,
+            connector=self.connector or DailyMedConnector(clock=self.clock),
+            ingest=self.ingest,
+            verify=self.verify,
+            clock=self.clock,
+        )
 
     def fetch(self, drug: str, source_version: str | None = None) -> dict[str, Any]:
         if drug.casefold().strip() != "apixaban":
@@ -335,6 +349,36 @@ class ODDService:
 
     def verify_diff(self, diff_id: str) -> DiffVerificationResult:
         return DiffVerifier(self.repository, self.diff_engine, self.clock).verify(diff_id)
+
+    def utilization_lists(self) -> list[dict[str, object]]:
+        return self.batch.utilization_lists()
+
+    def utilization_show(self, list_id: str) -> UtilizationList:
+        return self.batch.utilization_show(list_id)
+
+    def batch_plan(self, list_id: str) -> tuple[BatchRun, tuple[BatchItem, ...]]:
+        return self.batch.plan(list_id)
+
+    def batch_fetch(self, list_id: str) -> tuple[BatchRun, tuple[BatchItem, ...]]:
+        return self.batch.fetch(list_id)
+
+    def batch_ingest(self, list_id: str) -> tuple[BatchRun, tuple[BatchItem, ...]]:
+        return self.batch.ingest(list_id)
+
+    def batch_verify(self, list_id: str) -> tuple[BatchRun, tuple[BatchItem, ...]]:
+        return self.batch.verify(list_id)
+
+    def batch_run(self, list_id: str) -> BatchArtifactResult:
+        return self.batch.run(list_id)
+
+    def batch_status(self, run_id: str) -> tuple[BatchRun, tuple[BatchItem, ...]]:
+        return self.batch.status(run_id)
+
+    def batch_report(self, run_id: str) -> BatchArtifactResult:
+        return self.batch.report(run_id)
+
+    def candidates(self, ingredient: str) -> list[dict[str, object]]:
+        return self.batch.candidates(ingredient)
 
     def _record_ingestion_failure(
         self, run_id: int, raw: RawDocument, error: ODDError
