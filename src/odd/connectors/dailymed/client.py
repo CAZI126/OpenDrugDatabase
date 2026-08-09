@@ -31,6 +31,7 @@ from odd.models import (
     DownloadedSource,
     HTTPAttemptEvidence,
 )
+from odd.models.enrichment import CandidateDetailPage
 from odd.provenance.canonical import canonical_json_bytes
 from odd.provenance.hashing import sha256_bytes
 from odd.provenance.identifiers import live_candidate_snapshot_id
@@ -38,7 +39,7 @@ from odd.provenance.identifiers import live_candidate_snapshot_id
 DEFAULT_BASE_URL = "https://dailymed.nlm.nih.gov/dailymed/services/v2"
 DEFAULT_ARCHIVE_BASE_URL = "https://dailymed.nlm.nih.gov/dailymed"
 DEFAULT_USER_AGENT = (
-    "OpenDrugDatabase/0.4.0 (ODD-004; +https://github.com/CAZI126/OpenDrugDatabase)"
+    "OpenDrugDatabase/0.5.0 (ODD-005; +https://github.com/CAZI126/OpenDrugDatabase)"
 )
 MAX_ARCHIVED_XML_BYTES = 64 * 1024 * 1024
 MAX_JSON_RESPONSE_BYTES = 8 * 1024 * 1024
@@ -49,6 +50,8 @@ DEFAULT_RETRY_BACKOFF_SECONDS = 0.5
 DEFAULT_MAX_BACKOFF_SECONDS = 8.0
 DEFAULT_INTER_REQUEST_DELAY_SECONDS = 0.2
 LIVE_PAGE_SIZE = 100
+DETAIL_PAGE_SIZE = 100
+MAX_DETAIL_JSON_RESPONSE_BYTES = 512 * 1024
 HUMAN_PRESCRIPTION_DOCUMENT_CODE = "34391-3"
 _DAILYMED_DATE = re.compile(r"^([A-Za-z]{3}) (\d{2}), (\d{4})$")
 _MONTHS = {
@@ -76,6 +79,14 @@ class HTTPResponse:
     attempts: tuple[HTTPAttemptEvidence, ...] = ()
 
 
+class MalformedDetailResponse(MalformedMetadata):
+    """A valid HTTP representation whose exact bytes fail detail parsing."""
+
+    def __init__(self, message: str, *, response: HTTPResponse) -> None:
+        super().__init__(message)
+        self.response = response
+
+
 class HTTPTransport(Protocol):
     def get(
         self,
@@ -83,6 +94,7 @@ class HTTPTransport(Protocol):
         *,
         headers: Mapping[str, str],
         timeout: float,
+        max_bytes: int,
     ) -> HTTPResponse: ...
 
 
@@ -122,11 +134,12 @@ class UrllibTransport:
         *,
         headers: Mapping[str, str],
         timeout: float,
+        max_bytes: int,
     ) -> HTTPResponse:
         request = Request(url, headers=dict(headers), method="GET")
         try:
             with self._opener.open(request, timeout=timeout) as response:  # noqa: S310
-                body = response.read(MAX_TRANSPORT_RESPONSE_BYTES + 1)
+                body = response.read(max_bytes + 1)
                 return HTTPResponse(
                     status_code=int(response.status),
                     url=response.geturl(),
@@ -134,7 +147,7 @@ class UrllibTransport:
                     headers={key.lower(): value for key, value in response.headers.items()},
                 )
         except HTTPError as exc:
-            body = exc.read(MAX_TRANSPORT_RESPONSE_BYTES + 1)
+            body = exc.read(max_bytes + 1)
             return HTTPResponse(
                 status_code=int(exc.code),
                 url=exc.geturl(),
@@ -186,6 +199,29 @@ class DailyMedConnector:
         self.retry_backoff_seconds = retry_backoff_seconds
         self.max_backoff_seconds = max_backoff_seconds
         self.inter_request_delay_seconds = inter_request_delay_seconds
+
+    def with_operational_limits(
+        self,
+        *,
+        timeout_seconds: float,
+        max_retries: int,
+        inter_request_delay_seconds: float,
+    ) -> DailyMedConnector:
+        """Reuse the configured origin/transport with one explicit bounded execution policy."""
+
+        return DailyMedConnector(
+            base_url=self.base_url,
+            archive_base_url=self.archive_base_url,
+            timeout_seconds=timeout_seconds,
+            user_agent=self.user_agent,
+            transport=self.transport,
+            clock=self.clock,
+            sleep=self.sleep,
+            max_retries=max_retries,
+            retry_backoff_seconds=self.retry_backoff_seconds,
+            max_backoff_seconds=self.max_backoff_seconds,
+            inter_request_delay_seconds=inter_request_delay_seconds,
+        )
 
     def lookup(self, drug: str) -> CandidateLookup:
         normalized_drug = drug.strip()
@@ -460,14 +496,23 @@ class DailyMedConnector:
             failure_attempts=failure_attempts,
         )
 
-    def download(self, candidate: DailyMedCandidate) -> DownloadedSource:
+    def download(
+        self,
+        candidate: DailyMedCandidate,
+        *,
+        max_response_bytes: int = MAX_XML_RESPONSE_BYTES,
+    ) -> DownloadedSource:
         encoded_set_id = quote(candidate.set_id, safe="")
         url = f"{self.base_url}/spls/{encoded_set_id}.xml"
         response = self._get(
             url,
-            accept="application/xml",
+            # DailyMed's documented .xml endpoint returns application/xml but
+            # rejects an explicit ``Accept: application/xml`` with HTTP 406.
+            # A wildcard keeps content negotiation neutral; the response is
+            # still required to be XML below before any bytes are accepted.
+            accept="*/*",
             expected_content_types=("application/xml", "text/xml"),
-            max_response_bytes=MAX_XML_RESPONSE_BYTES,
+            max_response_bytes=max_response_bytes,
         )
         if not response.body:
             raise NetworkFailure(
@@ -485,6 +530,47 @@ class DailyMedConnector:
             headers=response.headers,
             http_attempts=response.attempts,
         )
+
+    def packaging_page(
+        self,
+        set_id: str,
+        *,
+        page_number: int,
+        max_response_bytes: int = MAX_DETAIL_JSON_RESPONSE_BYTES,
+    ) -> CandidateDetailPage:
+        """Fetch one documented packaging-detail page and retain exact bytes."""
+
+        normalized_set_id = set_id.strip()
+        if not normalized_set_id:
+            raise MalformedMetadata("DailyMed packaging set_id must not be blank")
+        if page_number <= 0:
+            raise ValueError("packaging page_number must be positive")
+        if max_response_bytes <= 0:
+            raise ValueError("packaging max_response_bytes must be positive")
+        encoded_set_id = quote(normalized_set_id, safe="")
+        endpoint = f"{self.base_url}/spls/{encoded_set_id}/packaging.json"
+        query_values = (
+            ("page", str(page_number)),
+            ("pagesize", str(DETAIL_PAGE_SIZE)),
+        )
+        url = f"{endpoint}?{urlencode(query_values)}"
+        response = self._get(
+            url,
+            accept="application/json",
+            expected_content_types=("application/json", "text/json"),
+            max_response_bytes=max_response_bytes,
+        )
+        try:
+            return _parse_packaging_page(
+                response,
+                normalized_set_id=normalized_set_id,
+                page_number=page_number,
+                endpoint=endpoint,
+                request_url=url,
+                retrieved_at=self._utc_now(),
+            )
+        except MalformedMetadata as exc:
+            raise MalformedDetailResponse(exc.message, response=response) from exc
 
     def history(self, set_id: str) -> DailyMedHistory:
         normalized_set_id = set_id.strip()
@@ -612,6 +698,7 @@ class DailyMedConnector:
                     url,
                     headers={"Accept": accept, "User-Agent": self.user_agent},
                     timeout=self.timeout_seconds,
+                    max_bytes=maximum,
                 )
             except NetworkFailure as exc:
                 retry = (
@@ -628,6 +715,7 @@ class DailyMedConnector:
                         retry_after_seconds=None,
                         backoff_seconds=delay,
                         retry_eligible=retry,
+                        response_size_bytes=None,
                     )
                 )
                 if retry:
@@ -665,6 +753,7 @@ class DailyMedConnector:
                             retry_after_seconds=None,
                             backoff_seconds=None,
                             retry_eligible=False,
+                            response_size_bytes=len(response.body),
                         )
                     )
                     raise NetworkFailure(
@@ -685,6 +774,7 @@ class DailyMedConnector:
                         retry_after_seconds=None,
                         backoff_seconds=None,
                         retry_eligible=False,
+                        response_size_bytes=len(response.body),
                     )
                 )
                 return HTTPResponse(
@@ -733,6 +823,7 @@ class DailyMedConnector:
                     retry_after_seconds=retry_after,
                     backoff_seconds=delay,
                     retry_eligible=retry,
+                    response_size_bytes=len(response.body),
                 )
             )
             if retry:
@@ -921,6 +1012,79 @@ class DailyMedConnector:
         )
 
 
+def _parse_packaging_page(
+    response: HTTPResponse,
+    *,
+    normalized_set_id: str,
+    page_number: int,
+    endpoint: str,
+    request_url: str,
+    retrieved_at: datetime,
+) -> CandidateDetailPage:
+    payload = _decode_json_object(response.body, response.url)
+    data_value = payload.get("data")
+    if not isinstance(data_value, dict):
+        raise MalformedMetadata("DailyMed packaging response has no data object")
+    data = cast(dict[str, Any], data_value)
+    returned_set_id = data.get("setid")
+    source_version = data.get("spl_version")
+    title = data.get("title")
+    published_date = data.get("published_date")
+    products_value = data.get("products")
+    if not isinstance(returned_set_id, str) or not returned_set_id.strip():
+        raise MalformedMetadata("DailyMed packaging setid must be non-empty text")
+    if isinstance(source_version, bool) or not isinstance(source_version, (str, int)):
+        raise MalformedMetadata("DailyMed packaging spl_version must be text or an integer")
+    normalized_version = str(source_version).strip()
+    if not normalized_version:
+        raise MalformedMetadata("DailyMed packaging spl_version must not be blank")
+    if not isinstance(title, str) or not title.strip():
+        raise MalformedMetadata("DailyMed packaging title must be non-empty text")
+    if not isinstance(published_date, str) or not published_date.strip():
+        raise MalformedMetadata("DailyMed packaging published_date must be non-empty text")
+    if not isinstance(products_value, list):
+        raise MalformedMetadata("DailyMed packaging products must be an array")
+    if len(products_value) > DETAIL_PAGE_SIZE:
+        raise MalformedMetadata(
+            "DailyMed packaging page exceeds the documented page size",
+            details={"page": page_number, "product_count": len(products_value)},
+        )
+    products: list[dict[str, object]] = []
+    for index, product in enumerate(products_value):
+        if not isinstance(product, dict):
+            raise MalformedMetadata(
+                "DailyMed packaging product must be an object",
+                details={"page": page_number, "product_index": index},
+            )
+        products.append(cast(dict[str, object], product))
+    return CandidateDetailPage(
+        set_id=returned_set_id,
+        observed_source_version=normalized_version,
+        title=title.strip(),
+        published_date=published_date.strip(),
+        page_number=page_number,
+        page_size=DETAIL_PAGE_SIZE,
+        request_url=request_url,
+        canonical_request=(
+            ("endpoint", endpoint),
+            ("page", str(page_number)),
+            ("pagesize", str(DETAIL_PAGE_SIZE)),
+            ("setid", normalized_set_id.casefold()),
+        ),
+        final_url=response.url,
+        status_code=response.status_code,
+        content_type=response.headers.get("content-type", ""),
+        retrieved_at=retrieved_at,
+        etag=response.headers.get("etag"),
+        last_modified=response.headers.get("last-modified"),
+        raw_body=response.body,
+        raw_sha256=sha256_bytes(response.body),
+        payload=cast(dict[str, object], payload),
+        products=tuple(products),
+        attempts=response.attempts,
+    )
+
+
 def _validate_xml_representation(body: bytes, response: HTTPResponse) -> None:
     """Reject bytes that cannot be an XML representation before raw storage.
 
@@ -1100,6 +1264,7 @@ def _attempt_payload(values: list[HTTPAttemptEvidence]) -> list[dict[str, object
             "error_category": value.error_category,
             "retry_after_seconds": value.retry_after_seconds,
             "retry_eligible": value.retry_eligible,
+            "response_size_bytes": value.response_size_bytes,
             "status_code": value.status_code,
         }
         for value in values
@@ -1140,6 +1305,11 @@ def _attempts_from_error(error: NetworkFailure) -> tuple[HTTPAttemptEvidence, ..
                         else None
                     ),
                     retry_eligible=bool(value["retry_eligible"]),
+                    response_size_bytes=(
+                        int(value["response_size_bytes"])
+                        if value.get("response_size_bytes") is not None
+                        else None
+                    ),
                 )
             )
         except (KeyError, TypeError, ValueError):

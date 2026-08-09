@@ -13,6 +13,7 @@ from odd.connectors.dailymed.client import DailyMedConnector
 from odd.connectors.dailymed.selection import candidate_payload, select_apixaban_candidate
 from odd.constants import HISTORICAL_SELECTION_RULE_VERSION
 from odd.diffs.engine import DiffEngine
+from odd.enrichment.service import EnrichmentCoordinator
 from odd.errors import ODDError, RawHashConflict, UnsupportedDocumentStructure
 from odd.models import (
     BatchArtifactResult,
@@ -27,8 +28,18 @@ from odd.models import (
     UtilizationList,
     VerificationResult,
 )
+from odd.models.enrichment import (
+    EnrichmentArtifactResult,
+    EnrichmentBudget,
+    EnrichmentDecisionRevision,
+    EnrichmentItem,
+    EnrichmentPlan,
+    EnrichmentRun,
+    EvidenceAssertion,
+)
 from odd.parsers.spl.parser import SPLParser
 from odd.provenance.discovery_store import DiscoveryEvidenceStore
+from odd.provenance.enrichment_store import EnrichmentEvidenceStore
 from odd.provenance.hashing import sha256_bytes
 from odd.provenance.raw_store import QuarantineStore, RawStore
 from odd.storage.sqlite import SQLiteRepository
@@ -73,6 +84,17 @@ class ODDService:
             raw_store=self.raw_store,
             discovery_store=DiscoveryEvidenceStore(self.raw_store.root.parent / "evidence"),
             quarantine_store=self.quarantine_store,
+            connector=self.connector or DailyMedConnector(clock=self.clock),
+            ingest=self.ingest,
+            verify=self.verify,
+            clock=self.clock,
+        )
+        self.enrichment = EnrichmentCoordinator(
+            repository=self.repository,
+            raw_store=self.raw_store,
+            evidence_store=EnrichmentEvidenceStore(
+                self.raw_store.root.parent / "evidence"
+            ),
             connector=self.connector or DailyMedConnector(clock=self.clock),
             ingest=self.ingest,
             verify=self.verify,
@@ -417,6 +439,60 @@ class ODDService:
 
     def candidates(self, ingredient: str) -> list[dict[str, object]]:
         return self.batch.candidates(ingredient)
+
+    def enrichment_plan(
+        self,
+        parent_run_id: str,
+        *,
+        ranks: tuple[int, ...],
+        budget: EnrichmentBudget,
+    ) -> EnrichmentPlan:
+        return self.enrichment.plan(parent_run_id, ranks=ranks, budget=budget)
+
+    def enrichment_new_observation(
+        self,
+        parent_run_id: str,
+        *,
+        ranks: tuple[int, ...],
+        parent_database_sha256: str,
+    ) -> tuple[EnrichmentRun, tuple[EnrichmentItem, ...]]:
+        return self.enrichment.new_observation(
+            parent_run_id,
+            ranks=ranks,
+            parent_database_sha256=parent_database_sha256,
+        )
+
+    def enrichment_execute(
+        self,
+        run_id: str,
+        *,
+        budget: EnrichmentBudget,
+        allow_tier2: bool,
+    ) -> EnrichmentArtifactResult:
+        return self.enrichment.execute(
+            run_id, budget=budget, allow_tier2=allow_tier2
+        )
+
+    def enrichment_status(
+        self, run_id: str
+    ) -> tuple[EnrichmentRun, tuple[EnrichmentItem, ...]]:
+        return self.enrichment.status(run_id)
+
+    def enrichment_evidence(
+        self, run_id: str, *, rank: int | None = None
+    ) -> tuple[EvidenceAssertion, ...]:
+        return self.enrichment.evidence(run_id, rank=rank)
+
+    def enrichment_decisions(
+        self, run_id: str, *, rank: int | None = None
+    ) -> tuple[EnrichmentDecisionRevision, ...]:
+        return self.enrichment.decisions(run_id, rank=rank)
+
+    def enrichment_report(self, run_id: str) -> EnrichmentArtifactResult:
+        return self.enrichment.report(run_id)
+
+    def enrichment_verify(self, run_id: str) -> dict[str, bool]:
+        return self.enrichment.verify_artifacts(run_id)
 
     def _record_ingestion_failure(
         self, run_id: int, raw: RawDocument, error: ODDError

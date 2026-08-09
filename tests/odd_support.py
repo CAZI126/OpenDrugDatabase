@@ -47,7 +47,9 @@ class FixtureTransport:
         *,
         headers: Mapping[str, str],
         timeout: float,
+        max_bytes: int,
     ) -> HTTPResponse:
+        del max_bytes
         self.requests.append((url, dict(headers), timeout))
         if self.error is not None:
             raise self.error

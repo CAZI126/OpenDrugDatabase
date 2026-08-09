@@ -50,8 +50,9 @@ class TemporalFixtureTransport:
         *,
         headers: Mapping[str, str],
         timeout: float,
+        max_bytes: int,
     ) -> HTTPResponse:
-        del headers, timeout
+        del headers, timeout, max_bytes
         self.requests.append(url)
         if url.endswith("/history.json"):
             body = self.history_body

@@ -27,6 +27,7 @@ class HTTPAttemptEvidence:
     retry_after_seconds: float | None
     backoff_seconds: float | None
     retry_eligible: bool
+    response_size_bytes: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

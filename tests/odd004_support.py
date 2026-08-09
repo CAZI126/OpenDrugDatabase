@@ -106,8 +106,9 @@ class SequenceTransport:
         *,
         headers: Mapping[str, str],
         timeout: float,
+        max_bytes: int,
     ) -> HTTPResponse:
-        del headers, timeout
+        del headers, timeout, max_bytes
         self.requests.append(url)
         if not self.values:
             raise AssertionError(f"unexpected offline request: {url}")
@@ -165,8 +166,9 @@ class LiveTop10Transport:
         *,
         headers: Mapping[str, str],
         timeout: float,
+        max_bytes: int,
     ) -> HTTPResponse:
-        del headers, timeout
+        del headers, timeout, max_bytes
         self.requests.append(url)
         if "/spls.json?" in url:
             query = parse_qs(urlparse(url).query).get("drug_name", [""])[0]

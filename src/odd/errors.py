@@ -32,6 +32,10 @@ class ErrorCategory(StrEnum):
     RAW_FETCH_FAILED = "raw_fetch_failed"
     VERIFICATION_FAILED = "verification_failed"
     BATCH_ARTIFACT_CONFLICT = "batch_artifact_conflict"
+    ENRICHMENT_INCOMPLETE = "enrichment_incomplete"
+    ENRICHMENT_BUDGET_EXHAUSTED = "enrichment_budget_exhausted"
+    SOURCE_DRIFT = "source_drift"
+    ENRICHMENT_ARTIFACT_CONFLICT = "enrichment_artifact_conflict"
 
 
 class ODDError(Exception):
@@ -150,3 +154,19 @@ class VerificationFailed(ODDError):
 
 class BatchArtifactConflict(ODDError):
     category = ErrorCategory.BATCH_ARTIFACT_CONFLICT
+
+
+class EnrichmentIncomplete(ODDError):
+    category = ErrorCategory.ENRICHMENT_INCOMPLETE
+
+
+class EnrichmentBudgetExhausted(ODDError):
+    category = ErrorCategory.ENRICHMENT_BUDGET_EXHAUSTED
+
+
+class SourceDrift(ODDError):
+    category = ErrorCategory.SOURCE_DRIFT
+
+
+class EnrichmentArtifactConflict(ODDError):
+    category = ErrorCategory.ENRICHMENT_ARTIFACT_CONFLICT

@@ -285,3 +285,98 @@ def quarantine_record_id(
             ),
         )
     )
+
+
+def enrichment_run_id(observation_token: str) -> str:
+    return str(uuid5(ODD_UUID_NAMESPACE, f"enrichment-run|{observation_token}"))
+
+
+def enrichment_execution_id(run_identifier: str, execution_token: str) -> str:
+    return str(
+        uuid5(ODD_UUID_NAMESPACE, f"enrichment-execution|{run_identifier}|{execution_token}")
+    )
+
+
+def enrichment_response_id(
+    run_identifier: str,
+    candidate_identifier: str,
+    tier: str,
+    page_number: int,
+    request_identity: tuple[tuple[str, str], ...],
+    raw_sha256: str | None,
+    terminal_fingerprint: str = "",
+) -> str:
+    payload = canonical_json_bytes(
+        {
+            "candidate_id": candidate_identifier,
+            "page_number": page_number,
+            "raw_sha256": raw_sha256,
+            "request_identity": request_identity,
+            "run_id": run_identifier,
+            "terminal_fingerprint": terminal_fingerprint,
+            "tier": tier,
+        }
+    ).decode("utf-8")
+    return str(uuid5(ODD_UUID_NAMESPACE, f"enrichment-response|{payload}"))
+
+
+def enrichment_snapshot_id(
+    parent_snapshots: tuple[tuple[int, str], ...],
+    response_hashes: tuple[tuple[str, str], ...],
+    assertion_identities: tuple[str, ...],
+    *,
+    extractor_version: str,
+    extraction_rule_version: str,
+) -> str:
+    payload = canonical_json_bytes(
+        {
+            "assertion_identities": assertion_identities,
+            "extraction_rule_version": extraction_rule_version,
+            "extractor_version": extractor_version,
+            "parent_snapshots": parent_snapshots,
+            "response_hashes": response_hashes,
+        }
+    ).decode("utf-8")
+    return str(uuid5(ODD_UUID_NAMESPACE, f"enrichment-snapshot|{payload}"))
+
+
+def evidence_assertion_id(canonical_evidence_identity: str) -> str:
+    return str(uuid5(ODD_UUID_NAMESPACE, f"evidence-assertion|{canonical_evidence_identity}"))
+
+
+def evidence_identity(payload: dict[str, object]) -> str:
+    canonical = canonical_json_bytes(payload).decode("utf-8")
+    return str(uuid5(ODD_UUID_NAMESPACE, f"canonical-evidence|{canonical}"))
+
+
+def enrichment_decision_revision_id(
+    run_identifier: str,
+    rank: int,
+    snapshot_identifier: str,
+    canonical_decision_sha256: str,
+) -> str:
+    return str(
+        uuid5(
+            ODD_UUID_NAMESPACE,
+            "|".join(
+                (
+                    "enrichment-decision-revision",
+                    run_identifier,
+                    str(rank),
+                    snapshot_identifier,
+                    canonical_decision_sha256,
+                )
+            ),
+        )
+    )
+
+
+def enrichment_artifact_id(
+    run_identifier: str, report_version: str, canonical_sha256: str
+) -> str:
+    return str(
+        uuid5(
+            ODD_UUID_NAMESPACE,
+            f"enrichment-artifact|{run_identifier}|{report_version}|{canonical_sha256}",
+        )
+    )

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from odd.models import BatchReport, DocumentDiff, NormalizedDocument, SourceIdentity
+from odd.models.enrichment import EnrichmentReport
 
 
 def canonical_json_bytes(value: Any) -> bytes:
@@ -91,6 +92,29 @@ def canonical_batch_report_json_bytes(value: BatchReport) -> bytes:
                     item["ingestion_status"] = "FETCHED"
                 elif item.get("ingestion_status") == "ALREADY_INGESTED":
                     item["ingestion_status"] = "INGESTED"
+    return canonical_json_bytes(payload)
+
+
+def canonical_enrichment_report_json_bytes(value: EnrichmentReport) -> bytes:
+    """Serialize ODD-005 results without timestamps or resume-only counters."""
+
+    payload = _primitive(value)
+    payload["generated_at"] = None
+    run = payload["run"]
+    run["started_at"] = None
+    run["completed_at"] = None
+    run["canonical_report_sha256"] = None
+    run["observation_token"] = None
+    # The exact response set and its snapshot ID carry canonical transport identity.
+    # Cache hits describe how an operator reached that state and may change on resume.
+    run["cache_hit_count"] = None
+    for item in payload.get("items", []):
+        if isinstance(item, dict):
+            item["cache_hit_count"] = None
+            if item.get("ingestion_status") == "ALREADY_FETCHED":
+                item["ingestion_status"] = "FETCHED"
+            elif item.get("ingestion_status") == "ALREADY_INGESTED":
+                item["ingestion_status"] = "INGESTED"
     return canonical_json_bytes(payload)
 
 

@@ -25,6 +25,12 @@ from odd.models import (
     DiffGenerationResult,
     DiffOperation,
 )
+from odd.models.enrichment import (
+    EnrichmentArtifactResult,
+    EnrichmentBudget,
+    EnrichmentItem,
+    EnrichmentRun,
+)
 from odd.provenance.canonical import canonical_json_bytes
 from odd.service import ODDService, create_service
 
@@ -125,6 +131,42 @@ def build_parser() -> argparse.ArgumentParser:
         "candidates", help="audit accepted and rejected DailyMed candidates"
     )
     candidates.add_argument("--ingredient", required=True)
+
+    enrichment = commands.add_parser(
+        "enrichment", help="plan and run bounded ODD-005 candidate enrichment"
+    )
+    enrichment_commands = enrichment.add_subparsers(
+        dest="enrichment_command", required=True
+    )
+    enrichment_plan = enrichment_commands.add_parser("plan")
+    enrichment_plan.add_argument("--parent-run", required=True)
+    enrichment_plan.add_argument("--ranks", required=True, type=_parse_ranks)
+    _add_enrichment_budget_arguments(enrichment_plan)
+
+    enrichment_run = enrichment_commands.add_parser("run")
+    run_source = enrichment_run.add_mutually_exclusive_group(required=True)
+    run_source.add_argument("--parent-run")
+    run_source.add_argument("--resume", dest="enrichment_run_id")
+    enrichment_run.add_argument("--new-observation", action="store_true")
+    enrichment_run.add_argument("--ranks", type=_parse_ranks)
+    enrichment_run.add_argument("--parent-database-sha256")
+    enrichment_run.add_argument("--max-tier", choices=(1, 2), type=int, required=True)
+    _add_enrichment_budget_arguments(enrichment_run)
+
+    enrichment_status = enrichment_commands.add_parser("status")
+    enrichment_status.add_argument("--run", required=True, dest="enrichment_run_id")
+    enrichment_evidence = enrichment_commands.add_parser("evidence")
+    enrichment_evidence.add_argument("--run", required=True, dest="enrichment_run_id")
+    enrichment_evidence.add_argument("--rank", type=int)
+    enrichment_decisions = enrichment_commands.add_parser("decisions")
+    enrichment_decisions.add_argument("--run", required=True, dest="enrichment_run_id")
+    enrichment_decisions.add_argument("--rank", type=int)
+    enrichment_report = enrichment_commands.add_parser("report")
+    enrichment_report.add_argument("--run", required=True, dest="enrichment_run_id")
+    enrichment_report.add_argument("--format", choices=("text", "json"), default="text")
+    enrichment_report.add_argument("--output", type=Path)
+    enrichment_verify = enrichment_commands.add_parser("verify")
+    enrichment_verify.add_argument("--run", required=True, dest="enrichment_run_id")
     return parser
 
 
@@ -283,6 +325,111 @@ def run_cli(
                 "ingredient": arguments.ingredient,
                 "status": "ok",
             }
+        elif arguments.command == "enrichment":
+            if arguments.enrichment_command == "plan":
+                payload = application.enrichment_plan(
+                    arguments.parent_run,
+                    ranks=arguments.ranks,
+                    budget=_enrichment_budget(arguments),
+                )
+            elif arguments.enrichment_command == "run":
+                if arguments.parent_run is not None:
+                    if not arguments.new_observation:
+                        raise ProvenanceValidationFailure(
+                            "--parent-run requires explicit --new-observation"
+                        )
+                    if arguments.ranks is None or arguments.parent_database_sha256 is None:
+                        raise ProvenanceValidationFailure(
+                            "new enrichment observation requires --ranks and "
+                            "--parent-database-sha256"
+                        )
+                    enrichment_run_value, _enrichment_items = (
+                        application.enrichment_new_observation(
+                        arguments.parent_run,
+                        ranks=arguments.ranks,
+                        parent_database_sha256=arguments.parent_database_sha256,
+                        )
+                    )
+                    run_id = enrichment_run_value.enrichment_run_id
+                else:
+                    if arguments.new_observation:
+                        raise ProvenanceValidationFailure(
+                            "--new-observation cannot be combined with --resume"
+                        )
+                    if arguments.ranks is not None or arguments.parent_database_sha256 is not None:
+                        raise ProvenanceValidationFailure(
+                            "resume uses its stored parent/ranks and rejects parent-only options"
+                        )
+                    run_id = arguments.enrichment_run_id
+                enrichment_artifact = application.enrichment_execute(
+                    run_id,
+                    budget=_enrichment_budget(arguments),
+                    allow_tier2=arguments.max_tier == 2,
+                )
+                payload = _enrichment_artifact_payload(enrichment_artifact)
+            elif arguments.enrichment_command == "status":
+                enrichment_run_value, enrichment_items = application.enrichment_status(
+                    arguments.enrichment_run_id
+                )
+                payload = _enrichment_payload(
+                    enrichment_run_value, enrichment_items
+                )
+            elif arguments.enrichment_command == "evidence":
+                evidence_values = application.enrichment_evidence(
+                    arguments.enrichment_run_id, rank=arguments.rank
+                )
+                payload = {
+                    "assertion_count": len(evidence_values),
+                    "assertions": evidence_values,
+                    "run_id": arguments.enrichment_run_id,
+                    "status": "ok",
+                }
+            elif arguments.enrichment_command == "decisions":
+                decision_values = application.enrichment_decisions(
+                    arguments.enrichment_run_id, rank=arguments.rank
+                )
+                payload = {
+                    "decision_revision_count": len(decision_values),
+                    "decision_revisions": decision_values,
+                    "run_id": arguments.enrichment_run_id,
+                    "status": "ok",
+                }
+            elif arguments.enrichment_command == "report":
+                enrichment_artifact = application.enrichment_report(
+                    arguments.enrichment_run_id
+                )
+                if arguments.output is not None:
+                    _write_enrichment_report_file(
+                        arguments.output, arguments.format, enrichment_artifact
+                    )
+                    payload = {
+                        "canonical_report_sha256": enrichment_artifact.canonical_sha256,
+                        "output": str(arguments.output.resolve()),
+                        "status": "ok",
+                    }
+                elif arguments.format == "text":
+                    _write_enrichment_report_text(output, enrichment_artifact)
+                    return 0
+                else:
+                    payload = _enrichment_artifact_payload(enrichment_artifact)
+            elif arguments.enrichment_command == "verify":
+                verification_values = application.enrichment_verify(
+                    arguments.enrichment_run_id
+                )
+                payload = {
+                    "checks": verification_values,
+                    "ok": all(verification_values.values()),
+                    "run_id": arguments.enrichment_run_id,
+                    "status": (
+                        "ok" if all(verification_values.values()) else "failed"
+                    ),
+                }
+                _write_json(output, payload)
+                return 0 if all(verification_values.values()) else 1
+            else:  # pragma: no cover - argparse enforces the command set
+                raise AssertionError(
+                    f"unhandled enrichment command: {arguments.enrichment_command}"
+                )
         else:  # pragma: no cover - argparse enforces the command set
             raise AssertionError(f"unhandled command: {arguments.command}")
         _write_json(output, payload)
@@ -296,6 +443,135 @@ def _write_json(stream: TextIO, value: Any) -> None:
     primitive = json.loads(canonical_json_bytes(value))
     json.dump(primitive, stream, ensure_ascii=False, indent=2, sort_keys=True)
     stream.write("\n")
+
+
+def _add_enrichment_budget_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--max-requests", type=int, required=True)
+    parser.add_argument("--max-bytes", type=int, required=True)
+    parser.add_argument("--timeout", type=float, required=True)
+    parser.add_argument("--retry-limit", type=int, required=True)
+    parser.add_argument("--rate-delay", type=float, required=True)
+    parser.add_argument("--max-response-bytes", type=int, required=True)
+    parser.add_argument("--max-detail-pages", type=int, required=True)
+    parser.add_argument("--max-tier2-candidates", type=int, required=True)
+
+
+def _enrichment_budget(arguments: argparse.Namespace) -> EnrichmentBudget:
+    return EnrichmentBudget(
+        max_requests=arguments.max_requests,
+        max_downloaded_bytes=arguments.max_bytes,
+        timeout_seconds=arguments.timeout,
+        retry_limit=arguments.retry_limit,
+        inter_request_delay_seconds=arguments.rate_delay,
+        max_response_bytes=arguments.max_response_bytes,
+        max_detail_pages=arguments.max_detail_pages,
+        max_tier2_candidates=arguments.max_tier2_candidates,
+    )
+
+
+def _parse_ranks(value: str) -> tuple[int, ...]:
+    try:
+        ranks = tuple(sorted({int(item.strip()) for item in value.split(",")}))
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("ranks must be comma-separated integers") from exc
+    if not ranks or any(rank <= 0 for rank in ranks):
+        raise argparse.ArgumentTypeError("ranks must be positive comma-separated integers")
+    return ranks
+
+
+def _enrichment_payload(
+    run: EnrichmentRun, items: tuple[EnrichmentItem, ...]
+) -> dict[str, Any]:
+    return {
+        "enrichment_run": run,
+        "items": items,
+        "status": "ok",
+    }
+
+
+def _enrichment_artifact_payload(
+    artifact: EnrichmentArtifactResult,
+) -> dict[str, Any]:
+    return {
+        "already_stored": artifact.already_stored,
+        "canonical_report": json.loads(artifact.canonical_json),
+        "canonical_report_sha256": artifact.canonical_sha256,
+        "operational_report": artifact.report,
+        "status": "ok",
+    }
+
+
+def _write_enrichment_report_text(
+    stream: TextIO, artifact: EnrichmentArtifactResult
+) -> None:
+    report = artifact.report
+    run = report.run
+    stream.write("ODD-005 candidate enrichment report - not regulatory source data\n")
+    stream.write(f"Run ID: {run.enrichment_run_id}\n")
+    stream.write(f"Parent ODD-004 run: {run.parent_live_batch_run_id}\n")
+    stream.write(f"Parent canonical SHA-256: {run.parent_canonical_sha256}\n")
+    stream.write(f"Enrichment snapshot: {run.current_snapshot_id or 'none'}\n")
+    stream.write(f"Status: {run.status.value}\n")
+    stream.write(f"Canonical report SHA-256: {artifact.canonical_sha256}\n")
+    stream.write(
+        "Versions: "
+        f"policy={run.selection_rule_version}, extractor={run.extractor_version}, "
+        f"rules={run.extraction_rule_version}, connector={run.connector_version}, "
+        f"parser={run.parser_version}, normalized_schema="
+        f"{run.normalized_schema_version}, mapping={run.mapping_version}, "
+        f"database_schema={run.database_schema_version}\n"
+    )
+    stream.write(
+        "Summary: "
+        f"items={len(report.items)}, complete={run.enrichment_complete_count}, "
+        f"selected={run.selected_count}, manual_review={run.manual_review_count}, "
+        f"incomplete={run.enrichment_incomplete_count}, source_drift={run.source_drift_count}, "
+        f"ingested={run.ingested_count}, verified={run.verified_count}\n"
+    )
+    stream.write(
+        "Transport: "
+        f"requests={run.request_count}, bytes={run.downloaded_bytes}, "
+        f"cache_hits={run.cache_hit_count}, retries={run.retry_count}, "
+        f"http_429={run.http_429_count}, failures={run.failure_count}\n"
+    )
+    for item in report.items:
+        stream.write(
+            f"[{item.rank}] {item.ingredient_name}: candidates={item.candidate_total}, "
+            f"tier0_excluded={item.candidates_excluded_tier0}, "
+            f"tier1={item.tier1_complete}/{item.tier1_attempted}, "
+            f"tier2={item.tier2_complete}/{item.tier2_attempted}, "
+            f"eligible={item.candidates_proven_eligible}, "
+            f"ineligible={item.candidates_proven_ineligible}, "
+            f"unknown={item.candidates_unknown}, conflict={item.candidates_conflict}, "
+            f"drift={item.source_drift_count}, completeness="
+            f"{item.enrichment_completeness.value}, selection={item.selection_status.value}, "
+            f"set_id={item.selected_set_id or 'none'}, version="
+            f"{item.selected_source_version or 'none'}, ingest={item.ingestion_status.value}, "
+            f"parser={item.parser_compatibility.value}, "
+            f"verify={item.verification_status.value}\n"
+        )
+        stream.write(
+            f"  parent_snapshot={item.parent_discovery_snapshot_id}, "
+            f"requests={item.request_count}, bytes={item.downloaded_bytes}, "
+            f"cache_hits={item.cache_hit_count}, retries={item.retry_count}, "
+            f"http_429={item.http_429_count}, failures={item.failure_count}, "
+            f"raw_xml_sha256={item.raw_xml_sha256 or 'none'}, "
+            f"artifact_sha256={item.canonical_artifact_sha256 or 'none'}\n"
+        )
+        stream.write(f"  reason: {item.manual_review_reason}\n")
+
+
+def _write_enrichment_report_file(
+    path: Path,
+    format_name: str,
+    artifact: EnrichmentArtifactResult,
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if format_name == "json":
+        path.write_bytes(artifact.canonical_json)
+        return
+    with path.open("w", encoding="utf-8", newline="\n") as stream:
+        _write_enrichment_report_text(stream, artifact)
 
 
 def _batch_payload(run: BatchRun, items: tuple[BatchItem, ...]) -> dict[str, Any]:

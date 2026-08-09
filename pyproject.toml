@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opendrugdatabase"
-version = "0.4.0"
-description = "Provenance-preserving DailyMed ingestion, temporal diffs, and live snapshots"
+version = "0.5.0"
+description = "Provenance-preserving DailyMed ingestion, live snapshots, and enrichment"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { file = "LICENSE" }

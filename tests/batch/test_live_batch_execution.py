@@ -26,7 +26,7 @@ def test_new_live_observation_keeps_unsupported_search_fields_manual(tmp_path) -
     application, transport = live_service(tmp_path)
     run, items = application.batch_plan(LIST_ID, new_observation=True)
 
-    assert run.database_schema_version == "4"
+    assert run.database_schema_version == "5"
     assert run.discovery_complete_count == 10
     assert run.selected_count == 0
     assert run.manual_review_count == 10

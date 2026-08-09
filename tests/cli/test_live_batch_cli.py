@@ -31,7 +31,7 @@ def test_cli_distinguishes_new_observation_from_resume(tmp_path) -> None:
     run_id = payload["batch_run"]["batch_run_id"]
     assert code == 0 and stderr == ""
     assert payload["batch_run"]["observation_mode"] == "LIVE"
-    assert payload["batch_run"]["database_schema_version"] == "4"
+    assert payload["batch_run"]["database_schema_version"] == "5"
     assert payload["batch_run"]["manual_review_count"] == 10
     assert transport.discovery_request_count == 10
 
@@ -64,7 +64,7 @@ def test_cli_writes_human_and_exact_canonical_reports(tmp_path) -> None:
     assert code == 2 and stderr == ""
     assert json.loads(stdout)["canonical_report_sha256"] == artifact.canonical_sha256
     human = human_path.read_text(encoding="utf-8")
-    assert "database_schema=4" in human
+    assert "database_schema=5" in human
     assert "discovery_complete=10" in human
     assert "manual_review=10" in human
     assert "metadata_total=" in human

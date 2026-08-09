@@ -12,7 +12,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
-from odd.constants import LIVE_SNAPSHOT_VERSION
+from odd.constants import ENRICHMENT_SNAPSHOT_VERSION, LIVE_SNAPSHOT_VERSION
 from odd.diffs.source_identifiers import extract_section_xml_identifiers
 from odd.errors import (
     AmbiguousDocumentVersion,
@@ -20,6 +20,7 @@ from odd.errors import (
     DatabaseFailure,
     DiffArtifactConflict,
     DuplicateDocument,
+    EnrichmentArtifactConflict,
     ODDError,
     ProvenanceValidationFailure,
     RawHashConflict,
@@ -55,9 +56,26 @@ from odd.models import (
     UtilizationList,
     VerificationStatus,
 )
+from odd.models.enrichment import (
+    DetailResponseEvidence,
+    EnrichmentArtifactResult,
+    EnrichmentBudget,
+    EnrichmentCompleteness,
+    EnrichmentDecisionRevision,
+    EnrichmentItem,
+    EnrichmentItemStatus,
+    EnrichmentReport,
+    EnrichmentRun,
+    EnrichmentRunStatus,
+    EnrichmentTier,
+    EvidenceAssertion,
+    EvidenceResult,
+    EvidenceType,
+)
 from odd.provenance.canonical import (
     canonical_batch_report_json_bytes,
     canonical_diff_json_bytes,
+    canonical_enrichment_report_json_bytes,
     canonical_json_bytes,
     canonical_normalized_json_bytes,
     source_identity_payload,
@@ -66,6 +84,7 @@ from odd.provenance.hashing import sha256_bytes
 from odd.provenance.identifiers import (
     batch_artifact_id,
     document_lineage_id,
+    enrichment_artifact_id,
     history_snapshot_id,
     ingredient_id,
     live_candidate_snapshot_id,
@@ -75,7 +94,7 @@ from odd.provenance.identifiers import (
     version_edge_id,
 )
 
-DATABASE_SCHEMA_VERSION = "4"
+DATABASE_SCHEMA_VERSION = "5"
 _DAILYMED_DATE = re.compile(r"^([A-Za-z]{3}) (\d{2}), (\d{4})$")
 _MONTHS = {
     "Jan": 1,
@@ -658,6 +677,222 @@ MIGRATION_4_STATEMENTS = (
     "CREATE INDEX idx_live_batch_items_status ON live_batch_items(batch_run_id, rank)",
 )
 
+MIGRATION_5_STATEMENTS = (
+    """
+    CREATE TABLE enrichment_runs (
+        id TEXT PRIMARY KEY,
+        observation_token TEXT NOT NULL UNIQUE,
+        parent_live_batch_run_id TEXT NOT NULL REFERENCES live_batch_runs(id),
+        parent_canonical_sha256 TEXT NOT NULL CHECK(length(parent_canonical_sha256) = 64),
+        parent_database_sha256 TEXT NOT NULL CHECK(length(parent_database_sha256) = 64),
+        extractor_version TEXT NOT NULL,
+        extraction_rule_version TEXT NOT NULL,
+        selection_rule_version TEXT NOT NULL,
+        connector_version TEXT NOT NULL,
+        parser_version TEXT NOT NULL,
+        normalized_schema_version TEXT NOT NULL,
+        mapping_version TEXT NOT NULL,
+        database_schema_version TEXT NOT NULL,
+        target_ranks_json TEXT NOT NULL,
+        started_at TEXT NOT NULL,
+        completed_at TEXT,
+        status TEXT NOT NULL,
+        current_snapshot_id TEXT REFERENCES enrichment_snapshots(id),
+        request_count INTEGER NOT NULL CHECK(request_count >= 0),
+        downloaded_bytes INTEGER NOT NULL CHECK(downloaded_bytes >= 0),
+        cache_hit_count INTEGER NOT NULL CHECK(cache_hit_count >= 0),
+        retry_count INTEGER NOT NULL CHECK(retry_count >= 0),
+        http_429_count INTEGER NOT NULL CHECK(http_429_count >= 0),
+        failure_count INTEGER NOT NULL CHECK(failure_count >= 0),
+        enrichment_complete_count INTEGER NOT NULL CHECK(enrichment_complete_count >= 0),
+        selected_count INTEGER NOT NULL CHECK(selected_count >= 0),
+        manual_review_count INTEGER NOT NULL CHECK(manual_review_count >= 0),
+        enrichment_incomplete_count INTEGER NOT NULL CHECK(enrichment_incomplete_count >= 0),
+        source_drift_count INTEGER NOT NULL CHECK(source_drift_count >= 0),
+        ingested_count INTEGER NOT NULL CHECK(ingested_count >= 0),
+        verified_count INTEGER NOT NULL CHECK(verified_count >= 0),
+        canonical_report_sha256 TEXT CHECK(
+            canonical_report_sha256 IS NULL OR length(canonical_report_sha256) = 64
+        )
+    )
+    """,
+    """
+    CREATE TABLE enrichment_executions (
+        id TEXT PRIMARY KEY,
+        enrichment_run_id TEXT NOT NULL REFERENCES enrichment_runs(id),
+        execution_token TEXT NOT NULL,
+        max_requests INTEGER NOT NULL CHECK(max_requests > 0),
+        max_downloaded_bytes INTEGER NOT NULL CHECK(max_downloaded_bytes > 0),
+        timeout_seconds REAL NOT NULL CHECK(timeout_seconds > 0),
+        retry_limit INTEGER NOT NULL CHECK(retry_limit >= 0),
+        inter_request_delay_seconds REAL NOT NULL CHECK(inter_request_delay_seconds >= 0),
+        max_response_bytes INTEGER NOT NULL CHECK(max_response_bytes > 0),
+        max_detail_pages INTEGER NOT NULL CHECK(max_detail_pages > 0),
+        max_tier2_candidates INTEGER NOT NULL CHECK(max_tier2_candidates >= 0),
+        started_at TEXT NOT NULL,
+        completed_at TEXT,
+        status TEXT NOT NULL,
+        request_count INTEGER NOT NULL DEFAULT 0 CHECK(request_count >= 0),
+        downloaded_bytes INTEGER NOT NULL DEFAULT 0 CHECK(downloaded_bytes >= 0),
+        cache_hit_count INTEGER NOT NULL DEFAULT 0 CHECK(cache_hit_count >= 0),
+        retry_count INTEGER NOT NULL DEFAULT 0 CHECK(retry_count >= 0),
+        http_429_count INTEGER NOT NULL DEFAULT 0 CHECK(http_429_count >= 0),
+        failure_count INTEGER NOT NULL DEFAULT 0 CHECK(failure_count >= 0),
+        diagnostic_message TEXT,
+        UNIQUE(enrichment_run_id, execution_token)
+    )
+    """,
+    """
+    CREATE TABLE enrichment_snapshots (
+        id TEXT PRIMARY KEY,
+        parent_snapshots_json TEXT NOT NULL,
+        response_hashes_json TEXT NOT NULL,
+        assertion_identities_json TEXT NOT NULL,
+        snapshot_version TEXT NOT NULL,
+        completeness TEXT NOT NULL,
+        canonical_manifest_json BLOB NOT NULL,
+        canonical_manifest_sha256 TEXT NOT NULL CHECK(length(canonical_manifest_sha256) = 64),
+        created_at TEXT NOT NULL,
+        UNIQUE(canonical_manifest_sha256)
+    )
+    """,
+    """
+    CREATE TABLE enrichment_run_snapshots (
+        enrichment_run_id TEXT NOT NULL REFERENCES enrichment_runs(id),
+        enrichment_snapshot_id TEXT NOT NULL REFERENCES enrichment_snapshots(id),
+        observed_at TEXT NOT NULL,
+        PRIMARY KEY(enrichment_run_id, enrichment_snapshot_id)
+    )
+    """,
+    """
+    CREATE TABLE detail_response_evidence (
+        id TEXT PRIMARY KEY,
+        enrichment_run_id TEXT NOT NULL REFERENCES enrichment_runs(id),
+        execution_id TEXT NOT NULL REFERENCES enrichment_executions(id),
+        parent_discovery_snapshot_id TEXT NOT NULL,
+        candidate_id TEXT NOT NULL REFERENCES label_candidates(id),
+        set_id TEXT NOT NULL,
+        expected_source_version TEXT NOT NULL,
+        observed_source_version TEXT,
+        tier TEXT NOT NULL,
+        page_number INTEGER NOT NULL CHECK(page_number > 0),
+        canonical_request_json TEXT NOT NULL,
+        canonical_request_sha256 TEXT NOT NULL CHECK(length(canonical_request_sha256) = 64),
+        request_url TEXT NOT NULL,
+        final_url TEXT,
+        http_status INTEGER,
+        content_type TEXT,
+        retrieved_at TEXT NOT NULL,
+        etag TEXT,
+        last_modified TEXT,
+        raw_response BLOB,
+        raw_sha256 TEXT CHECK(raw_sha256 IS NULL OR length(raw_sha256) = 64),
+        response_size INTEGER NOT NULL CHECK(response_size >= 0),
+        attempts_json TEXT NOT NULL,
+        error_category TEXT,
+        diagnostic TEXT,
+        CHECK(
+            (raw_response IS NULL AND raw_sha256 IS NULL AND response_size = 0)
+            OR (raw_response IS NOT NULL AND raw_sha256 IS NOT NULL)
+        )
+    )
+    """,
+    """
+    CREATE UNIQUE INDEX idx_enrichment_success_response_identity
+    ON detail_response_evidence(enrichment_run_id, candidate_id, tier, page_number)
+    WHERE raw_response IS NOT NULL
+    """,
+    """
+    CREATE TABLE evidence_assertions (
+        id TEXT PRIMARY KEY,
+        canonical_evidence_identity TEXT NOT NULL UNIQUE,
+        parent_discovery_snapshot_id TEXT NOT NULL,
+        candidate_id TEXT NOT NULL REFERENCES label_candidates(id),
+        set_id TEXT NOT NULL,
+        expected_source_version TEXT NOT NULL,
+        observed_source_version TEXT,
+        evidence_type TEXT NOT NULL,
+        result TEXT NOT NULL,
+        tier TEXT NOT NULL,
+        raw_response_sha256 TEXT CHECK(
+            raw_response_sha256 IS NULL OR length(raw_response_sha256) = 64
+        ),
+        source_response_sha256s_json TEXT NOT NULL,
+        source_url_identity TEXT NOT NULL,
+        source_locator TEXT NOT NULL,
+        source_field_or_code TEXT NOT NULL,
+        extraction_rule_version TEXT NOT NULL,
+        extractor_version TEXT NOT NULL,
+        diagnostic TEXT NOT NULL,
+        retrieved_at TEXT,
+        canonical_json BLOB NOT NULL,
+        canonical_sha256 TEXT NOT NULL CHECK(length(canonical_sha256) = 64)
+    )
+    """,
+    """
+    CREATE TABLE enrichment_snapshot_assertions (
+        enrichment_snapshot_id TEXT NOT NULL REFERENCES enrichment_snapshots(id),
+        assertion_id TEXT NOT NULL REFERENCES evidence_assertions(id),
+        PRIMARY KEY(enrichment_snapshot_id, assertion_id)
+    )
+    """,
+    """
+    CREATE TABLE enrichment_item_states (
+        enrichment_run_id TEXT NOT NULL REFERENCES enrichment_runs(id),
+        rank INTEGER NOT NULL CHECK(rank > 0),
+        ingredient_id TEXT NOT NULL,
+        parent_discovery_run_id TEXT NOT NULL REFERENCES candidate_discovery_runs(id),
+        parent_discovery_snapshot_id TEXT NOT NULL,
+        parent_decision_id TEXT NOT NULL REFERENCES candidate_decisions(id),
+        item_status TEXT NOT NULL,
+        selection_status TEXT NOT NULL,
+        decision_revision_id TEXT,
+        canonical_state_json BLOB NOT NULL,
+        canonical_state_sha256 TEXT NOT NULL CHECK(length(canonical_state_sha256) = 64),
+        PRIMARY KEY(enrichment_run_id, rank)
+    )
+    """,
+    """
+    CREATE TABLE decision_revisions (
+        id TEXT PRIMARY KEY,
+        enrichment_run_id TEXT NOT NULL REFERENCES enrichment_runs(id),
+        enrichment_snapshot_id TEXT NOT NULL REFERENCES enrichment_snapshots(id),
+        parent_decision_id TEXT NOT NULL REFERENCES candidate_decisions(id),
+        previous_revision_id TEXT REFERENCES decision_revisions(id),
+        rank INTEGER NOT NULL CHECK(rank > 0),
+        ingredient_id TEXT NOT NULL,
+        selection_status TEXT NOT NULL,
+        selected_candidate_id TEXT REFERENCES label_candidates(id),
+        selected_set_id TEXT,
+        selected_source_version TEXT,
+        selection_reason TEXT NOT NULL,
+        manual_review_required INTEGER NOT NULL CHECK(manual_review_required IN (0, 1)),
+        canonical_json BLOB NOT NULL,
+        canonical_sha256 TEXT NOT NULL CHECK(length(canonical_sha256) = 64),
+        created_at TEXT NOT NULL,
+        UNIQUE(enrichment_run_id, rank, enrichment_snapshot_id)
+    )
+    """,
+    """
+    CREATE TABLE enrichment_artifacts (
+        id TEXT PRIMARY KEY,
+        enrichment_run_id TEXT NOT NULL REFERENCES enrichment_runs(id),
+        report_version TEXT NOT NULL,
+        canonical_json BLOB NOT NULL,
+        canonical_sha256 TEXT NOT NULL CHECK(length(canonical_sha256) = 64),
+        generated_at TEXT NOT NULL,
+        UNIQUE(enrichment_run_id, report_version, canonical_sha256)
+    )
+    """,
+    "CREATE INDEX idx_enrichment_items_status ON enrichment_item_states(enrichment_run_id, rank)",
+    """
+    CREATE INDEX idx_enrichment_responses_candidate
+    ON detail_response_evidence(enrichment_run_id, candidate_id, tier, page_number)
+    """,
+    "CREATE INDEX idx_evidence_candidate ON evidence_assertions(candidate_id, evidence_type)",
+    "CREATE INDEX idx_decision_revisions_rank ON decision_revisions(enrichment_run_id, rank)",
+)
+
 
 class SQLiteRepository:
     """Narrow repository with explicit transactions and read models."""
@@ -714,6 +949,19 @@ class SQLiteRepository:
                         connection.execute(
                             "INSERT INTO schema_migrations(version) VALUES (?)",
                             ("4",),
+                        )
+                        connection.commit()
+                    except Exception:
+                        connection.rollback()
+                        raise
+                if "5" not in applied:
+                    connection.execute("BEGIN IMMEDIATE")
+                    try:
+                        for statement in MIGRATION_5_STATEMENTS:
+                            connection.execute(statement)
+                        connection.execute(
+                            "INSERT INTO schema_migrations(version) VALUES (?)",
+                            ("5",),
                         )
                         connection.commit()
                     except Exception:
@@ -1981,6 +2229,918 @@ class SQLiteRepository:
         except (json.JSONDecodeError, sqlite3.Error, TypeError, ValueError) as exc:
             raise DatabaseFailure(f"SQLite live-batch artifact verification failed: {exc}") from exc
 
+    def create_enrichment_run(
+        self, run: EnrichmentRun, items: tuple[EnrichmentItem, ...]
+    ) -> bool:
+        """Create one explicit observation without altering its ODD-004 parent."""
+
+        try:
+            with self._connect() as connection:
+                connection.execute("BEGIN IMMEDIATE")
+                parent = connection.execute(
+                    "SELECT canonical_report_sha256 FROM live_batch_runs WHERE id = ?",
+                    (run.parent_live_batch_run_id,),
+                ).fetchone()
+                if parent is None:
+                    raise DatabaseFailure("ODD-005 parent live batch run does not exist")
+                if str(parent["canonical_report_sha256"] or "") != run.parent_canonical_sha256:
+                    raise DatabaseFailure("ODD-005 parent canonical hash does not match")
+                existing = connection.execute(
+                    "SELECT id FROM enrichment_runs WHERE id = ?", (run.enrichment_run_id,)
+                ).fetchone()
+                if existing is not None:
+                    connection.rollback()
+                    return False
+                connection.execute(
+                    """
+                    INSERT INTO enrichment_runs(
+                        id, observation_token, parent_live_batch_run_id,
+                        parent_canonical_sha256, parent_database_sha256,
+                        extractor_version, extraction_rule_version, selection_rule_version,
+                        connector_version, parser_version, normalized_schema_version,
+                        mapping_version, database_schema_version, target_ranks_json,
+                        started_at, completed_at, status, current_snapshot_id,
+                        request_count, downloaded_bytes, cache_hit_count, retry_count,
+                        http_429_count, failure_count, enrichment_complete_count,
+                        selected_count, manual_review_count, enrichment_incomplete_count,
+                        source_drift_count, ingested_count, verified_count,
+                        canonical_report_sha256
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                              ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    _enrichment_run_values(run),
+                )
+                for item in items:
+                    self._write_enrichment_item(connection, item, replace_existing=False)
+                connection.commit()
+                return True
+        except DatabaseFailure:
+            raise
+        except sqlite3.Error as exc:
+            raise DatabaseFailure(f"SQLite enrichment-run creation failed: {exc}") from exc
+
+    def update_enrichment_run(self, run: EnrichmentRun) -> None:
+        try:
+            with self._connect() as connection:
+                values = _enrichment_run_values(run)
+                cursor = connection.execute(
+                    """
+                    UPDATE enrichment_runs SET
+                        observation_token = ?, parent_live_batch_run_id = ?,
+                        parent_canonical_sha256 = ?, parent_database_sha256 = ?,
+                        extractor_version = ?, extraction_rule_version = ?,
+                        selection_rule_version = ?, connector_version = ?, parser_version = ?,
+                        normalized_schema_version = ?, mapping_version = ?,
+                        database_schema_version = ?, target_ranks_json = ?, started_at = ?,
+                        completed_at = ?, status = ?, current_snapshot_id = ?,
+                        request_count = ?, downloaded_bytes = ?, cache_hit_count = ?,
+                        retry_count = ?, http_429_count = ?, failure_count = ?,
+                        enrichment_complete_count = ?, selected_count = ?,
+                        manual_review_count = ?, enrichment_incomplete_count = ?,
+                        source_drift_count = ?, ingested_count = ?, verified_count = ?,
+                        canonical_report_sha256 = ?
+                    WHERE id = ?
+                    """,
+                    (*values[1:], run.enrichment_run_id),
+                )
+                if cursor.rowcount != 1:
+                    raise DatabaseFailure("ODD-005 enrichment run does not exist")
+                connection.commit()
+        except DatabaseFailure:
+            raise
+        except sqlite3.Error as exc:
+            raise DatabaseFailure(f"SQLite enrichment-run update failed: {exc}") from exc
+
+    def get_enrichment_run(self, run_id: str) -> EnrichmentRun | None:
+        try:
+            with self._connect() as connection:
+                row = connection.execute(
+                    "SELECT * FROM enrichment_runs WHERE id = ?", (run_id,)
+                ).fetchone()
+                return _enrichment_run_from_row(row) if row is not None else None
+        except (sqlite3.Error, TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise DatabaseFailure(f"SQLite enrichment-run lookup failed: {exc}") from exc
+
+    @staticmethod
+    def _write_enrichment_item(
+        connection: sqlite3.Connection,
+        item: EnrichmentItem,
+        *,
+        replace_existing: bool,
+        decision_revision_id: str | None = None,
+    ) -> None:
+        canonical = canonical_json_bytes(item)
+        digest = sha256_bytes(canonical)
+        if replace_existing:
+            cursor = connection.execute(
+                """
+                UPDATE enrichment_item_states SET
+                    ingredient_id = ?, parent_discovery_run_id = ?,
+                    parent_discovery_snapshot_id = ?, parent_decision_id = ?,
+                    item_status = ?, selection_status = ?, decision_revision_id = ?,
+                    canonical_state_json = ?, canonical_state_sha256 = ?
+                WHERE enrichment_run_id = ? AND rank = ?
+                """,
+                (
+                    item.ingredient_id,
+                    item.parent_discovery_run_id,
+                    item.parent_discovery_snapshot_id,
+                    item.parent_decision_id,
+                    item.item_status.value,
+                    item.selection_status.value,
+                    decision_revision_id,
+                    canonical,
+                    digest,
+                    item.enrichment_run_id,
+                    item.rank,
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise DatabaseFailure("ODD-005 enrichment item does not exist")
+            return
+        connection.execute(
+            """
+            INSERT INTO enrichment_item_states(
+                enrichment_run_id, rank, ingredient_id, parent_discovery_run_id,
+                parent_discovery_snapshot_id, parent_decision_id, item_status,
+                selection_status, decision_revision_id, canonical_state_json,
+                canonical_state_sha256
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                item.enrichment_run_id,
+                item.rank,
+                item.ingredient_id,
+                item.parent_discovery_run_id,
+                item.parent_discovery_snapshot_id,
+                item.parent_decision_id,
+                item.item_status.value,
+                item.selection_status.value,
+                decision_revision_id,
+                canonical,
+                digest,
+            ),
+        )
+
+    def save_enrichment_item(
+        self, item: EnrichmentItem, *, decision_revision_id: str | None = None
+    ) -> None:
+        try:
+            with self._connect() as connection:
+                connection.execute("BEGIN IMMEDIATE")
+                self._write_enrichment_item(
+                    connection,
+                    item,
+                    replace_existing=True,
+                    decision_revision_id=decision_revision_id,
+                )
+                connection.commit()
+        except DatabaseFailure:
+            raise
+        except sqlite3.Error as exc:
+            raise DatabaseFailure(f"SQLite enrichment-item update failed: {exc}") from exc
+
+    def get_enrichment_items(self, run_id: str) -> tuple[EnrichmentItem, ...]:
+        try:
+            with self._connect() as connection:
+                rows = connection.execute(
+                    """
+                    SELECT canonical_state_json, canonical_state_sha256
+                    FROM enrichment_item_states
+                    WHERE enrichment_run_id = ? ORDER BY rank
+                    """,
+                    (run_id,),
+                ).fetchall()
+                values: list[EnrichmentItem] = []
+                for row in rows:
+                    canonical = bytes(row["canonical_state_json"])
+                    if sha256_bytes(canonical) != str(row["canonical_state_sha256"]):
+                        raise DatabaseFailure("ODD-005 enrichment item hash mismatch")
+                    values.append(_enrichment_item_from_stored(json.loads(canonical)))
+                return tuple(values)
+        except DatabaseFailure:
+            raise
+        except (sqlite3.Error, TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise DatabaseFailure(f"SQLite enrichment-item lookup failed: {exc}") from exc
+
+    def start_enrichment_execution(
+        self,
+        *,
+        execution_id: str,
+        run_id: str,
+        execution_token: str,
+        budget: EnrichmentBudget,
+        started_at: datetime,
+    ) -> bool:
+        try:
+            with self._connect() as connection:
+                cursor = connection.execute(
+                    """
+                    INSERT OR IGNORE INTO enrichment_executions(
+                        id, enrichment_run_id, execution_token, max_requests,
+                        max_downloaded_bytes, timeout_seconds, retry_limit,
+                        inter_request_delay_seconds, max_response_bytes,
+                        max_detail_pages, max_tier2_candidates, started_at, status
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'RUNNING')
+                    """,
+                    (
+                        execution_id,
+                        run_id,
+                        execution_token,
+                        budget.max_requests,
+                        budget.max_downloaded_bytes,
+                        budget.timeout_seconds,
+                        budget.retry_limit,
+                        budget.inter_request_delay_seconds,
+                        budget.max_response_bytes,
+                        budget.max_detail_pages,
+                        budget.max_tier2_candidates,
+                        _iso_utc(started_at),
+                    ),
+                )
+                connection.commit()
+                return cursor.rowcount == 1
+        except sqlite3.Error as exc:
+            raise DatabaseFailure(f"SQLite enrichment execution creation failed: {exc}") from exc
+
+    def finish_enrichment_execution(
+        self,
+        execution_id: str,
+        *,
+        completed_at: datetime,
+        status: str,
+        request_count: int,
+        downloaded_bytes: int,
+        cache_hit_count: int,
+        retry_count: int,
+        http_429_count: int,
+        failure_count: int,
+        diagnostic_message: str | None,
+    ) -> None:
+        try:
+            with self._connect() as connection:
+                cursor = connection.execute(
+                    """
+                    UPDATE enrichment_executions SET
+                        completed_at = ?, status = ?, request_count = ?,
+                        downloaded_bytes = ?, cache_hit_count = ?, retry_count = ?,
+                        http_429_count = ?, failure_count = ?, diagnostic_message = ?
+                    WHERE id = ? AND completed_at IS NULL
+                    """,
+                    (
+                        _iso_utc(completed_at),
+                        status,
+                        request_count,
+                        downloaded_bytes,
+                        cache_hit_count,
+                        retry_count,
+                        http_429_count,
+                        failure_count,
+                        diagnostic_message,
+                        execution_id,
+                    ),
+                )
+                if cursor.rowcount != 1:
+                    raise DatabaseFailure("enrichment execution is absent or already complete")
+                connection.commit()
+        except DatabaseFailure:
+            raise
+        except sqlite3.Error as exc:
+            raise DatabaseFailure(f"SQLite enrichment execution update failed: {exc}") from exc
+
+    def recover_running_enrichment_executions(
+        self,
+        run_id: str,
+        *,
+        completed_at: datetime,
+        diagnostic_message: str,
+    ) -> int:
+        """Close interrupted executions using their already-retained HTTP evidence."""
+
+        try:
+            with self._connect() as connection:
+                connection.execute("BEGIN IMMEDIATE")
+                executions = connection.execute(
+                    """
+                    SELECT id FROM enrichment_executions
+                    WHERE enrichment_run_id = ? AND completed_at IS NULL
+                      AND status = 'RUNNING'
+                    ORDER BY started_at, id
+                    """,
+                    (run_id,),
+                ).fetchall()
+                for execution in executions:
+                    execution_id = str(execution["id"])
+                    responses = connection.execute(
+                        """
+                        SELECT attempts_json, error_category
+                        FROM detail_response_evidence
+                        WHERE execution_id = ? ORDER BY rowid
+                        """,
+                        (execution_id,),
+                    ).fetchall()
+                    attempts_by_response: list[list[dict[str, object]]] = []
+                    for response in responses:
+                        parsed = json.loads(str(response["attempts_json"]))
+                        if not isinstance(parsed, list) or any(
+                            not isinstance(value, dict) for value in parsed
+                        ):
+                            raise DatabaseFailure(
+                                "interrupted enrichment execution has malformed attempts"
+                            )
+                        attempts_by_response.append(parsed)
+                    attempts = tuple(
+                        attempt
+                        for response_attempts in attempts_by_response
+                        for attempt in response_attempts
+                    )
+                    downloaded_bytes = 0
+                    for attempt in attempts:
+                        size = attempt.get("response_size_bytes")
+                        if size is None:
+                            continue
+                        if (
+                            isinstance(size, bool)
+                            or not isinstance(size, int)
+                            or size < 0
+                        ):
+                            raise DatabaseFailure(
+                                "interrupted enrichment execution has an invalid byte count"
+                            )
+                        downloaded_bytes += size
+                    connection.execute(
+                        """
+                        UPDATE enrichment_executions SET
+                            completed_at = ?, status = 'FAILED_RECOVERED',
+                            request_count = ?, downloaded_bytes = ?,
+                            retry_count = ?, http_429_count = ?, failure_count = ?,
+                            diagnostic_message = ?
+                        WHERE id = ? AND completed_at IS NULL AND status = 'RUNNING'
+                        """,
+                        (
+                            _iso_utc(completed_at),
+                            len(attempts),
+                            downloaded_bytes,
+                            sum(max(0, len(value) - 1) for value in attempts_by_response),
+                            sum(attempt.get("status_code") == 429 for attempt in attempts),
+                            sum(response["error_category"] is not None for response in responses),
+                            diagnostic_message,
+                            execution_id,
+                        ),
+                    )
+                connection.commit()
+                return len(executions)
+        except DatabaseFailure:
+            raise
+        except (sqlite3.Error, TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise DatabaseFailure(
+                f"SQLite enrichment execution recovery failed: {exc}"
+            ) from exc
+
+    def store_detail_response(self, response: DetailResponseEvidence) -> bool:
+        raw = response.raw_body
+        if raw is not None and sha256_bytes(raw) != response.raw_sha256:
+            raise RawHashConflict("ODD-005 detail response SHA-256 does not match its bytes")
+        request_json = canonical_json_bytes(response.canonical_request).decode("utf-8")
+        request_digest = sha256_bytes(request_json.encode("utf-8"))
+        try:
+            with self._connect() as connection:
+                connection.execute("BEGIN IMMEDIATE")
+                if raw is not None:
+                    existing = connection.execute(
+                        """
+                        SELECT raw_response, raw_sha256 FROM detail_response_evidence
+                        WHERE enrichment_run_id = ? AND candidate_id = ? AND tier = ?
+                          AND page_number = ? AND raw_response IS NOT NULL
+                        """,
+                        (
+                            response.enrichment_run_id,
+                            response.candidate_id,
+                            response.tier.value,
+                            response.page_number,
+                        ),
+                    ).fetchone()
+                    if existing is not None:
+                        if (
+                            bytes(existing["raw_response"]) != raw
+                            or str(existing["raw_sha256"]) != response.raw_sha256
+                        ):
+                            raise RawHashConflict(
+                                "same enrichment response identity has different exact bytes"
+                            )
+                        connection.rollback()
+                        return False
+                connection.execute(
+                    """
+                    INSERT INTO detail_response_evidence(
+                        id, enrichment_run_id, execution_id,
+                        parent_discovery_snapshot_id, candidate_id, set_id,
+                        expected_source_version, observed_source_version, tier,
+                        page_number, canonical_request_json, canonical_request_sha256,
+                        request_url, final_url, http_status, content_type, retrieved_at,
+                        etag, last_modified, raw_response, raw_sha256, response_size,
+                        attempts_json, error_category, diagnostic
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                              ?, ?, ?, ?)
+                    """,
+                    (
+                        response.response_id,
+                        response.enrichment_run_id,
+                        response.execution_id,
+                        response.parent_discovery_snapshot_id,
+                        response.candidate_id,
+                        response.set_id,
+                        response.expected_source_version,
+                        response.observed_source_version,
+                        response.tier.value,
+                        response.page_number,
+                        request_json,
+                        request_digest,
+                        response.request_url,
+                        response.final_url,
+                        response.status_code,
+                        response.content_type,
+                        _iso_utc(response.retrieved_at),
+                        response.etag,
+                        response.last_modified,
+                        raw,
+                        response.raw_sha256,
+                        len(raw) if raw is not None else 0,
+                        canonical_json_bytes(response.attempts).decode("utf-8"),
+                        response.error_category,
+                        response.diagnostic,
+                    ),
+                )
+                connection.commit()
+                return True
+        except (DatabaseFailure, RawHashConflict):
+            raise
+        except sqlite3.Error as exc:
+            raise DatabaseFailure(f"SQLite detail evidence storage failed: {exc}") from exc
+
+    def get_detail_responses(
+        self,
+        run_id: str,
+        *,
+        candidate_id: str | None = None,
+        tier: EnrichmentTier | None = None,
+        successful_only: bool = False,
+    ) -> tuple[DetailResponseEvidence, ...]:
+        clauses = ["enrichment_run_id = ?"]
+        parameters: list[object] = [run_id]
+        if candidate_id is not None:
+            clauses.append("candidate_id = ?")
+            parameters.append(candidate_id)
+        if tier is not None:
+            clauses.append("tier = ?")
+            parameters.append(tier.value)
+        if successful_only:
+            clauses.append("raw_response IS NOT NULL")
+        query = (
+            "SELECT * FROM detail_response_evidence WHERE "
+            + " AND ".join(clauses)
+            + " ORDER BY candidate_id, tier, page_number, rowid"
+        )
+        try:
+            with self._connect() as connection:
+                rows = connection.execute(query, tuple(parameters)).fetchall()
+                return tuple(_detail_response_from_row(row) for row in rows)
+        except (sqlite3.Error, TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise DatabaseFailure(f"SQLite detail evidence lookup failed: {exc}") from exc
+
+    def store_enrichment_snapshot(
+        self,
+        *,
+        snapshot_id: str,
+        run_id: str,
+        parent_snapshots: tuple[tuple[int, str], ...],
+        response_hashes: tuple[tuple[str, str], ...],
+        assertions: tuple[EvidenceAssertion, ...],
+        completeness: EnrichmentCompleteness,
+        created_at: datetime,
+    ) -> bool:
+        identities = tuple(
+            sorted(assertion.canonical_evidence_identity for assertion in assertions)
+        )
+        retained_response_hashes = {raw_hash for _identity, raw_hash in response_hashes}
+        for assertion in assertions:
+            sources = assertion.source_response_sha256s
+            if assertion.raw_response_sha256 is not None and (
+                not sources or assertion.raw_response_sha256 not in sources
+            ):
+                raise RawHashConflict(
+                    "assertion raw response hash is absent from its exact source hashes"
+                )
+            if any(source not in retained_response_hashes for source in sources):
+                raise RawHashConflict(
+                    "assertion refers to exact response bytes outside its enrichment snapshot"
+                )
+        manifest = {
+            "assertion_identities": identities,
+            "completeness": completeness,
+            "parent_snapshots": parent_snapshots,
+            "response_hashes": response_hashes,
+            "snapshot_id": snapshot_id,
+            "snapshot_version": ENRICHMENT_SNAPSHOT_VERSION,
+        }
+        canonical_manifest = canonical_json_bytes(manifest)
+        manifest_digest = sha256_bytes(canonical_manifest)
+        try:
+            with self._connect() as connection:
+                connection.execute("BEGIN IMMEDIATE")
+                existing = connection.execute(
+                    "SELECT canonical_manifest_json FROM enrichment_snapshots WHERE id = ?",
+                    (snapshot_id,),
+                ).fetchone()
+                inserted = existing is None
+                if existing is not None:
+                    if bytes(existing["canonical_manifest_json"]) != canonical_manifest:
+                        raise RawHashConflict(
+                            "enrichment snapshot identity already stores different evidence"
+                        )
+                else:
+                    connection.execute(
+                        """
+                        INSERT INTO enrichment_snapshots(
+                            id, parent_snapshots_json,
+                            response_hashes_json, assertion_identities_json,
+                            snapshot_version, completeness, canonical_manifest_json,
+                            canonical_manifest_sha256, created_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            snapshot_id,
+                            canonical_json_bytes(parent_snapshots).decode("utf-8"),
+                            canonical_json_bytes(response_hashes).decode("utf-8"),
+                            canonical_json_bytes(identities).decode("utf-8"),
+                            ENRICHMENT_SNAPSHOT_VERSION,
+                            completeness.value,
+                            canonical_manifest,
+                            manifest_digest,
+                            _iso_utc(created_at),
+                        ),
+                    )
+                connection.execute(
+                    """
+                    INSERT OR IGNORE INTO enrichment_run_snapshots(
+                        enrichment_run_id, enrichment_snapshot_id, observed_at
+                    ) VALUES (?, ?, ?)
+                    """,
+                    (run_id, snapshot_id, _iso_utc(created_at)),
+                )
+                for assertion in assertions:
+                    stable = _canonical_assertion_bytes(assertion)
+                    stable_digest = sha256_bytes(stable)
+                    row = connection.execute(
+                        "SELECT canonical_json FROM evidence_assertions WHERE id = ?",
+                        (assertion.assertion_id,),
+                    ).fetchone()
+                    if row is not None and bytes(row["canonical_json"]) != stable:
+                        raise RawHashConflict(
+                            "canonical evidence identity stores different assertion bytes"
+                        )
+                    if row is None:
+                        connection.execute(
+                            """
+                            INSERT INTO evidence_assertions(
+                                id, canonical_evidence_identity,
+                                parent_discovery_snapshot_id, candidate_id, set_id,
+                                expected_source_version, observed_source_version,
+                                evidence_type, result, tier, raw_response_sha256,
+                                source_response_sha256s_json, source_url_identity,
+                                source_locator, source_field_or_code,
+                                extraction_rule_version, extractor_version, diagnostic,
+                                retrieved_at, canonical_json, canonical_sha256
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """,
+                            (
+                                assertion.assertion_id,
+                                assertion.canonical_evidence_identity,
+                                assertion.parent_discovery_snapshot_id,
+                                assertion.candidate_id,
+                                assertion.set_id,
+                                assertion.expected_source_version,
+                                assertion.observed_source_version,
+                                assertion.evidence_type.value,
+                                assertion.result.value,
+                                assertion.tier.value,
+                                assertion.raw_response_sha256,
+                                canonical_json_bytes(
+                                    assertion.source_response_sha256s
+                                ).decode("utf-8"),
+                                assertion.source_url_identity,
+                                assertion.source_locator,
+                                assertion.source_field_or_code,
+                                assertion.extraction_rule_version,
+                                assertion.extractor_version,
+                                assertion.diagnostic,
+                                _iso_utc(assertion.retrieved_at)
+                                if assertion.retrieved_at is not None
+                                else None,
+                                stable,
+                                stable_digest,
+                            ),
+                        )
+                    connection.execute(
+                        """
+                        INSERT OR IGNORE INTO enrichment_snapshot_assertions(
+                            enrichment_snapshot_id, assertion_id
+                        ) VALUES (?, ?)
+                        """,
+                        (snapshot_id, assertion.assertion_id),
+                    )
+                connection.execute(
+                    "UPDATE enrichment_runs SET current_snapshot_id = ? WHERE id = ?",
+                    (snapshot_id, run_id),
+                )
+                connection.commit()
+                return inserted
+        except (DatabaseFailure, RawHashConflict):
+            raise
+        except sqlite3.Error as exc:
+            raise DatabaseFailure(f"SQLite enrichment snapshot storage failed: {exc}") from exc
+
+    def get_enrichment_snapshot_response_hashes(
+        self, snapshot_id: str
+    ) -> tuple[tuple[str, str], ...]:
+        try:
+            with self._connect() as connection:
+                row = connection.execute(
+                    "SELECT response_hashes_json FROM enrichment_snapshots WHERE id = ?",
+                    (snapshot_id,),
+                ).fetchone()
+                if row is None:
+                    raise DatabaseFailure("ODD-005 enrichment snapshot is absent")
+                parsed = json.loads(str(row["response_hashes_json"]))
+                if not isinstance(parsed, list):
+                    raise DatabaseFailure(
+                        "ODD-005 snapshot response-hash collection is malformed"
+                    )
+                values: list[tuple[str, str]] = []
+                for value in parsed:
+                    if (
+                        not isinstance(value, list)
+                        or len(value) != 2
+                        or not all(isinstance(part, str) for part in value)
+                        or len(value[1]) != 64
+                    ):
+                        raise DatabaseFailure(
+                            "ODD-005 snapshot response-hash entry is malformed"
+                        )
+                    values.append((value[0], value[1]))
+                return tuple(values)
+        except DatabaseFailure:
+            raise
+        except (sqlite3.Error, TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise DatabaseFailure(
+                f"SQLite enrichment snapshot hash lookup failed: {exc}"
+            ) from exc
+
+    def get_enrichment_assertions(
+        self, run_id: str, snapshot_id: str | None = None
+    ) -> tuple[EvidenceAssertion, ...]:
+        try:
+            with self._connect() as connection:
+                resolved_snapshot = snapshot_id
+                if resolved_snapshot is None:
+                    row = connection.execute(
+                        "SELECT current_snapshot_id FROM enrichment_runs WHERE id = ?",
+                        (run_id,),
+                    ).fetchone()
+                    resolved_snapshot = (
+                        str(row["current_snapshot_id"])
+                        if row is not None and row["current_snapshot_id"] is not None
+                        else None
+                    )
+                if resolved_snapshot is None:
+                    return ()
+                rows = connection.execute(
+                    """
+                    SELECT ea.* FROM evidence_assertions ea
+                    JOIN enrichment_snapshot_assertions esa ON esa.assertion_id = ea.id
+                    JOIN enrichment_run_snapshots ers
+                      ON ers.enrichment_snapshot_id = esa.enrichment_snapshot_id
+                    WHERE ers.enrichment_run_id = ? AND esa.enrichment_snapshot_id = ?
+                    ORDER BY ea.candidate_id, ea.evidence_type, ea.tier, ea.id
+                    """,
+                    (run_id, resolved_snapshot),
+                ).fetchall()
+                return tuple(
+                    _evidence_assertion_from_row(row, run_id, resolved_snapshot)
+                    for row in rows
+                )
+        except (sqlite3.Error, TypeError, ValueError) as exc:
+            raise DatabaseFailure(f"SQLite evidence assertion lookup failed: {exc}") from exc
+
+    def store_decision_revision(
+        self, revision: EnrichmentDecisionRevision, *, created_at: datetime
+    ) -> bool:
+        canonical = canonical_json_bytes(revision)
+        digest = sha256_bytes(canonical)
+        try:
+            with self._connect() as connection:
+                connection.execute("BEGIN IMMEDIATE")
+                existing = connection.execute(
+                    "SELECT canonical_json FROM decision_revisions WHERE id = ?",
+                    (revision.revision_id,),
+                ).fetchone()
+                if existing is not None:
+                    if bytes(existing["canonical_json"]) != canonical:
+                        raise RawHashConflict(
+                            "decision revision identity stores different canonical bytes"
+                        )
+                    connection.rollback()
+                    return False
+                connection.execute(
+                    """
+                    INSERT INTO decision_revisions(
+                        id, enrichment_run_id, enrichment_snapshot_id,
+                        parent_decision_id, previous_revision_id, rank, ingredient_id,
+                        selection_status, selected_candidate_id, selected_set_id,
+                        selected_source_version, selection_reason,
+                        manual_review_required, canonical_json, canonical_sha256, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        revision.revision_id,
+                        revision.enrichment_run_id,
+                        revision.enrichment_snapshot_id,
+                        revision.parent_decision_id,
+                        revision.previous_revision_id,
+                        revision.rank,
+                        revision.ingredient_id,
+                        revision.selection_status.value,
+                        revision.selected_candidate_id,
+                        revision.selected_set_id,
+                        revision.selected_source_version,
+                        revision.selection_reason,
+                        int(revision.manual_review_required),
+                        canonical,
+                        digest,
+                        _iso_utc(created_at),
+                    ),
+                )
+                connection.commit()
+                return True
+        except RawHashConflict:
+            raise
+        except sqlite3.Error as exc:
+            raise DatabaseFailure(f"SQLite decision revision storage failed: {exc}") from exc
+
+    def get_decision_revisions(
+        self, run_id: str, *, rank: int | None = None
+    ) -> tuple[EnrichmentDecisionRevision, ...]:
+        query = (
+            "SELECT canonical_json, canonical_sha256 FROM decision_revisions "
+            "WHERE enrichment_run_id = ?"
+        )
+        parameters: tuple[object, ...] = (run_id,)
+        if rank is not None:
+            query += " AND rank = ?"
+            parameters = (run_id, rank)
+        query += " ORDER BY rank, rowid"
+        try:
+            with self._connect() as connection:
+                rows = connection.execute(query, parameters).fetchall()
+                values = []
+                for row in rows:
+                    canonical = bytes(row["canonical_json"])
+                    if sha256_bytes(canonical) != str(row["canonical_sha256"]):
+                        raise DatabaseFailure("decision revision canonical hash mismatch")
+                    values.append(_decision_revision_from_stored(json.loads(canonical)))
+                return tuple(values)
+        except DatabaseFailure:
+            raise
+        except (sqlite3.Error, TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise DatabaseFailure(f"SQLite decision revision lookup failed: {exc}") from exc
+
+    def store_enrichment_artifact(
+        self, report: EnrichmentReport
+    ) -> EnrichmentArtifactResult:
+        canonical = canonical_enrichment_report_json_bytes(report)
+        digest = sha256_bytes(canonical)
+        identifier = enrichment_artifact_id(
+            report.run.enrichment_run_id, report.report_version, digest
+        )
+        try:
+            with self._connect() as connection:
+                connection.execute("BEGIN IMMEDIATE")
+                existing = connection.execute(
+                    "SELECT canonical_json FROM enrichment_artifacts WHERE id = ?",
+                    (identifier,),
+                ).fetchone()
+                if existing is not None:
+                    if bytes(existing["canonical_json"]) != canonical:
+                        raise EnrichmentArtifactConflict(
+                            "enrichment artifact identity stores different canonical bytes"
+                        )
+                    connection.rollback()
+                    return EnrichmentArtifactResult(report, canonical, digest, True)
+                connection.execute(
+                    """
+                    INSERT INTO enrichment_artifacts(
+                        id, enrichment_run_id, report_version, canonical_json,
+                        canonical_sha256, generated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        identifier,
+                        report.run.enrichment_run_id,
+                        report.report_version,
+                        canonical,
+                        digest,
+                        _iso_utc(report.generated_at),
+                    ),
+                )
+                connection.execute(
+                    "UPDATE enrichment_runs SET canonical_report_sha256 = ? WHERE id = ?",
+                    (digest, report.run.enrichment_run_id),
+                )
+                connection.commit()
+                return EnrichmentArtifactResult(report, canonical, digest, False)
+        except EnrichmentArtifactConflict:
+            raise
+        except sqlite3.Error as exc:
+            raise DatabaseFailure(f"SQLite enrichment artifact storage failed: {exc}") from exc
+
+    def enrichment_artifact_integrity(self, run_id: str) -> dict[str, bool]:
+        try:
+            with self._connect() as connection:
+                row = connection.execute(
+                    """
+                    SELECT * FROM enrichment_artifacts
+                    WHERE enrichment_run_id = ? ORDER BY rowid DESC LIMIT 1
+                    """,
+                    (run_id,),
+                ).fetchone()
+                if row is None:
+                    return {
+                        "found": False,
+                        "hash_matches": False,
+                        "item_ordered": False,
+                        "run_hash_matches": False,
+                        "evidence_hashes": False,
+                        "assertion_sources": False,
+                    }
+                canonical = bytes(row["canonical_json"])
+                payload = json.loads(canonical)
+                ranks = [int(item["rank"]) for item in payload.get("items", [])]
+                run = self.get_enrichment_run(run_id)
+                evidence_rows = connection.execute(
+                    """
+                    SELECT raw_response, raw_sha256, response_size
+                    FROM detail_response_evidence
+                    WHERE enrichment_run_id = ? AND raw_response IS NOT NULL
+                    """,
+                    (run_id,),
+                ).fetchall()
+                evidence_ok = all(
+                    sha256_bytes(bytes(value["raw_response"])) == str(value["raw_sha256"])
+                    and len(bytes(value["raw_response"])) == int(value["response_size"])
+                    for value in evidence_rows
+                )
+                retained_hashes = {
+                    str(value["raw_sha256"]) for value in evidence_rows
+                }
+                assertion_rows = connection.execute(
+                    """
+                    SELECT ea.raw_response_sha256, ea.source_response_sha256s_json
+                    FROM evidence_assertions ea
+                    JOIN enrichment_snapshot_assertions esa ON esa.assertion_id = ea.id
+                    JOIN enrichment_run_snapshots ers
+                      ON ers.enrichment_snapshot_id = esa.enrichment_snapshot_id
+                    WHERE ers.enrichment_run_id = ?
+                      AND esa.enrichment_snapshot_id = ?
+                    """,
+                    (run_id, run.current_snapshot_id if run is not None else None),
+                ).fetchall()
+                assertion_sources_ok = True
+                for assertion_row in assertion_rows:
+                    sources = tuple(
+                        str(value)
+                        for value in json.loads(
+                            str(assertion_row["source_response_sha256s_json"])
+                        )
+                    )
+                    singular = _optional_text(assertion_row["raw_response_sha256"])
+                    if any(value not in retained_hashes for value in sources) or (
+                        singular is not None and singular not in sources
+                    ):
+                        assertion_sources_ok = False
+                        break
+                return {
+                    "found": True,
+                    "hash_matches": sha256_bytes(canonical) == str(row["canonical_sha256"]),
+                    "item_ordered": ranks == sorted(ranks) and len(ranks) == len(set(ranks)),
+                    "run_hash_matches": bool(
+                        run and run.canonical_report_sha256 == str(row["canonical_sha256"])
+                    ),
+                    "evidence_hashes": evidence_ok,
+                    "assertion_sources": assertion_sources_ok,
+                }
+        except (sqlite3.Error, TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise DatabaseFailure(f"SQLite enrichment integrity check failed: {exc}") from exc
+
     def store_batch_artifact(self, report: BatchReport) -> BatchArtifactResult:
         canonical = canonical_batch_report_json_bytes(report)
         digest = sha256_bytes(canonical)
@@ -3041,6 +4201,16 @@ class SQLiteRepository:
             "live_batch_runs",
             "live_batch_items",
             "live_batch_artifacts",
+            "enrichment_runs",
+            "enrichment_executions",
+            "enrichment_snapshots",
+            "enrichment_run_snapshots",
+            "detail_response_evidence",
+            "evidence_assertions",
+            "enrichment_snapshot_assertions",
+            "enrichment_item_states",
+            "decision_revisions",
+            "enrichment_artifacts",
         }
         if table not in allowed:
             raise ValueError(f"unsupported table name: {table}")
@@ -3498,6 +4668,11 @@ def _http_attempts_from_json(value: str) -> tuple[HTTPAttemptEvidence, ...]:
                     else None
                 ),
                 retry_eligible=bool(item["retry_eligible"]),
+                response_size_bytes=(
+                    int(item["response_size_bytes"])
+                    if item.get("response_size_bytes") is not None
+                    else None
+                ),
             )
         )
     return tuple(result)
@@ -3753,6 +4928,260 @@ def _live_batch_item_from_row(row: sqlite3.Row) -> BatchItem:
             str(row["evidence_verification_status"])
         ),
     )
+
+
+def _enrichment_run_values(run: EnrichmentRun) -> tuple[Any, ...]:
+    return (
+        run.enrichment_run_id,
+        run.observation_token,
+        run.parent_live_batch_run_id,
+        run.parent_canonical_sha256,
+        run.parent_database_sha256,
+        run.extractor_version,
+        run.extraction_rule_version,
+        run.selection_rule_version,
+        run.connector_version,
+        run.parser_version,
+        run.normalized_schema_version,
+        run.mapping_version,
+        run.database_schema_version,
+        canonical_json_bytes(run.target_ranks).decode("utf-8"),
+        _iso_utc(run.started_at),
+        _iso_utc(run.completed_at) if run.completed_at is not None else None,
+        run.status.value,
+        run.current_snapshot_id,
+        run.request_count,
+        run.downloaded_bytes,
+        run.cache_hit_count,
+        run.retry_count,
+        run.http_429_count,
+        run.failure_count,
+        run.enrichment_complete_count,
+        run.selected_count,
+        run.manual_review_count,
+        run.enrichment_incomplete_count,
+        run.source_drift_count,
+        run.ingested_count,
+        run.verified_count,
+        run.canonical_report_sha256,
+    )
+
+
+def _enrichment_run_from_row(row: sqlite3.Row) -> EnrichmentRun:
+    return EnrichmentRun(
+        enrichment_run_id=str(row["id"]),
+        observation_token=str(row["observation_token"]),
+        parent_live_batch_run_id=str(row["parent_live_batch_run_id"]),
+        parent_canonical_sha256=str(row["parent_canonical_sha256"]),
+        parent_database_sha256=str(row["parent_database_sha256"]),
+        extractor_version=str(row["extractor_version"]),
+        extraction_rule_version=str(row["extraction_rule_version"]),
+        selection_rule_version=str(row["selection_rule_version"]),
+        connector_version=str(row["connector_version"]),
+        parser_version=str(row["parser_version"]),
+        normalized_schema_version=str(row["normalized_schema_version"]),
+        mapping_version=str(row["mapping_version"]),
+        database_schema_version=str(row["database_schema_version"]),
+        target_ranks=tuple(int(value) for value in json.loads(str(row["target_ranks_json"]))),
+        started_at=_parse_datetime(str(row["started_at"])),
+        completed_at=(
+            _parse_datetime(str(row["completed_at"]))
+            if row["completed_at"] is not None
+            else None
+        ),
+        status=EnrichmentRunStatus(str(row["status"])),
+        current_snapshot_id=(
+            str(row["current_snapshot_id"])
+            if row["current_snapshot_id"] is not None
+            else None
+        ),
+        request_count=int(row["request_count"]),
+        downloaded_bytes=int(row["downloaded_bytes"]),
+        cache_hit_count=int(row["cache_hit_count"]),
+        retry_count=int(row["retry_count"]),
+        http_429_count=int(row["http_429_count"]),
+        failure_count=int(row["failure_count"]),
+        enrichment_complete_count=int(row["enrichment_complete_count"]),
+        selected_count=int(row["selected_count"]),
+        manual_review_count=int(row["manual_review_count"]),
+        enrichment_incomplete_count=int(row["enrichment_incomplete_count"]),
+        source_drift_count=int(row["source_drift_count"]),
+        ingested_count=int(row["ingested_count"]),
+        verified_count=int(row["verified_count"]),
+        canonical_report_sha256=(
+            str(row["canonical_report_sha256"])
+            if row["canonical_report_sha256"] is not None
+            else None
+        ),
+    )
+
+
+def _enrichment_item_from_stored(payload: dict[str, Any]) -> EnrichmentItem:
+    return EnrichmentItem(
+        enrichment_run_id=str(payload["enrichment_run_id"]),
+        rank=int(payload["rank"]),
+        ingredient_id=str(payload["ingredient_id"]),
+        ingredient_name=str(payload["ingredient_name"]),
+        parent_discovery_run_id=str(payload["parent_discovery_run_id"]),
+        parent_discovery_snapshot_id=str(payload["parent_discovery_snapshot_id"]),
+        parent_decision_id=str(payload["parent_decision_id"]),
+        candidate_total=int(payload["candidate_total"]),
+        candidates_excluded_tier0=int(payload["candidates_excluded_tier0"]),
+        tier1_attempted=int(payload["tier1_attempted"]),
+        tier1_complete=int(payload["tier1_complete"]),
+        tier2_attempted=int(payload["tier2_attempted"]),
+        tier2_complete=int(payload["tier2_complete"]),
+        candidates_proven_eligible=int(payload["candidates_proven_eligible"]),
+        candidates_proven_ineligible=int(payload["candidates_proven_ineligible"]),
+        candidates_unknown=int(payload["candidates_unknown"]),
+        candidates_conflict=int(payload["candidates_conflict"]),
+        source_drift_count=int(payload["source_drift_count"]),
+        enrichment_completeness=EnrichmentCompleteness(
+            str(payload["enrichment_completeness"])
+        ),
+        item_status=EnrichmentItemStatus(str(payload["item_status"])),
+        selection_status=SelectionStatus(str(payload["selection_status"])),
+        selected_candidate_id=_optional_text(payload.get("selected_candidate_id")),
+        selected_set_id=_optional_text(payload.get("selected_set_id")),
+        selected_source_version=_optional_text(payload.get("selected_source_version")),
+        manual_review_reason=str(payload["manual_review_reason"]),
+        request_count=int(payload["request_count"]),
+        downloaded_bytes=int(payload["downloaded_bytes"]),
+        cache_hit_count=int(payload["cache_hit_count"]),
+        retry_count=int(payload["retry_count"]),
+        http_429_count=int(payload["http_429_count"]),
+        failure_count=int(payload["failure_count"]),
+        ingestion_status=IngestionStatus(str(payload["ingestion_status"])),
+        parser_compatibility=ParserCompatibilityStatus(
+            str(payload["parser_compatibility"])
+        ),
+        verification_status=VerificationStatus(str(payload["verification_status"])),
+        document_id=_optional_text(payload.get("document_id")),
+        raw_xml_sha256=_optional_text(payload.get("raw_xml_sha256")),
+        canonical_artifact_sha256=_optional_text(
+            payload.get("canonical_artifact_sha256")
+        ),
+        diagnostic_message=_optional_text(payload.get("diagnostic_message")),
+    )
+
+
+def _detail_response_from_row(row: sqlite3.Row) -> DetailResponseEvidence:
+    return DetailResponseEvidence(
+        response_id=str(row["id"]),
+        enrichment_run_id=str(row["enrichment_run_id"]),
+        execution_id=str(row["execution_id"]),
+        parent_discovery_snapshot_id=str(row["parent_discovery_snapshot_id"]),
+        candidate_id=str(row["candidate_id"]),
+        set_id=str(row["set_id"]),
+        expected_source_version=str(row["expected_source_version"]),
+        observed_source_version=(
+            str(row["observed_source_version"])
+            if row["observed_source_version"] is not None
+            else None
+        ),
+        tier=EnrichmentTier(str(row["tier"])),
+        page_number=int(row["page_number"]),
+        canonical_request=tuple(
+            (str(pair[0]), str(pair[1]))
+            for pair in json.loads(str(row["canonical_request_json"]))
+        ),
+        request_url=str(row["request_url"]),
+        final_url=_optional_text(row["final_url"]),
+        status_code=int(row["http_status"]) if row["http_status"] is not None else None,
+        content_type=_optional_text(row["content_type"]),
+        retrieved_at=_parse_datetime(str(row["retrieved_at"])),
+        etag=_optional_text(row["etag"]),
+        last_modified=_optional_text(row["last_modified"]),
+        raw_body=bytes(row["raw_response"]) if row["raw_response"] is not None else None,
+        raw_sha256=_optional_text(row["raw_sha256"]),
+        attempts=_http_attempts_from_json(str(row["attempts_json"])),
+        error_category=_optional_text(row["error_category"]),
+        diagnostic=_optional_text(row["diagnostic"]),
+    )
+
+
+def _canonical_assertion_bytes(assertion: EvidenceAssertion) -> bytes:
+    return canonical_json_bytes(
+        {
+            "assertion_id": assertion.assertion_id,
+            "canonical_evidence_identity": assertion.canonical_evidence_identity,
+            "candidate_id": assertion.candidate_id,
+            "diagnostic": assertion.diagnostic,
+            "evidence_type": assertion.evidence_type,
+            "expected_source_version": assertion.expected_source_version,
+            "extraction_rule_version": assertion.extraction_rule_version,
+            "extractor_version": assertion.extractor_version,
+            "observed_source_version": assertion.observed_source_version,
+            "parent_discovery_snapshot_id": assertion.parent_discovery_snapshot_id,
+            "raw_response_sha256": assertion.raw_response_sha256,
+            "result": assertion.result,
+            "set_id": assertion.set_id,
+            "source_field_or_code": assertion.source_field_or_code,
+            "source_locator": assertion.source_locator,
+            "source_response_sha256s": assertion.source_response_sha256s,
+            "source_url_identity": assertion.source_url_identity,
+            "tier": assertion.tier,
+        }
+    )
+
+
+def _evidence_assertion_from_row(
+    row: sqlite3.Row, run_id: str, snapshot_id: str
+) -> EvidenceAssertion:
+    return EvidenceAssertion(
+        assertion_id=str(row["id"]),
+        canonical_evidence_identity=str(row["canonical_evidence_identity"]),
+        parent_discovery_snapshot_id=str(row["parent_discovery_snapshot_id"]),
+        enrichment_run_id=run_id,
+        enrichment_snapshot_id=snapshot_id,
+        candidate_id=str(row["candidate_id"]),
+        set_id=str(row["set_id"]),
+        expected_source_version=str(row["expected_source_version"]),
+        observed_source_version=_optional_text(row["observed_source_version"]),
+        evidence_type=EvidenceType(str(row["evidence_type"])),
+        result=EvidenceResult(str(row["result"])),
+        tier=EnrichmentTier(str(row["tier"])),
+        raw_response_sha256=_optional_text(row["raw_response_sha256"]),
+        source_url_identity=str(row["source_url_identity"]),
+        source_locator=str(row["source_locator"]),
+        source_field_or_code=str(row["source_field_or_code"]),
+        extraction_rule_version=str(row["extraction_rule_version"]),
+        extractor_version=str(row["extractor_version"]),
+        diagnostic=str(row["diagnostic"]),
+        retrieved_at=(
+            _parse_datetime(str(row["retrieved_at"]))
+            if row["retrieved_at"] is not None
+            else None
+        ),
+        source_response_sha256s=tuple(
+            str(value)
+            for value in json.loads(str(row["source_response_sha256s_json"]))
+        ),
+    )
+
+
+def _decision_revision_from_stored(
+    payload: dict[str, Any]
+) -> EnrichmentDecisionRevision:
+    return EnrichmentDecisionRevision(
+        revision_id=str(payload["revision_id"]),
+        enrichment_run_id=str(payload["enrichment_run_id"]),
+        enrichment_snapshot_id=str(payload["enrichment_snapshot_id"]),
+        parent_decision_id=str(payload["parent_decision_id"]),
+        previous_revision_id=_optional_text(payload.get("previous_revision_id")),
+        rank=int(payload["rank"]),
+        ingredient_id=str(payload["ingredient_id"]),
+        selection_status=SelectionStatus(str(payload["selection_status"])),
+        selected_candidate_id=_optional_text(payload.get("selected_candidate_id")),
+        selected_set_id=_optional_text(payload.get("selected_set_id")),
+        selected_source_version=_optional_text(payload.get("selected_source_version")),
+        selection_reason=str(payload["selection_reason"]),
+        manual_review_required=bool(payload["manual_review_required"]),
+    )
+
+
+def _optional_text(value: object) -> str | None:
+    return str(value) if value is not None else None
 
 
 def _iso_utc(value: datetime) -> str:

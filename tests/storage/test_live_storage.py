@@ -12,7 +12,7 @@ def test_live_observation_persists_pages_decisions_and_item_state(tmp_path) -> N
     application, _transport = live_service(tmp_path)
     run, items = application.batch_plan("us-top10-2023", new_observation=True)
 
-    assert application.repository.schema_versions() == ("1", "2", "3", "4")
+    assert application.repository.schema_versions() == ("1", "2", "3", "4", "5")
     assert application.repository.table_count("candidate_discovery_details") == 10
     assert application.repository.table_count("candidate_discovery_pages") == 10
     assert application.repository.table_count("live_batch_runs") == 1

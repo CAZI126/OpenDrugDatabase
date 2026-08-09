@@ -4,7 +4,7 @@ OpenDrugDatabase (ODD) is an open-source version-control foundation for global r
 knowledge. Regulatory source documents are primary data. Normalized mappings and temporal diffs
 are reproducible derivative data that retain traceability to exact source bytes.
 
-## Implemented scope: ODD-001 through ODD-004
+## Implemented scope: ODD-001 through ODD-005
 
 ODD currently implements one production-oriented United States DailyMed SPL vertical slice for
 apixaban/Eliquis.
@@ -62,6 +62,17 @@ Selected exact SPL bytes then pass through the existing raw, normalized, databas
 compatibility, and artifact verification boundaries. See the
 [ODD-004 live runbook](docs/odd004-live-runbook.md) for the checked official contract, UNKNOWN
 fields, operating limits, snapshot identity, and pilot procedure.
+
+ODD-005 enriches the candidates in a complete ODD-004 snapshot with bounded, exact-byte official
+DailyMed detail evidence. It first uses the smaller packaging metadata endpoint and considers SPL
+XML only for an explicitly capped set of candidates that may still compete. Every extracted fact
+is `PROVEN_TRUE`, `PROVEN_FALSE`, `UNKNOWN`, or `CONFLICT` and retains a JSON/XML locator,
+source identity, raw hash, and versioned extractor rule. A source-version mismatch, incomplete
+candidate coverage, conflicting evidence, missing non-repackager proof, or authoritative tie stops
+selection. Previous decisions remain immutable revisions, and successful XML is reused for ingest
+rather than downloaded again. See the
+[ODD-005 enrichment runbook](docs/odd005-enrichment-runbook.md) for the official contract,
+mandatory request/byte budgets, canary gates, source drift, resume, and report semantics.
 
 ## Installation
 
@@ -153,6 +164,24 @@ odd --data-dir ./data/live/odd004-pilot --database ./data/live/odd004-pilot/data
 observe changed live search bytes. The canonical JSON report excludes timestamps, local paths, and
 the operational run ID while retaining snapshot and decision evidence.
 
+Plan and run a bounded ODD-005 rank-1 enrichment canary on a verified copy of the ODD-004 parent:
+
+```console
+odd --data-dir ./data/live/odd005-canary --database ./data/live/odd005-canary/database/odd.sqlite3 enrichment plan --parent-run <ODD004_RUN_ID> --ranks 1 --max-requests 806 --max-bytes 220000000 --timeout 30 --retry-limit 1 --rate-delay 0.30 --max-response-bytes 262144 --max-detail-pages 2 --max-tier2-candidates 0
+odd --data-dir ./data/live/odd005-canary --database ./data/live/odd005-canary/database/odd.sqlite3 enrichment run --parent-run <ODD004_RUN_ID> --new-observation --ranks 1 --parent-database-sha256 <ODD004_DB_SHA256> --max-tier 1 --max-requests 806 --max-bytes 220000000 --timeout 30 --retry-limit 1 --rate-delay 0.30 --max-response-bytes 262144 --max-detail-pages 2 --max-tier2-candidates 0
+odd --data-dir ./data/live/odd005-canary --database ./data/live/odd005-canary/database/odd.sqlite3 enrichment run --resume <ENRICHMENT_RUN_ID> --max-tier 1 --max-requests 806 --max-bytes 220000000 --timeout 30 --retry-limit 1 --rate-delay 0.30 --max-response-bytes 262144 --max-detail-pages 2 --max-tier2-candidates 0
+odd --data-dir ./data/live/odd005-canary --database ./data/live/odd005-canary/database/odd.sqlite3 enrichment status --run <ENRICHMENT_RUN_ID>
+odd --data-dir ./data/live/odd005-canary --database ./data/live/odd005-canary/database/odd.sqlite3 enrichment evidence --run <ENRICHMENT_RUN_ID> --rank 1
+odd --data-dir ./data/live/odd005-canary --database ./data/live/odd005-canary/database/odd.sqlite3 enrichment decisions --run <ENRICHMENT_RUN_ID> --rank 1
+odd --data-dir ./data/live/odd005-canary --database ./data/live/odd005-canary/database/odd.sqlite3 enrichment report --run <ENRICHMENT_RUN_ID> --format json --output ./data/live/odd005-canary/reports/report.json
+odd --data-dir ./data/live/odd005-canary --database ./data/live/odd005-canary/database/odd.sqlite3 enrichment verify --run <ENRICHMENT_RUN_ID>
+```
+
+Every enrichment plan and execution requires explicit request, byte, timeout, retry, pacing,
+response-size, pagination, and Tier-2 caps. The shown values are an example envelope, not defaults
+or a DailyMed quota. `--resume` reuses exact cached evidence; only `--new-observation` creates a new
+enrichment run. Do not expand beyond the canary when Tier 1 leaves a large XML requirement.
+
 Planning is non-fatal even when it exposes ambiguity. End-to-end batch commands return `0` when
 all requested items verify, `2` for completed partial/unresolved results, and `1` for fatal command
 or batch failure. Successful items are committed independently and reused on resume. Ambiguous
@@ -191,6 +220,8 @@ The data boundaries are:
   batch reports live in separate derivative/evidence tables;
 - exact paginated candidate responses and their immutable manifests are stored under
   `data/evidence/dailymed/discovery/{snapshot_id}` (or beneath the selected live data root);
+- exact candidate-detail responses, four-valued assertions, enrichment snapshots, immutable
+  decision revisions, and canonical reports remain separate from the ODD-004 parent evidence;
 - unknown and absent sections are not invented or silently discarded;
 - every section diff retains old/new wording, headings, hashes, locators, concepts, and match method.
 
@@ -216,6 +247,7 @@ python scripts\verify_fixture_integrity.py
 python scripts\verify_temporal_diff.py
 python scripts\verify_odd003_utilization.py
 python scripts\verify_odd004_live_contract.py
+python scripts\verify_odd005_enrichment_contract.py
 python -m pytest tests\parsers\test_spl_parser.py::test_repeated_parsing_is_byte_deterministic
 python -m pytest tests\diffs\test_genuine_temporal_diff.py::test_canonical_diff_is_timestamp_independent_and_idempotent
 python -m pytest tests\connectors\test_dailymed_batch_selection.py::test_response_order_does_not_change_winner_or_evidence_order
@@ -225,9 +257,11 @@ python -m pytest tests\storage\test_batch_storage.py::test_fresh_and_v3_to_v4_mi
 python -m pytest tests\connectors\test_dailymed_live_discovery.py::test_discover_retrieves_and_hashes_every_advertised_page
 python -m pytest tests\batch\test_live_batch_execution.py::test_resume_never_performs_additional_candidate_discovery
 python -m pytest tests\batch\test_live_batch_execution.py::test_canonical_live_report_ignores_run_id_and_detects_tampering
+python -m pytest tests\enrichment\test_evidence_extraction.py
+python -m pytest tests\enrichment\test_enrichment_execution.py
 ```
 
-CI runs these checks independently on Python 3.12.
+CI runs these checks independently on Python 3.12 and never contacts DailyMed.
 
 ## Known limitations
 
@@ -244,6 +278,9 @@ CI runs these checks independently on Python 3.12.
   live report is an observation at retrieval time, not a permanent currentness guarantee.
 - DailyMed candidate metadata can be incomplete. ODD does not infer chemical equivalence for
   salts, esters, complexes, formulations, or combination products and may require manual review.
+- The documented DailyMed packaging detail response does not prove the absence of repackaging.
+  ODD-005 therefore keeps non-repackager status `UNKNOWN` unless a future official, versioned
+  evidence rule can prove it; it does not treat a missing code as favorable evidence.
 - `FULLY_PARSED` means no empty or unmapped sections were observed by the current parser; it is not
   clinical validation. Other explicit states report unmapped sections, unsupported structures,
   partial parsing, parser failure, or a document that was not ingested.

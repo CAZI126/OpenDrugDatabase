@@ -29,19 +29,19 @@ EXPECTED_TABLES = (
     "live_batch_items",
     "live_batch_runs",
 )
-EXPECTED_CONTRACT_SHA256 = "818da402c25d5f3abe1ecd5d763d66756c8d019e762dd8dfa9c7615082072b05"
+EXPECTED_CONTRACT_SHA256 = "7620d3580fa2c46d4e78d2d1f37c30947ae5a1af12342be15fbb814bb1eb464d"
 
 
 def main() -> None:
-    if __version__ != "0.4.0":
-        raise SystemExit(f"ODD package version is {__version__}, expected 0.4.0")
+    if __version__ != "0.5.0":
+        raise SystemExit(f"ODD package version is {__version__}, expected 0.5.0")
     repository_root = Path(__file__).resolve().parents[1]
     temporary_root = repository_root / ".tmp"
     temporary_root.mkdir(parents=True, exist_ok=True)
     with TemporaryDirectory(prefix="odd004-contract-", dir=temporary_root) as temporary:
         repository = SQLiteRepository(Path(temporary) / "contract.sqlite3")
         repository.initialize_schema()
-        if repository.schema_versions() != ("1", "2", "3", "4"):
+        if repository.schema_versions() != ("1", "2", "3", "4", "5"):
             raise SystemExit(
                 f"unexpected migrations: {repository.schema_versions()}"
             )
