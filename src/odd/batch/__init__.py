@@ -1,4 +1,4 @@
-"""ODD-003 ranked-ingredient batch orchestration."""
+"""ODD-003 offline and ODD-004 live ranked-ingredient orchestration."""
 
 from odd.batch.service import BatchCoordinator
 

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from odd.batch import BatchCoordinator
+from odd.batch.live_service import LiveBatchCoordinator
 from odd.connectors.dailymed.client import DailyMedConnector
 from odd.connectors.dailymed.selection import candidate_payload, select_apixaban_candidate
 from odd.constants import HISTORICAL_SELECTION_RULE_VERSION
@@ -27,6 +28,7 @@ from odd.models import (
     VerificationResult,
 )
 from odd.parsers.spl.parser import SPLParser
+from odd.provenance.discovery_store import DiscoveryEvidenceStore
 from odd.provenance.hashing import sha256_bytes
 from odd.provenance.raw_store import QuarantineStore, RawStore
 from odd.storage.sqlite import SQLiteRepository
@@ -60,6 +62,16 @@ class ODDService:
         self.batch = BatchCoordinator(
             repository=self.repository,
             raw_store=self.raw_store,
+            quarantine_store=self.quarantine_store,
+            connector=self.connector or DailyMedConnector(clock=self.clock),
+            ingest=self.ingest,
+            verify=self.verify,
+            clock=self.clock,
+        )
+        self.live_batch = LiveBatchCoordinator(
+            repository=self.repository,
+            raw_store=self.raw_store,
+            discovery_store=DiscoveryEvidenceStore(self.raw_store.root.parent / "evidence"),
             quarantine_store=self.quarantine_store,
             connector=self.connector or DailyMedConnector(clock=self.clock),
             ingest=self.ingest,
@@ -356,25 +368,51 @@ class ODDService:
     def utilization_show(self, list_id: str) -> UtilizationList:
         return self.batch.utilization_show(list_id)
 
-    def batch_plan(self, list_id: str) -> tuple[BatchRun, tuple[BatchItem, ...]]:
+    def batch_plan(
+        self,
+        list_id: str | None = None,
+        *,
+        new_observation: bool = False,
+        run_id: str | None = None,
+    ) -> tuple[BatchRun, tuple[BatchItem, ...]]:
+        if new_observation:
+            if list_id is None or run_id is not None:
+                raise ValueError("new live observation requires list_id and no run_id")
+            return self.live_batch.new_observation(list_id)
+        if run_id is not None:
+            return self.live_batch.resume_plan(run_id)
+        if list_id is None:
+            raise ValueError("legacy batch plan requires list_id")
         return self.batch.plan(list_id)
 
-    def batch_fetch(self, list_id: str) -> tuple[BatchRun, tuple[BatchItem, ...]]:
-        return self.batch.fetch(list_id)
+    def batch_fetch(
+        self, list_id: str | None = None, *, run_id: str | None = None
+    ) -> tuple[BatchRun, tuple[BatchItem, ...]]:
+        return self.live_batch.fetch(run_id) if run_id else self.batch.fetch(_required(list_id))
 
-    def batch_ingest(self, list_id: str) -> tuple[BatchRun, tuple[BatchItem, ...]]:
-        return self.batch.ingest(list_id)
+    def batch_ingest(
+        self, list_id: str | None = None, *, run_id: str | None = None
+    ) -> tuple[BatchRun, tuple[BatchItem, ...]]:
+        return self.live_batch.ingest(run_id) if run_id else self.batch.ingest(_required(list_id))
 
-    def batch_verify(self, list_id: str) -> tuple[BatchRun, tuple[BatchItem, ...]]:
-        return self.batch.verify(list_id)
+    def batch_verify(
+        self, list_id: str | None = None, *, run_id: str | None = None
+    ) -> tuple[BatchRun, tuple[BatchItem, ...]]:
+        return self.live_batch.verify(run_id) if run_id else self.batch.verify(_required(list_id))
 
-    def batch_run(self, list_id: str) -> BatchArtifactResult:
-        return self.batch.run(list_id)
+    def batch_run(
+        self, list_id: str | None = None, *, run_id: str | None = None
+    ) -> BatchArtifactResult:
+        return self.live_batch.run(run_id) if run_id else self.batch.run(_required(list_id))
 
     def batch_status(self, run_id: str) -> tuple[BatchRun, tuple[BatchItem, ...]]:
+        if self.repository.get_live_batch_run(run_id) is not None:
+            return self.live_batch.status(run_id)
         return self.batch.status(run_id)
 
     def batch_report(self, run_id: str) -> BatchArtifactResult:
+        if self.repository.get_live_batch_run(run_id) is not None:
+            return self.live_batch.report(run_id)
         return self.batch.report(run_id)
 
     def candidates(self, ingredient: str) -> list[dict[str, object]]:
@@ -426,3 +464,9 @@ def create_service(
         connector=connector,
         clock=clock,
     )
+
+
+def _required(value: str | None) -> str:
+    if value is None:
+        raise ValueError("batch list_id is required when no live run_id is provided")
+    return value

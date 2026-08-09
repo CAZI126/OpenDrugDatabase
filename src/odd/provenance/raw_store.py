@@ -234,6 +234,7 @@ class RawStore:
     ) -> dict[str, Any]:
         retrieval: dict[str, Any] = {
             "headers": download.headers,
+            "http_attempts": download.http_attempts,
             "http_status": download.status_code,
             "response_byte_length": len(
                 download.container_body if download.container_body is not None else download.body

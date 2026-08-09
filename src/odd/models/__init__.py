@@ -8,6 +8,12 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
+from odd.models.discovery import (
+    CandidateDiscoveryPage,
+    DiscoveryCompleteness,
+    HTTPAttemptEvidence,
+)
+
 
 class SectionContentStatus(StrEnum):
     PRESENT = "present"
@@ -131,6 +137,17 @@ class CandidateLookup:
     retrieved_at: datetime
     raw_body: bytes
     payload: dict[str, Any]
+    pages: tuple[CandidateDiscoveryPage, ...] = ()
+    canonical_request: tuple[tuple[str, str], ...] = ()
+    snapshot_id: str | None = None
+    metadata_total_elements: int | None = None
+    retrieved_candidate_count: int | None = None
+    total_pages: int | None = None
+    completeness: DiscoveryCompleteness = DiscoveryCompleteness.UNKNOWN
+    duplicate_count: int = 0
+    metadata_conflict_count: int = 0
+    diagnostic_message: str | None = None
+    failure_attempts: tuple[HTTPAttemptEvidence, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -142,6 +159,7 @@ class DownloadedSource:
     body: bytes
     status_code: int
     headers: dict[str, str]
+    http_attempts: tuple[HTTPAttemptEvidence, ...] = ()
     container_body: bytes | None = None
     container_format: str | None = None
     container_member: str | None = None
@@ -239,6 +257,7 @@ from odd.models.diff import (  # noqa: E402  (base models must exist before re-e
 )
 
 __all__ = [
+    "CandidateDiscoveryPage",
     "CandidateLookup",
     "BatchArtifactResult",
     "BatchItem",
@@ -264,6 +283,8 @@ __all__ = [
     "DocumentMetadataChange",
     "DownloadedSource",
     "DiscoveryStatus",
+    "DiscoveryCompleteness",
+    "HTTPAttemptEvidence",
     "IngredientIdentity",
     "IngredientIdentityStatus",
     "IngestionStatus",

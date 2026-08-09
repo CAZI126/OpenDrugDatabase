@@ -1,6 +1,8 @@
 # DailyMed test fixtures
 
-These files are intentionally small, offline inputs for ODD-001 through ODD-003 tests. They are not
+These files are intentionally small, offline inputs for ODD-001 through ODD-003 tests. ODD-004
+reuses them only to construct explicitly synthetic SPL bodies and builds official-shape pagination
+responses in test code; it adds no live response fixture. These files are not
 a DailyMed corpus mirror, and retaining them here is not a general determination about
 redistribution rights for DailyMed collections.
 

@@ -82,6 +82,15 @@ def canonical_batch_report_json_bytes(value: BatchReport) -> bytes:
     batch_run["started_at"] = None
     batch_run["completed_at"] = None
     batch_run["canonical_report_sha256"] = None
+    if batch_run.get("observation_mode") == "LIVE":
+        batch_run["batch_run_id"] = None
+        for item in payload.get("items", []):
+            if isinstance(item, dict):
+                item["batch_run_id"] = None
+                if item.get("ingestion_status") == "ALREADY_FETCHED":
+                    item["ingestion_status"] = "FETCHED"
+                elif item.get("ingestion_status") == "ALREADY_INGESTED":
+                    item["ingestion_status"] = "INGESTED"
     return canonical_json_bytes(payload)
 
 

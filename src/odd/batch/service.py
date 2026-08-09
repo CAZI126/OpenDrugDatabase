@@ -634,6 +634,7 @@ def _selection_error_category(selection: CandidateSelection) -> str | None:
         SelectionStatus.NO_ACCEPTABLE_CANDIDATE: ErrorCategory.NO_ACCEPTABLE_CANDIDATE.value,
         SelectionStatus.MULTIPLE_EQUIVALENT_CANDIDATES: ErrorCategory.AMBIGUOUS_SELECTION.value,
         SelectionStatus.AMBIGUOUS_REQUIRES_REVIEW: ErrorCategory.AMBIGUOUS_SELECTION.value,
+        SelectionStatus.MANUAL_REVIEW_REQUIRED: ErrorCategory.AMBIGUOUS_SELECTION.value,
         SelectionStatus.METADATA_INVALID: ErrorCategory.CANDIDATE_METADATA_INVALID.value,
         SelectionStatus.FETCH_FAILED: ErrorCategory.CANDIDATE_LOOKUP_FAILED.value,
     }.get(selection.selection_status)
@@ -713,6 +714,7 @@ def _is_unresolved(item: BatchItem) -> bool:
         SelectionStatus.NO_ACCEPTABLE_CANDIDATE,
         SelectionStatus.MULTIPLE_EQUIVALENT_CANDIDATES,
         SelectionStatus.AMBIGUOUS_REQUIRES_REVIEW,
+        SelectionStatus.MANUAL_REVIEW_REQUIRED,
     }
 
 

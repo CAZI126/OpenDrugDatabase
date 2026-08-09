@@ -1,4 +1,4 @@
-"""Deterministic, non-clinical DailyMed candidate classification for ODD-003."""
+"""Deterministic, non-clinical DailyMed candidate classification for ODD-003/004."""
 
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ from odd.models import (
     CandidateLookup,
     CandidateSelection,
     DailyMedCandidate,
+    DiscoveryCompleteness,
     IngredientIdentity,
     SelectionStatus,
 )
@@ -65,7 +66,7 @@ _REASON_BY_CLASSIFICATION = {
         "salt or formulation variant is not treated as chemically equivalent"
     ),
     CandidateClassification.NON_HUMAN_PRODUCT: "non-human product is outside this validation set",
-    CandidateClassification.OTC_PRODUCT: "ODD-003 selection policy requires a prescription product",
+    CandidateClassification.OTC_PRODUCT: "ODD selection policy requires a prescription product",
     CandidateClassification.REPACKAGED_PRODUCT: (
         "repackaged labels are excluded from the validation-label policy"
     ),
@@ -98,7 +99,7 @@ def classify_and_select_candidates(
     """Classify every result and select only one uniquely highest supported candidate."""
 
     lookup_sha256 = sha256_bytes(lookup.raw_body)
-    discovery_identifier = candidate_discovery_id(
+    discovery_identifier = lookup.snapshot_id or candidate_discovery_id(
         utilization_list_id,
         identity.ingredient_id,
         connector_version,
@@ -136,6 +137,43 @@ def classify_and_select_candidates(
         evidence.append(classified)
 
     decision_identifier = candidate_decision_id(discovery_identifier, selection_rule_version)
+    if lookup.completeness in {
+        DiscoveryCompleteness.INCOMPLETE,
+        DiscoveryCompleteness.INVALID,
+    }:
+        evidence = [
+            replace(
+                item,
+                classifications=_ordered_classifications(
+                    (*item.classifications, CandidateClassification.AMBIGUOUS)
+                ),
+                accepted_for_selection=False,
+                rejection_reasons=(
+                    *item.rejection_reasons,
+                    "candidate discovery is not a complete, valid pagination snapshot",
+                ),
+            )
+            for item in evidence
+        ]
+        return CandidateSelection(
+            decision_id=decision_identifier,
+            discovery_run_id=discovery_identifier,
+            ingredient_id=identity.ingredient_id,
+            selection_rule_version=selection_rule_version,
+            selection_status=SelectionStatus.MANUAL_REVIEW_REQUIRED,
+            selected_candidate_id=None,
+            selected_set_id=None,
+            selected_source_version=None,
+            selection_reason=(
+                "Automatic selection is prohibited because candidate discovery is "
+                f"{lookup.completeness.value}: "
+                f"{lookup.diagnostic_message or 'no complete snapshot was proven'}."
+            ),
+            applied_rules=SELECTION_RULES,
+            manual_review_required=True,
+            selection_scope=SELECTION_SCOPE,
+            candidates=tuple(evidence),
+        )
     if not evidence:
         return CandidateSelection(
             decision_id=decision_identifier,
@@ -155,18 +193,27 @@ def classify_and_select_candidates(
 
     acceptable = [item for item in evidence if item.accepted_for_selection]
     if not acceptable:
+        live_profile = any(
+            isinstance(item.raw_metadata.get("_odd_live_evidence"), dict)
+            for item in evidence
+        )
         return CandidateSelection(
             decision_id=decision_identifier,
             discovery_run_id=discovery_identifier,
             ingredient_id=identity.ingredient_id,
             selection_rule_version=selection_rule_version,
-            selection_status=SelectionStatus.NO_ACCEPTABLE_CANDIDATE,
+            selection_status=(
+                SelectionStatus.MANUAL_REVIEW_REQUIRED
+                if live_profile
+                else SelectionStatus.NO_ACCEPTABLE_CANDIDATE
+            ),
             selected_candidate_id=None,
             selected_set_id=None,
             selected_source_version=None,
             selection_reason=(
                 f"{len(evidence)} candidate(s) were retained, but none satisfied all explicit "
-                "human/current/prescription/single-ingredient metadata rules."
+                "human/current/prescription/single-ingredient metadata rules; unsupported "
+                "DailyMed search fields remain UNKNOWN and require manual review."
             ),
             applied_rules=SELECTION_RULES,
             manual_review_required=True,
@@ -368,7 +415,11 @@ def _classify_candidate(
         dosage_form,
         route,
     )
-    if any(not value for value in required_values):
+    live_profile = isinstance(metadata.get("_odd_live_evidence"), dict)
+    repackaged_supported = isinstance(repackaged_value, bool)
+    if any(not value for value in required_values) or (
+        live_profile and not repackaged_supported
+    ):
         classifications.append(CandidateClassification.MISSING_REQUIRED_METADATA)
     if duplicate_of_candidate_id is not None:
         classifications.append(CandidateClassification.DUPLICATE_CANDIDATE)

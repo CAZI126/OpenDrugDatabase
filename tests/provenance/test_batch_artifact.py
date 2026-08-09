@@ -37,7 +37,8 @@ def test_canonical_batch_report_retains_version_identities(tmp_path: Path) -> No
     application, _transport = odd003_service(tmp_path)
     artifact = application.batch_run("us-top10-2023")
     payload = artifact.canonical_json.decode("utf-8")
-    assert '"selection_rule_version":"dailymed-top10-validation-selection/1.0.0"' in payload
+    assert '"selection_rule_version":"dailymed-top10-validation-selection/2.0.0"' in payload
+    assert '"database_schema_version":"3"' in payload
     assert '"parser_version":"spl-parser/1.0.0"' in payload
     assert '"schema_version":"odd-normalized/1.0.0"' in payload
     assert '"mapping_version":"spl-section-mapping/1.0.0"' in payload

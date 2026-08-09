@@ -1,4 +1,4 @@
-"""ODD-003 schema-v3 persistence, migration, and integrity tests."""
+"""ODD-003/v3 and additive ODD-004/v4 persistence and integrity tests."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+import odd.storage.sqlite as sqlite_storage
 from odd.errors import BatchArtifactConflict, DatabaseFailure
 from odd.storage.sqlite import SQLiteRepository
 from odd.utilization import load_utilization_list
@@ -25,8 +26,16 @@ V3_TABLES = (
     "utilization_lists",
 )
 
+V4_TABLES = (
+    "live_batch_artifacts",
+    "live_batch_items",
+    "live_batch_runs",
+    "candidate_discovery_pages",
+    "candidate_discovery_details",
+)
 
-def test_schema_three_creates_only_additive_batch_tables(tmp_path: Path) -> None:
+
+def test_schema_four_keeps_v3_and_adds_only_live_tables(tmp_path: Path) -> None:
     repository = SQLiteRepository(tmp_path / "odd.sqlite3")
     repository.initialize_schema()
     with sqlite3.connect(repository.path) as connection:
@@ -37,7 +46,8 @@ def test_schema_three_creates_only_additive_batch_tables(tmp_path: Path) -> None
             )
         }
     assert set(V3_TABLES) <= tables
-    assert repository.schema_versions() == ("1", "2", "3")
+    assert set(V4_TABLES) <= tables
+    assert repository.schema_versions() == ("1", "2", "3", "4")
 
 
 def test_fresh_and_v2_migrated_schema_contracts_match(tmp_path: Path) -> None:
@@ -48,9 +58,9 @@ def test_fresh_and_v2_migrated_schema_contracts_match(tmp_path: Path) -> None:
 
     with sqlite3.connect(migrated.path) as connection:
         connection.execute("PRAGMA foreign_keys = OFF")
-        for table in V3_TABLES:
+        for table in (*V4_TABLES, *V3_TABLES):
             connection.execute(f"DROP TABLE {table}")
-        connection.execute("DELETE FROM schema_migrations WHERE version = '3'")
+        connection.execute("DELETE FROM schema_migrations WHERE version IN ('3', '4')")
         connection.commit()
     migrated.initialize_schema()
 
@@ -67,8 +77,81 @@ def test_fresh_and_v2_migrated_schema_contracts_match(tmp_path: Path) -> None:
                 )
             )
 
-    assert migrated.schema_versions() == ("1", "2", "3")
+    assert migrated.schema_versions() == ("1", "2", "3", "4")
     assert contract(migrated) == contract(fresh)
+
+
+def test_fresh_and_v3_to_v4_migrated_schema_contracts_match(tmp_path: Path) -> None:
+    fresh = SQLiteRepository(tmp_path / "fresh.sqlite3")
+    migrated = SQLiteRepository(tmp_path / "migrated.sqlite3")
+    fresh.initialize_schema()
+    migrated.initialize_schema()
+    assert migrated.store_utilization_list(load_utilization_list())
+
+    with sqlite3.connect(migrated.path) as connection:
+        connection.execute("PRAGMA foreign_keys = OFF")
+        for table in V4_TABLES:
+            connection.execute(f"DROP TABLE {table}")
+        connection.execute("DELETE FROM schema_migrations WHERE version = '4'")
+        connection.commit()
+    migrated.initialize_schema()
+
+    def contract(repository: SQLiteRepository) -> tuple[tuple[object, ...], ...]:
+        with sqlite3.connect(repository.path) as connection:
+            return tuple(
+                connection.execute(
+                    """
+                    SELECT type, name, tbl_name, sql
+                    FROM sqlite_master
+                    WHERE name NOT LIKE 'sqlite_%'
+                    ORDER BY type, name
+                    """
+                )
+            )
+
+    assert migrated.schema_versions() == ("1", "2", "3", "4")
+    assert migrated.table_count("utilization_entries") == 10
+    assert contract(migrated) == contract(fresh)
+
+
+def test_v4_migration_failure_rolls_back_the_entire_schema_change(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repository = SQLiteRepository(tmp_path / "rollback.sqlite3")
+    repository.initialize_schema()
+    assert repository.store_utilization_list(load_utilization_list())
+    with sqlite3.connect(repository.path) as connection:
+        connection.execute("PRAGMA foreign_keys = OFF")
+        for table in V4_TABLES:
+            connection.execute(f"DROP TABLE {table}")
+        connection.execute("DELETE FROM schema_migrations WHERE version = '4'")
+        connection.commit()
+    monkeypatch.setattr(
+        sqlite_storage,
+        "MIGRATION_4_STATEMENTS",
+        (
+            "CREATE TABLE migration_four_probe (id INTEGER PRIMARY KEY)",
+            "THIS IS NOT VALID SQL",
+        ),
+    )
+
+    with pytest.raises(DatabaseFailure):
+        repository.initialize_schema()
+
+    with sqlite3.connect(repository.path) as connection:
+        probe = connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+            ("migration_four_probe",),
+        ).fetchone()
+        version = connection.execute(
+            "SELECT 1 FROM schema_migrations WHERE version = '4'"
+        ).fetchone()
+        utilization_count = connection.execute(
+            "SELECT COUNT(*) FROM utilization_entries"
+        ).fetchone()[0]
+    assert probe is None
+    assert version is None
+    assert utilization_count == 10
 
 
 def test_utilization_data_is_separate_from_regulatory_documents(tmp_path: Path) -> None:
@@ -155,12 +238,12 @@ def test_v2_to_v3_migration_preserves_source_diff_and_verification(tmp_path: Pat
     section_count = application.repository.table_count("source_sections")
     with sqlite3.connect(application.repository.path) as connection:
         connection.execute("PRAGMA foreign_keys = OFF")
-        for table in V3_TABLES:
+        for table in (*V4_TABLES, *V3_TABLES):
             connection.execute(f"DROP TABLE {table}")
-        connection.execute("DELETE FROM schema_migrations WHERE version = '3'")
+        connection.execute("DELETE FROM schema_migrations WHERE version IN ('3', '4')")
         connection.commit()
     application.repository.initialize_schema()
-    assert application.repository.schema_versions() == ("1", "2", "3")
+    assert application.repository.schema_versions() == ("1", "2", "3", "4")
     assert application.repository.table_count("source_documents") == source_count
     assert application.repository.table_count("source_sections") == section_count
     assert application.repository.get_diff_artifact(diff.diff.diff_id) is not None

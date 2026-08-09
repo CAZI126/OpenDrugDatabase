@@ -4,7 +4,7 @@ OpenDrugDatabase (ODD) is an open-source version-control foundation for global r
 knowledge. Regulatory source documents are primary data. Normalized mappings and temporal diffs
 are reproducible derivative data that retain traceability to exact source bytes.
 
-## Implemented scope: ODD-001 through ODD-003
+## Implemented scope: ODD-001 through ODD-004
 
 ODD currently implements one production-oriented United States DailyMed SPL vertical slice for
 apixaban/Eliquis.
@@ -45,13 +45,23 @@ so they are intentionally omitted.
 
 For each ingredient ODD preserves the exact lookup response, classifies every candidate, records
 accepted and rejected evidence, and either selects one validation label or exposes an unresolved
-state. The `dailymed-top10-validation-selection/1.0.0` policy requires explicit human, current,
+state. The `dailymed-top10-validation-selection/2.0.0` policy requires explicit human, current,
 prescription, single-ingredient metadata; excludes combinations, repackaged, archived, non-human,
 OTC, incomplete, and unsupported candidates; then prefers exact name, higher numeric source
 version, and later publication date. Candidates still tied on authoritative fields require manual
 review—response order and lexical `set_id` never manufacture a winner. One selected label is only
 one deterministic validation label; it does not represent every formulation, route, manufacturer,
 or product for that ingredient.
+
+ODD-004 applies that policy to explicit observations of the official DailyMed v2 API. It retrieves
+and hashes every advertised candidate page, validates totals and duplicate/conflicting results,
+stores an immutable snapshot in files and additive SQLite schema v4 tables, and resumes without
+mixing later search responses into the observation. Missing API metadata, incomplete pagination,
+and equal supported candidates become `MANUAL_REVIEW_REQUIRED`; no command forces a winner.
+Selected exact SPL bytes then pass through the existing raw, normalized, database, parser-
+compatibility, and artifact verification boundaries. See the
+[ODD-004 live runbook](docs/odd004-live-runbook.md) for the checked official contract, UNKNOWN
+fields, operating limits, snapshot identity, and pilot procedure.
 
 ## Installation
 
@@ -127,6 +137,22 @@ odd batch report --run <BATCH_RUN_ID> --format json
 odd candidates --ingredient albuterol
 ```
 
+Create a distinct live observation only with the explicit flag, then use its run ID for every
+later phase. Keep live source and database artifacts under an ignored local directory:
+
+```console
+odd --data-dir ./data/live/odd004-pilot --database ./data/live/odd004-pilot/database/odd.sqlite3 batch plan --list us-top10-2023 --new-observation
+odd --data-dir ./data/live/odd004-pilot --database ./data/live/odd004-pilot/database/odd.sqlite3 batch plan --resume <LIVE_RUN_ID>
+odd --data-dir ./data/live/odd004-pilot --database ./data/live/odd004-pilot/database/odd.sqlite3 batch run --run <LIVE_RUN_ID>
+odd --data-dir ./data/live/odd004-pilot --database ./data/live/odd004-pilot/database/odd.sqlite3 batch status --run <LIVE_RUN_ID>
+odd --data-dir ./data/live/odd004-pilot --database ./data/live/odd004-pilot/database/odd.sqlite3 batch report --run <LIVE_RUN_ID> --format text --output ./data/live/odd004-pilot/reports/report.txt
+odd --data-dir ./data/live/odd004-pilot --database ./data/live/odd004-pilot/database/odd.sqlite3 batch report --run <LIVE_RUN_ID> --format json --output ./data/live/odd004-pilot/reports/report.json
+```
+
+`--resume` never performs candidate discovery. Only another explicit `--new-observation` may
+observe changed live search bytes. The canonical JSON report excludes timestamps, local paths, and
+the operational run ID while retaining snapshot and decision evidence.
+
 Planning is non-fatal even when it exposes ambiguity. End-to-end batch commands return `0` when
 all requested items verify, `2` for completed partial/unresolved results, and `1` for fatal command
 or batch failure. Successful items are committed independently and reused on resume. Ambiguous
@@ -163,6 +189,8 @@ The data boundaries are:
 - temporal diffs are generated artifacts stored separately from regulatory source tables;
 - utilization ranks, candidate evidence, batch state, parser-compatibility results, and canonical
   batch reports live in separate derivative/evidence tables;
+- exact paginated candidate responses and their immutable manifests are stored under
+  `data/evidence/dailymed/discovery/{snapshot_id}` (or beneath the selected live data root);
 - unknown and absent sections are not invented or silently discarded;
 - every section diff retains old/new wording, headings, hashes, locators, concepts, and match method.
 
@@ -187,11 +215,16 @@ python -m mypy src/odd
 python scripts\verify_fixture_integrity.py
 python scripts\verify_temporal_diff.py
 python scripts\verify_odd003_utilization.py
+python scripts\verify_odd004_live_contract.py
 python -m pytest tests\parsers\test_spl_parser.py::test_repeated_parsing_is_byte_deterministic
 python -m pytest tests\diffs\test_genuine_temporal_diff.py::test_canonical_diff_is_timestamp_independent_and_idempotent
 python -m pytest tests\connectors\test_dailymed_batch_selection.py::test_response_order_does_not_change_winner_or_evidence_order
 python -m pytest tests\batch\test_batch_execution.py::test_batch_report_items_and_diagnostics_are_deterministic
 python -m pytest tests\storage\test_batch_storage.py::test_v2_to_v3_migration_preserves_source_diff_and_verification
+python -m pytest tests\storage\test_batch_storage.py::test_fresh_and_v3_to_v4_migrated_schema_contracts_match
+python -m pytest tests\connectors\test_dailymed_live_discovery.py::test_discover_retrieves_and_hashes_every_advertised_page
+python -m pytest tests\batch\test_live_batch_execution.py::test_resume_never_performs_additional_candidate_discovery
+python -m pytest tests\batch\test_live_batch_execution.py::test_canonical_live_report_ignores_run_id_and_detects_tampering
 ```
 
 CI runs these checks independently on Python 3.12.
@@ -207,7 +240,8 @@ CI runs these checks independently on Python 3.12.
   qualifiers, tables, and hierarchy. They are not complete clinical validation.
 - Source publication metadata can disagree across DailyMed endpoints. ODD records both values and
   exposes the discrepancy rather than silently selecting one.
-- Live fetch depends on DailyMed availability and its response contract; CI is fully offline.
+- Live fetch depends on DailyMed availability and its response contract; CI is fully offline. A
+  live report is an observation at retrieval time, not a permanent currentness guarantee.
 - DailyMed candidate metadata can be incomplete. ODD does not infer chemical equivalence for
   salts, esters, complexes, formulations, or combination products and may require manual review.
 - `FULLY_PARSED` means no empty or unmapped sections were observed by the current parser; it is not

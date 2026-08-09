@@ -1,4 +1,4 @@
-"""Typed ODD-003 utilization, candidate-selection, and batch models."""
+"""Typed utilization, candidate-selection, and ODD-003/ODD-004 batch models."""
 
 from __future__ import annotations
 
@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 from typing import Any
+
+from odd.models.discovery import DiscoveryCompleteness
 
 
 class IngredientIdentityStatus(StrEnum):
@@ -40,6 +42,7 @@ class DiscoveryStatus(StrEnum):
     NO_CANDIDATE = "NO_CANDIDATE"
     LOOKUP_FAILED = "LOOKUP_FAILED"
     METADATA_INVALID = "METADATA_INVALID"
+    DISCOVERY_INCOMPLETE = "DISCOVERY_INCOMPLETE"
 
 
 class SelectionStatus(StrEnum):
@@ -51,6 +54,7 @@ class SelectionStatus(StrEnum):
     AMBIGUOUS_REQUIRES_REVIEW = "AMBIGUOUS_REQUIRES_REVIEW"
     FETCH_FAILED = "FETCH_FAILED"
     METADATA_INVALID = "METADATA_INVALID"
+    MANUAL_REVIEW_REQUIRED = "MANUAL_REVIEW_REQUIRED"
 
 
 class IngestionStatus(StrEnum):
@@ -80,6 +84,7 @@ class ParserCompatibilityStatus(StrEnum):
     PARTIAL_PARSE = "PARTIAL_PARSE"
     PARSER_FAILED = "PARSER_FAILED"
     NOT_INGESTED = "NOT_INGESTED"
+    UNSUPPORTED_STRUCTURE = "UNSUPPORTED_STRUCTURE"
 
 
 class BatchStatus(StrEnum):
@@ -215,6 +220,12 @@ class BatchItem:
     query_text: str = ""
     candidate_count: int = 0
     selection_reason: str | None = None
+    snapshot_id: str | None = None
+    metadata_total_candidate_count: int | None = None
+    retrieved_candidate_count: int = 0
+    eligible_candidate_count: int = 0
+    discovery_completeness: DiscoveryCompleteness = DiscoveryCompleteness.UNKNOWN
+    evidence_verification_status: VerificationStatus = VerificationStatus.NOT_VERIFIED
 
 
 @dataclass(frozen=True, slots=True)
@@ -238,6 +249,14 @@ class BatchRun:
     unresolved_count: int
     failed_count: int
     canonical_report_sha256: str | None
+    database_schema_version: str = "3"
+    observation_mode: str = "LEGACY"
+    snapshot_manifest_sha256: str | None = None
+    discovery_complete_count: int = 0
+    manual_review_count: int = 0
+    no_candidate_count: int = 0
+    fetch_failure_count: int = 0
+    parser_failure_count: int = 0
 
 
 @dataclass(frozen=True, slots=True)

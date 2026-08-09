@@ -29,7 +29,7 @@ def test_schema_migration_two_creates_lineage_and_diff_tables(stored_diff: tuple
             )
         }
 
-    assert versions == {"1", "2", "3"}
+    assert versions == {"1", "2", "3", "4"}
     assert {
         "document_lineages",
         "lineage_source_documents",

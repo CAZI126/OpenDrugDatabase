@@ -98,16 +98,28 @@ def build_parser() -> argparse.ArgumentParser:
     )
     utilization_show.add_argument("--list", required=True, dest="list_id")
 
-    batch = commands.add_parser("batch", help="run the ODD-003 ranked validation batch")
+    batch = commands.add_parser("batch", help="run ranked offline or ODD-004 live observations")
     batch_commands = batch.add_subparsers(dest="batch_command", required=True)
-    for name in ("plan", "fetch", "ingest", "verify", "run"):
+    batch_plan = batch_commands.add_parser("plan")
+    plan_source = batch_plan.add_mutually_exclusive_group(required=True)
+    plan_source.add_argument("--list", dest="list_id")
+    plan_source.add_argument("--resume", dest="run_id")
+    batch_plan.add_argument(
+        "--new-observation",
+        action="store_true",
+        help="perform a new immutable live discovery; never implied by resume",
+    )
+    for name in ("fetch", "ingest", "verify", "run"):
         phase = batch_commands.add_parser(name)
-        phase.add_argument("--list", required=True, dest="list_id")
+        source = phase.add_mutually_exclusive_group(required=True)
+        source.add_argument("--list", dest="list_id")
+        source.add_argument("--run", dest="run_id")
     batch_status = batch_commands.add_parser("status")
     batch_status.add_argument("--run", required=True, dest="run_id")
     batch_report = batch_commands.add_parser("report")
     batch_report.add_argument("--run", required=True, dest="run_id")
     batch_report.add_argument("--format", choices=("text", "json"), default="text")
+    batch_report.add_argument("--output", type=Path)
 
     candidates = commands.add_parser(
         "candidates", help="audit accepted and rejected DailyMed candidates"
@@ -199,21 +211,39 @@ def run_cli(
                 payload = application.utilization_show(arguments.list_id)
         elif arguments.command == "batch":
             if arguments.batch_command == "plan":
-                run, items = application.batch_plan(arguments.list_id)
+                if arguments.run_id:
+                    if arguments.new_observation:
+                        raise ProvenanceValidationFailure(
+                            "--new-observation cannot be combined with --resume"
+                        )
+                    run, items = application.batch_plan(run_id=arguments.run_id)
+                else:
+                    run, items = application.batch_plan(
+                        arguments.list_id,
+                        new_observation=arguments.new_observation,
+                    )
                 payload = _batch_payload(run, items)
                 _write_json(output, payload)
                 return 0
             if arguments.batch_command == "fetch":
-                run, items = application.batch_fetch(arguments.list_id)
+                run, items = application.batch_fetch(
+                    arguments.list_id, run_id=arguments.run_id
+                )
                 payload = _batch_payload(run, items)
             elif arguments.batch_command == "ingest":
-                run, items = application.batch_ingest(arguments.list_id)
+                run, items = application.batch_ingest(
+                    arguments.list_id, run_id=arguments.run_id
+                )
                 payload = _batch_payload(run, items)
             elif arguments.batch_command == "verify":
-                run, items = application.batch_verify(arguments.list_id)
+                run, items = application.batch_verify(
+                    arguments.list_id, run_id=arguments.run_id
+                )
                 payload = _batch_payload(run, items)
             elif arguments.batch_command == "run":
-                artifact = application.batch_run(arguments.list_id)
+                artifact = application.batch_run(
+                    arguments.list_id, run_id=arguments.run_id
+                )
                 payload = _batch_artifact_payload(artifact)
                 run = artifact.report.batch_run
                 items = artifact.report.items
@@ -226,6 +256,17 @@ def run_cli(
                 artifact = application.batch_report(arguments.run_id)
                 run = artifact.report.batch_run
                 items = artifact.report.items
+                if arguments.output is not None:
+                    _write_batch_report_file(arguments.output, arguments.format, artifact)
+                    _write_json(
+                        output,
+                        {
+                            "canonical_report_sha256": artifact.canonical_sha256,
+                            "output": str(arguments.output.resolve()),
+                            "status": "ok",
+                        },
+                    )
+                    return _batch_exit_code(run.status, items)
                 if arguments.format == "text":
                     _write_batch_report_text(output, artifact)
                     return _batch_exit_code(run.status, items)
@@ -304,11 +345,18 @@ def _batch_exit_code(
 
 def _write_batch_report_text(stream: TextIO, artifact: BatchArtifactResult) -> None:
     run = artifact.report.batch_run
-    stream.write("ODD-003 derivative batch report — not regulatory source data\n")
+    report_scope = "ODD-004 live" if run.observation_mode == "LIVE" else "ODD-003 derivative"
+    stream.write(f"{report_scope} batch report - not regulatory source data\n")
     stream.write(f"Batch run ID: {run.batch_run_id}\n")
     stream.write(f"Utilization list: {run.utilization_list_id}\n")
     stream.write(f"Status: {run.status.value}\n")
     stream.write(f"Canonical report SHA-256: {artifact.canonical_sha256}\n")
+    stream.write(
+        "Versions: "
+        f"policy={run.selection_rule_version} connector={run.connector_version} "
+        f"parser={run.parser_version} normalized_schema={run.schema_version} "
+        f"mapping={run.mapping_version} database_schema={run.database_schema_version}\n"
+    )
     stream.write(
         "Counts: "
         f"requested={run.requested_count} selected={run.selected_count} "
@@ -316,6 +364,18 @@ def _write_batch_report_text(stream: TextIO, artifact: BatchArtifactResult) -> N
         f"verified={run.verified_count} quarantined={run.quarantined_count} "
         f"unresolved={run.unresolved_count} failed={run.failed_count}\n"
     )
+    if run.observation_mode == "LIVE":
+        stream.write(
+            "Live counts: "
+            f"discovery_complete={run.discovery_complete_count} "
+            f"manual_review={run.manual_review_count} "
+            f"no_candidate={run.no_candidate_count} "
+            f"fetch_failure={run.fetch_failure_count} "
+            f"parser_failure={run.parser_failure_count}\n"
+        )
+        stream.write(
+            f"Snapshot manifest SHA-256: {run.snapshot_manifest_sha256 or '-'}\n"
+        )
     stream.write(
         "rank ingredient selection version sections mapped unmapped "
         "compatibility verify\n"
@@ -329,8 +389,53 @@ def _write_batch_report_text(stream: TextIO, artifact: BatchArtifactResult) -> N
             f"{item.unmapped_section_count if item.unmapped_section_count is not None else '-'} "
             f"{item.parser_compatibility_status.value} {item.verification_status.value}\n"
         )
+        if run.observation_mode == "LIVE":
+            metadata_total = (
+                item.metadata_total_candidate_count
+                if item.metadata_total_candidate_count is not None
+                else "UNKNOWN"
+            )
+            stream.write(
+                "   discovery: "
+                f"query={item.query_text} snapshot={item.snapshot_id or '-'} "
+                f"metadata_total={metadata_total} "
+                f"retrieved={item.retrieved_candidate_count} "
+                f"eligible={item.eligible_candidate_count} "
+                f"completeness={item.discovery_completeness.value}\n"
+            )
+            stream.write(
+                "   decision: "
+                f"manual_review={str(item.manual_review_required).lower()} "
+                f"set_id={item.selected_set_id or '-'} "
+                f"spl_version={item.selected_source_version or '-'} "
+                f"reason={item.selection_reason or '-'}\n"
+            )
+            stream.write(
+                "   pipeline: "
+                f"raw_sha256={item.raw_sha256 or '-'} "
+                f"ingestion={item.ingestion_status.value} "
+                f"parser={item.parser_compatibility_status.value} "
+                f"document_verify={item.verification_status.value} "
+                f"evidence_verify={item.evidence_verification_status.value} "
+                f"error={item.error_category or '-'} "
+                f"retry_eligible={str(item.retry_eligible).lower()}\n"
+            )
         if item.diagnostic_message:
             stream.write(f"   diagnostic: {item.diagnostic_message}\n")
+
+
+def _write_batch_report_file(
+    path: Path,
+    format_name: str,
+    artifact: BatchArtifactResult,
+) -> None:
+    resolved = path.resolve()
+    resolved.parent.mkdir(parents=True, exist_ok=True)
+    if format_name == "json":
+        resolved.write_bytes(artifact.canonical_json)
+        return
+    with resolved.open("w", encoding="utf-8", newline="\n") as stream:
+        _write_batch_report_text(stream, artifact)
 
 
 def _run_diff(application: ODDService, arguments: argparse.Namespace) -> DiffGenerationResult:

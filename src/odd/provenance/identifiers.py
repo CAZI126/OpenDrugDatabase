@@ -167,6 +167,32 @@ def candidate_discovery_id(
     )
 
 
+def live_candidate_snapshot_id(
+    canonical_request: tuple[tuple[str, str], ...],
+    page_hashes: tuple[tuple[int, str], ...],
+    *,
+    connector_version: str,
+    terminal_fingerprint: str = "",
+) -> str:
+    """Identify one immutable live observation without operational timestamps."""
+
+    payload = canonical_json_bytes(
+        {
+            "canonical_request": canonical_request,
+            "connector_version": connector_version,
+            "page_hashes": page_hashes,
+            "terminal_fingerprint": terminal_fingerprint,
+        }
+    ).decode("utf-8")
+    return str(uuid5(ODD_UUID_NAMESPACE, f"live-candidate-snapshot|{payload}"))
+
+
+def live_batch_run_id(observation_token: str) -> str:
+    """Create an operational run ID for one explicitly requested live observation."""
+
+    return str(uuid5(ODD_UUID_NAMESPACE, f"live-batch-run|{observation_token}"))
+
+
 def candidate_evidence_id(
     discovery_identifier: str,
     set_id: str,
