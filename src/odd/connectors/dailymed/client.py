@@ -19,7 +19,7 @@ from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 from zipfile import BadZipFile, ZipFile
 
-from odd.constants import CONNECTOR_VERSION
+from odd.constants import CONNECTOR_VERSION, DAILYMED_QUERY_RESULTS_SCOPE
 from odd.errors import MalformedArchive, MalformedMetadata, NetworkFailure, SourceNotFound
 from odd.models import (
     CandidateDiscoveryPage,
@@ -494,6 +494,7 @@ class DailyMedConnector:
             metadata_conflict_count=conflict_count,
             diagnostic_message=diagnostic,
             failure_attempts=failure_attempts,
+            intended_use_scope=DAILYMED_QUERY_RESULTS_SCOPE,
         )
 
     def download(

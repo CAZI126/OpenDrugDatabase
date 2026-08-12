@@ -5177,6 +5177,7 @@ def _decision_revision_from_stored(
         selected_source_version=_optional_text(payload.get("selected_source_version")),
         selection_reason=str(payload["selection_reason"]),
         manual_review_required=bool(payload["manual_review_required"]),
+        intended_use_scope=_optional_text(payload.get("intended_use_scope")),
     )
 
 

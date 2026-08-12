@@ -176,6 +176,10 @@ class CandidateSelection:
     selection_scope: str
     candidates: tuple[CandidateEvidence, ...]
 
+    @property
+    def intended_use_scope(self) -> str:
+        return self.selection_scope
+
 
 @dataclass(frozen=True, slots=True)
 class ParserCompatibilityResult:

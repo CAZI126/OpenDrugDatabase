@@ -199,6 +199,7 @@ class EnrichmentDecisionRevision:
     selected_source_version: str | None
     selection_reason: str
     manual_review_required: bool
+    intended_use_scope: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

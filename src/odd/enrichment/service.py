@@ -25,6 +25,7 @@ from odd.constants import (
     MAPPING_VERSION,
     PARSER_VERSION,
     SCHEMA_VERSION,
+    VALIDATION_LABEL_SCOPE,
 )
 from odd.enrichment.decision import (
     EnrichedSelection,
@@ -1291,6 +1292,7 @@ class EnrichmentCoordinator:
             "selected_source_version": updated.selected_source_version,
             "selection_reason": selection.reason,
             "selection_status": selection.selection_status,
+            "intended_use_scope": VALIDATION_LABEL_SCOPE,
         }
         decision_digest = sha256_bytes(canonical_json_bytes(decision_payload))
         revision_id = enrichment_decision_revision_id(
@@ -1318,6 +1320,7 @@ class EnrichmentCoordinator:
             selected_source_version=updated.selected_source_version,
             selection_reason=selection.reason,
             manual_review_required=selection.manual_review_required,
+            intended_use_scope=VALIDATION_LABEL_SCOPE,
         )
         return updated, revision
 
@@ -1363,6 +1366,7 @@ class EnrichmentCoordinator:
             ),
             reason=selection.reason,
             ambiguity_exposed=False,
+            intended_use_scope=VALIDATION_LABEL_SCOPE,
         )
         download = DownloadedSource(
             set_id=_required_text(candidate.set_id, "set ID"),

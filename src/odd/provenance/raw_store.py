@@ -263,6 +263,7 @@ class RawStore:
             "selection": {
                 "ambiguity_exposed": decision.ambiguity_exposed,
                 "candidate_count": len(decision.ordered_candidates),
+                "intended_use_scope": decision.intended_use_scope,
                 "reason": decision.reason,
                 "rule_description": decision.rule_description,
                 "rule_version": decision.rule_version,

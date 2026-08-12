@@ -148,6 +148,7 @@ class CandidateLookup:
     metadata_conflict_count: int = 0
     diagnostic_message: str | None = None
     failure_attempts: tuple[HTTPAttemptEvidence, ...] = ()
+    intended_use_scope: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -173,6 +174,7 @@ class SelectionDecision:
     rule_description: str
     reason: str
     ambiguity_exposed: bool
+    intended_use_scope: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
