@@ -1,0 +1,119 @@
+{
+  "schema": "odd007r-protocol-scope-manifest/1.0.0",
+  "manifest_version": "1.0.0-draft.5",
+  "draft_status": "READY_FOR_REVIEW",
+  "scope_name": "ODD-007R_PROTOCOL_ONLY_COMMIT_X",
+  "expected_file_count": 4,
+  "path_order": "LEXICOGRAPHIC_ASCII_ASCENDING",
+  "allowed_content_bindings": [
+    "sha256_inline",
+    "sha256_in_protocol_freeze_manifest",
+    "git_blob_in_commit_x"
+  ],
+  "path_rules": {
+    "repository_relative": true,
+    "slash_separator": "/",
+    "duplicates": "PROHIBITED",
+    "unknown_path": "PROHIBITED",
+    "missing_path": "PROHIBITED",
+    "extra_path": "PROHIBITED",
+    "wildcards": "PROHIBITED"
+  },
+  "entry_schema": {
+    "required_common_fields": [
+      "path",
+      "artifact_role",
+      "required",
+      "allowed_in_commit_x",
+      "content_binding"
+    ],
+    "required_value": true,
+    "allowed_in_commit_x_value": true,
+    "sha256_inline_required_fields": [
+      "exact_size_bytes",
+      "sha256"
+    ],
+    "externally_bound_entry_omitted_fields": [
+      "exact_size_bytes",
+      "sha256",
+      "expected_sha256",
+      "null hash placeholder"
+    ]
+  },
+  "entries": [
+    {
+      "path": "docs/research/ODD-007R_ADJUDICATION_RULES.json",
+      "artifact_role": "ADJUDICATION_RULES",
+      "encoding": "UTF-8_WITHOUT_BOM_LF_TERMINAL_NEWLINE",
+      "required": true,
+      "allowed_in_commit_x": true,
+      "content_binding": "sha256_inline",
+      "exact_size_bytes": 163971,
+      "sha256": "0fd45de0c398090b06db9b5b88e78bfe676e9054e3ea6c733ab62714a41c3a82"
+    },
+    {
+      "path": "docs/research/ODD-007R_ALLOWED_CLAIM.txt",
+      "artifact_role": "ALLOWED_CLAIM",
+      "encoding": "UTF-8_WITHOUT_BOM_LF_TERMINAL_NEWLINE",
+      "required": true,
+      "allowed_in_commit_x": true,
+      "content_binding": "sha256_inline",
+      "exact_size_bytes": 234,
+      "sha256": "a9d6f0d2bf658b630357048f69e892e4cf58d29a2c3faad15e072cac932bea3e"
+    },
+    {
+      "path": "docs/research/ODD-007R_PROTOCOL_FREEZE_MANIFEST.json",
+      "artifact_role": "PROTOCOL_FREEZE_MANIFEST",
+      "encoding": "UTF-8_WITHOUT_BOM_LF_TERMINAL_NEWLINE",
+      "required": true,
+      "allowed_in_commit_x": true,
+      "content_binding": "git_blob_in_commit_x"
+    },
+    {
+      "path": "docs/research/ODD-007R_PROTOCOL_SCOPE_MANIFEST.json",
+      "artifact_role": "PROTOCOL_SCOPE_MANIFEST",
+      "encoding": "UTF-8_WITHOUT_BOM_LF_TERMINAL_NEWLINE",
+      "required": true,
+      "allowed_in_commit_x": true,
+      "content_binding": "sha256_in_protocol_freeze_manifest"
+    }
+  ],
+  "binding_validation": {
+    "inline_digest_entries": "Rules and Claim must contain non-null exact_size_bytes and sha256 values matching their exact current bytes.",
+    "intentional_digest_omission": "Scope and Freeze omit digest and size fields because content_binding names their higher anchor; this is not a missing-hash defect.",
+    "unauthorized_digest_omission": "BLOCKING",
+    "unknown_content_binding": "BLOCKING",
+    "null_hash_binding": "INVALID",
+    "scope_manifest_seal": "Freeze must contain exactly one exact-byte SHA-256 digest entry for Scope.",
+    "freeze_manifest_seal": "The exact Freeze bytes must be present as the Freeze path's Git blob in the tree of commit X.",
+    "content_binding_dag": "Rules + Claim -> Scope -> Freeze -> candidate commit object; after S8 promotion the unchanged candidate commit object is named commit X.",
+    "publication_workflow_digest_graph_membership": false
+  },
+  "manifest_digest_reference_arcs": [
+    "PROTOCOL_SCOPE_MANIFEST -> ADJUDICATION_RULES",
+    "PROTOCOL_SCOPE_MANIFEST -> ALLOWED_CLAIM"
+  ],
+  "manifest_digest_reference_arc_semantics": "Container -> artifact whose inline digest is stored here; content-binding dependency direction is defined separately in Rules.content_binding_model.CONTENT_BINDING_DAG.",
+  "commit_x_parent_relative_validation": {
+    "parent_count": 1,
+    "changed_path_set": "Set of paths changed by X relative to its single parent must exactly equal entries.path.",
+    "path_count_must_equal": 4,
+    "each_required_must_exist_once": true,
+    "unknown_path": "PROHIBITED",
+    "missing_path": "PROHIBITED",
+    "extra_path": "PROHIBITED",
+    "rules_and_claim_inline_digests_must_match": true,
+    "scope_digest_must_match_protocol_freeze_manifest": true,
+    "freeze_bytes_must_match_git_blob_in_commit_x": true,
+    "unrelated_parent_tree_files_are_not_new_X_differences": true,
+    "failure_label": "PROTOCOL_X_SCOPE_CONTAMINATED",
+    "failure_classification": "BLOCKING",
+    "failure_status": "COMMIT_BLOCKED"
+  },
+  "allowed_artifact_roles": [
+    "ADJUDICATION_RULES",
+    "ALLOWED_CLAIM",
+    "PROTOCOL_FREEZE_MANIFEST",
+    "PROTOCOL_SCOPE_MANIFEST"
+  ]
+}

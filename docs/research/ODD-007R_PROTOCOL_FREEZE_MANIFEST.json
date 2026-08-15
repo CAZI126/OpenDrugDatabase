@@ -1,0 +1,44 @@
+{
+  "schema": "odd007r-protocol-freeze-manifest/1.0.0",
+  "manifest_version": "1.0.0-draft.5",
+  "draft_status": "READY_FOR_REVIEW",
+  "generated_by": "Codex protocol-draft construction",
+  "generation_method": {
+    "input_mode": "Read each listed artifact as opaque bytes.",
+    "size_method": "Exact byte count.",
+    "hash_method": "SHA-256 over exact bytes rendered as 64 lowercase hexadecimal ASCII characters.",
+    "git_object_format_independent": true,
+    "ordering": "Sort entries by repository-relative path using ASCII lexicographic ascending order.",
+    "text_output": "UTF-8 without BOM, LF line endings, terminal newline present."
+  },
+  "entry_count": 3,
+  "path_order": "LEXICOGRAPHIC_ASCII_ASCENDING",
+  "entries": [
+    {
+      "path": "docs/research/ODD-007R_ADJUDICATION_RULES.json",
+      "artifact_role": "ADJUDICATION_RULES",
+      "exact_size_bytes": 163971,
+      "sha256": "0fd45de0c398090b06db9b5b88e78bfe676e9054e3ea6c733ab62714a41c3a82"
+    },
+    {
+      "path": "docs/research/ODD-007R_ALLOWED_CLAIM.txt",
+      "artifact_role": "ALLOWED_CLAIM",
+      "exact_size_bytes": 234,
+      "sha256": "a9d6f0d2bf658b630357048f69e892e4cf58d29a2c3faad15e072cac932bea3e"
+    },
+    {
+      "path": "docs/research/ODD-007R_PROTOCOL_SCOPE_MANIFEST.json",
+      "artifact_role": "PROTOCOL_SCOPE_MANIFEST",
+      "exact_size_bytes": 4691,
+      "sha256": "7efd7ddda44b9f440a72db936fa81eead0fcc1575c584b0565841f7b55fd9ba9"
+    }
+  ],
+  "self_binding": {
+    "self_path": "docs/research/ODD-007R_PROTOCOL_FREEZE_MANIFEST.json",
+    "content_binding": "git_blob_in_commit_x",
+    "self_digest_embedded": false
+  },
+  "self_binding_validation": "Commit X must contain these exact Freeze bytes as the Git blob at self_path; the artifact SHA-256 and exact size of Freeze are computed and reported externally and are not embedded here.",
+  "content_binding_dag_terminus_after_candidate_promotion": "commit X",
+  "publication_workflow_digest_graph_membership": false
+}
