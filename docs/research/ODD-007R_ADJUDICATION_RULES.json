@@ -1,0 +1,4204 @@
+{
+  "schema": "odd007r-adjudication-protocol/1.0.0",
+  "protocol": {
+    "name": "ODD-007R",
+    "version": "1.0.0-draft.5",
+    "document_status": "REVIEW_REQUIRED_NOT_ACTIVE",
+    "applies_only_to": "ONE_NEW_ODD-007R_RUN_CREATED_AFTER_PROTOCOL_COMMIT_X",
+    "retrospective_application": {
+      "ODD-007": "PROHIBITED",
+      "ODD-008": "PROHIBITED",
+      "any_pre_X_run": "PROHIBITED"
+    },
+    "change_control": {
+      "rule": "Any byte or semantic change requires a new protocol version, a new protocol-only commit X, and a new RUN_IDENTITY.",
+      "same_run_repair": "PROHIBITED",
+      "post_result_gap_filling": "PROHIBITED"
+    },
+    "draft_pass_scope": {
+      "status_term": "PASS",
+      "guarantees_only": [
+        "Logical structure of the protocol rules.",
+        "Acyclicity of the one-way content-seal graph.",
+        "Finite enumeration of adjudication rules.",
+        "Only the scope actually exercised by static and mechanical draft validation."
+      ],
+      "does_not_guarantee": [
+        "Identity of disk bytes and Git index blob bytes.",
+        "Identity of Git index blob bytes and commit X blob bytes.",
+        "Existence of any remote ref.",
+        "Identity of blobs retrieved from a remote.",
+        "Absolute immutability of a branch or tag.",
+        "Any ODD-007R execution result.",
+        "Population performance.",
+        "Generalization to the top 100.",
+        "Differentiation delta.",
+        "Kill criteria.",
+        "Advantage over PMDA or any other regulator."
+      ],
+      "commit_x_state_at_draft_review": "NOT_CREATED",
+      "remote_publication_state_at_draft_review": "NOT_VERIFIED",
+      "run_identity_state_at_draft_review": "NOT_DERIVED",
+      "odd007r_run_state_at_draft_review": "NOT_STARTED"
+    }
+  },
+  "source_preregistration": {
+    "path": "docs/research/ODD-007_COHORT_PREREGISTRATION.json",
+    "exact_bytes_sha256": "3f053cd84306d3650ea756a89cd23b5e899582756c33be80c2ce726d277d501e",
+    "manifest_path": "docs/research/ODD-007_COHORT_PREREGISTRATION.manifest.json",
+    "manifest_exact_bytes_sha256": "0233640b0c955bf416749d574dd55a7033213d7c5f9796f8e67c6b36b878980c",
+    "use": "IDENTIFIER_SOURCE_ONLY_NOT_ODD-007R_ADJUDICATION_EVIDENCE"
+  },
+  "limited_cohort": {
+    "literal_name": "LIMITED_COHORT",
+    "identifier_namespace": "us-top10-2023/source_row_identifier",
+    "stable_identifier_comparison": "ASCII byte-for-byte equality after validating the literal pattern ^rank-[1-9][0-9]*$; no casefolding, name normalization, synonym mapping, or inferred equivalence is permitted.",
+    "member_count": 3,
+    "members_in_required_order": [
+      {
+        "stable_identifier": "rank-2",
+        "normalized_name": "metformin",
+        "source_rank": 2,
+        "development_consumed": false
+      },
+      {
+        "stable_identifier": "rank-3",
+        "normalized_name": "levothyroxine",
+        "source_rank": 3,
+        "development_consumed": false
+      },
+      {
+        "stable_identifier": "rank-4",
+        "normalized_name": "lisinopril",
+        "source_rank": 4,
+        "development_consumed": false
+      }
+    ],
+    "development_canary": {
+      "included": false,
+      "stable_identifier_derivation": "rank- plus canonical base-10 source rank",
+      "stable_identifier": "rank-1",
+      "normalized_name": "atorvastatin",
+      "source_rank": 1,
+      "classification": "DEVELOPMENT_CONSUMED"
+    },
+    "boundaries": {
+      "contains_only_the_three_listed_members": true,
+      "contains_development_canary": false,
+      "contains_top_100": false,
+      "contains_population": false,
+      "contains_future_components": false,
+      "post_X_addition": "PROHIBITED",
+      "post_X_removal": "PROHIBITED",
+      "post_X_substitution": "PROHIBITED",
+      "ambiguous_aliases_may_replace_literal": false
+    },
+    "undefined_or_non_exact_result": {
+      "label": "LIMITED_COHORT_UNDEFINED",
+      "classification": "BLOCKING",
+      "status": "COMMIT_BLOCKED"
+    }
+  },
+  "development_boundary": {
+    "development_consumed_definition": "A component or candidate whose stable component identifier was used to design, tune, debug, select, or validate implementation behavior before protocol-only commit X.",
+    "development_consumed_component_identifiers": [
+      "rank-1"
+    ],
+    "development_canary_policy": "The rank-1 atorvastatin canary is development-consumed and is excluded from LIMITED_COHORT and every ODD-007R held-out candidate set.",
+    "candidate_identity": {
+      "stable_candidate_identifier_format": "lowercase canonical UUID set_id + '@' + canonical base-10 positive source_version",
+      "component_link_field": "limited_cohort_stable_identifier",
+      "component_link_comparison": "ASCII byte-for-byte equality",
+      "normalized_name_identity_use": "PROHIBITED",
+      "normalized_name_use": "DIAGNOSTIC_ONLY"
+    },
+    "intersection_algorithm": [
+      "Validate every component and candidate stable identifier before comparison.",
+      "For each of exactly 390 candidate records, compare limited_cohort_stable_identifier byte-for-byte with every development_consumed_component_identifier.",
+      "Record one classification record per unique stable candidate identifier.",
+      "Require classified_count=390, unique_candidate_count=390, included_count+excluded_count=390, and no missing component link.",
+      "If any exact intersection exists, emit DEVELOPMENT_BOUNDARY_CONTAMINATED and stop before component adjudication."
+    ],
+    "contamination_result": {
+      "label": "DEVELOPMENT_BOUNDARY_CONTAMINATED",
+      "classification": "BLOCKING",
+      "status": "COMMIT_BLOCKED",
+      "minimum_intersection_count": 1,
+      "recompute_components_to_rescue": "PROHIBITED"
+    }
+  },
+  "evidence_state_model": {
+    "state_enum": [
+      "PASS",
+      "PARTIAL",
+      "FAIL",
+      "NOT_INSTRUMENTED",
+      "UNDETERMINED",
+      "NOT_APPLICABLE"
+    ],
+    "normalized_case_enum": [
+      "PROVEN_NOT_APPLICABLE",
+      "PROVEN_CONTRACT_VIOLATION",
+      "REQUIRED_OBSERVATION_MISSING",
+      "INSTRUMENTED_BUT_UNRESOLVED",
+      "BOUNDED_SUBSET_SATISFIED",
+      "COMPLETE_CONTRACT_SATISFIED"
+    ],
+    "predicate_dsl": {
+      "node_forms": [
+        "all",
+        "any",
+        "field_op_value"
+      ],
+      "operators": [
+        "EQ",
+        "IN",
+        "COUNT_EQ",
+        "COUNT_GT",
+        "CONTAINS_ANY",
+        "ALL_VALUES_IN"
+      ],
+      "evaluation": "all requires every child true; any requires at least one child true; field_op_value applies the named operator without coercion. Unknown fields, values, operators, or types emit PRE_FROZEN_RULE_INCOMPLETE."
+    },
+    "raw_fact_schema": {
+      "named_upstream_stop_rule_state": [
+        "APPLIES",
+        "DOES_NOT_APPLY"
+      ],
+      "upstream_stop_proof_state": [
+        "TRUSTED",
+        "ABSENT",
+        "INVALID"
+      ],
+      "cell_downstream_registration": [
+        "REGISTERED",
+        "NOT_REGISTERED"
+      ],
+      "trusted_violation_proven": "boolean",
+      "required_observation_state": [
+        "COMPLETE",
+        "ABSENT",
+        "INCOMPLETE",
+        "FINAL_ONLY",
+        "HASH_INVALID"
+      ],
+      "evidence_locator_state": [
+        "VALID",
+        "ABSENT",
+        "INVALID"
+      ],
+      "resolution_state": [
+        "DETERMINED",
+        "UNRESOLVED",
+        "CONFLICTING"
+      ],
+      "cause_resolution_state": [
+        "DETERMINED",
+        "UNRESOLVED",
+        "NOT_REQUIRED"
+      ],
+      "coverage_state": [
+        "COMPLETE",
+        "BOUNDED_SUBSET",
+        "NONE"
+      ],
+      "observed_subset_satisfied": "boolean",
+      "all_gaps_enumerated": "boolean",
+      "all_frozen_predicates_satisfied": "boolean",
+      "unresolved_fact_present": "boolean"
+    },
+    "case_derivation_priority_high_to_low": [
+      {
+        "priority": 1,
+        "case": "PROVEN_NOT_APPLICABLE",
+        "match": {
+          "all": [
+            {
+              "field": "named_upstream_stop_rule_state",
+              "op": "EQ",
+              "value": "APPLIES"
+            },
+            {
+              "field": "upstream_stop_proof_state",
+              "op": "EQ",
+              "value": "TRUSTED"
+            },
+            {
+              "field": "cell_downstream_registration",
+              "op": "EQ",
+              "value": "REGISTERED"
+            }
+          ]
+        },
+        "requires_all": [
+          "a specifically named upstream stop rule applies",
+          "the stop fact has a trusted evidence path and locator",
+          "the current cell is explicitly listed as downstream of that stop"
+        ],
+        "forbids_any": [
+          "unsupported operator assertion",
+          "use merely because evidence is missing"
+        ]
+      },
+      {
+        "priority": 2,
+        "case": "PROVEN_CONTRACT_VIOLATION",
+        "match": {
+          "all": [
+            {
+              "field": "trusted_violation_proven",
+              "op": "EQ",
+              "value": true
+            },
+            {
+              "field": "required_observation_state",
+              "op": "EQ",
+              "value": "COMPLETE"
+            },
+            {
+              "field": "evidence_locator_state",
+              "op": "EQ",
+              "value": "VALID"
+            }
+          ]
+        },
+        "requires_all": [
+          "trusted direct or reproducibly derived evidence exists",
+          "a finite frozen predicate evaluates false"
+        ],
+        "forbids_any": [
+          "violation inferred from absent or hash-invalid evidence"
+        ]
+      },
+      {
+        "priority": 3,
+        "case": "REQUIRED_OBSERVATION_MISSING",
+        "match": {
+          "any": [
+            {
+              "field": "required_observation_state",
+              "op": "IN",
+              "value": [
+                "ABSENT",
+                "INCOMPLETE",
+                "FINAL_ONLY",
+                "HASH_INVALID"
+              ]
+            },
+            {
+              "field": "evidence_locator_state",
+              "op": "IN",
+              "value": [
+                "ABSENT",
+                "INVALID"
+              ]
+            }
+          ]
+        },
+        "requires_any": [
+          "required evidence path is absent",
+          "required locator is absent",
+          "required evidence SHA-256 is absent or invalid",
+          "only a final output exists while a required intermediate layer is unobserved"
+        ]
+      },
+      {
+        "priority": 6,
+        "case": "INSTRUMENTED_BUT_UNRESOLVED",
+        "match": {
+          "all": [
+            {
+              "field": "required_observation_state",
+              "op": "EQ",
+              "value": "COMPLETE"
+            },
+            {
+              "field": "evidence_locator_state",
+              "op": "EQ",
+              "value": "VALID"
+            }
+          ]
+        },
+        "requires_all": [
+          "required instrumentation and trusted evidence exist",
+          "the frozen predicate cannot be evaluated to true or false"
+        ],
+        "includes_any": [
+          "an observed layer stop with unidentified cause",
+          "conflicting trusted observations",
+          "cause cannot be assigned without inference"
+        ]
+      },
+      {
+        "priority": 4,
+        "case": "BOUNDED_SUBSET_SATISFIED",
+        "match": {
+          "all": [
+            {
+              "field": "required_observation_state",
+              "op": "EQ",
+              "value": "COMPLETE"
+            },
+            {
+              "field": "evidence_locator_state",
+              "op": "EQ",
+              "value": "VALID"
+            },
+            {
+              "field": "trusted_violation_proven",
+              "op": "EQ",
+              "value": false
+            },
+            {
+              "field": "resolution_state",
+              "op": "EQ",
+              "value": "DETERMINED"
+            },
+            {
+              "field": "coverage_state",
+              "op": "EQ",
+              "value": "BOUNDED_SUBSET"
+            },
+            {
+              "field": "observed_subset_satisfied",
+              "op": "EQ",
+              "value": true
+            },
+            {
+              "field": "all_gaps_enumerated",
+              "op": "EQ",
+              "value": true
+            },
+            {
+              "field": "unresolved_fact_present",
+              "op": "EQ",
+              "value": false
+            }
+          ]
+        },
+        "requires_all": [
+          "the satisfied subset is finite and enumerated",
+          "every gap is finite and enumerated",
+          "no trusted violation exists",
+          "complete coverage is false"
+        ]
+      },
+      {
+        "priority": 5,
+        "case": "COMPLETE_CONTRACT_SATISFIED",
+        "match": {
+          "all": [
+            {
+              "field": "required_observation_state",
+              "op": "EQ",
+              "value": "COMPLETE"
+            },
+            {
+              "field": "evidence_locator_state",
+              "op": "EQ",
+              "value": "VALID"
+            },
+            {
+              "field": "trusted_violation_proven",
+              "op": "EQ",
+              "value": false
+            },
+            {
+              "field": "resolution_state",
+              "op": "EQ",
+              "value": "DETERMINED"
+            },
+            {
+              "field": "coverage_state",
+              "op": "EQ",
+              "value": "COMPLETE"
+            },
+            {
+              "field": "all_frozen_predicates_satisfied",
+              "op": "EQ",
+              "value": true
+            },
+            {
+              "field": "unresolved_fact_present",
+              "op": "EQ",
+              "value": false
+            }
+          ]
+        },
+        "requires_all": [
+          "all required observations are present and trusted",
+          "complete coverage is true",
+          "every frozen predicate evaluates true",
+          "no unresolved fact remains"
+        ]
+      }
+    ],
+    "case_to_state_bijection": {
+      "PROVEN_NOT_APPLICABLE": "NOT_APPLICABLE",
+      "PROVEN_CONTRACT_VIOLATION": "FAIL",
+      "REQUIRED_OBSERVATION_MISSING": "NOT_INSTRUMENTED",
+      "INSTRUMENTED_BUT_UNRESOLVED": "UNDETERMINED",
+      "BOUNDED_SUBSET_SATISFIED": "PARTIAL",
+      "COMPLETE_CONTRACT_SATISFIED": "PASS"
+    },
+    "state_requirements": {
+      "PASS": "Only COMPLETE_CONTRACT_SATISFIED.",
+      "PARTIAL": "Only BOUNDED_SUBSET_SATISFIED; a violation or unresolved fact excludes PARTIAL.",
+      "FAIL": "Only a trusted proven violation; missing evidence alone excludes FAIL.",
+      "NOT_INSTRUMENTED": "A required observation or its exact locator/hash is missing or invalid; final-only output does not instrument an intermediate cell.",
+      "UNDETERMINED": "Instrumentation exists but trusted facts cannot determine the predicate or cause; no allocation to drug, source, or code is permitted.",
+      "NOT_APPLICABLE": "Only a specifically evidenced upstream stop listed by the frozen rule can make the cell inapplicable."
+    },
+    "conflict_rule": "Evaluate normalized cases in ascending numeric priority and select exactly the first matching case. Zero matches or an input that cannot be normalized emits PRE_FROZEN_RULE_INCOMPLETE. Lower-priority states are not additionally emitted.",
+    "cause_inference": "PROHIBITED when cause evidence is absent, conflicting, hash-invalid, or only a final output is observed."
+  },
+  "evidence_to_resolved_status_map": {
+    "definition": "For each required cell i, f_i maps that cell's evidence_state_model.raw_fact_schema tuple to exactly one normalized case by evidence_state_model.case_derivation_priority_high_to_low and then to exactly one resolved status by evidence_state_model.case_to_state_bijection.",
+    "resolver_semantics_source": [
+      "evidence_state_model.raw_fact_schema",
+      "evidence_state_model.case_derivation_priority_high_to_low",
+      "evidence_state_model.case_to_state_bijection",
+      "evidence_state_model.conflict_rule"
+    ],
+    "cell_specific_measured_value_semantics_changed": false,
+    "PER_CELL_ABSTRACT_FACT_DOMAIN_CARDINALITY": 155520,
+    "RESOLVER_EVALUATION_COUNT": {
+      "expression": "14 * 155,520",
+      "count": 2177280
+    },
+    "JOINT_14_CELL_FACT_DOMAIN_CARDINALITY": "NOT_ESTABLISHED",
+    "per_resolver_report_common_fields": {
+      "applies_to_each_cell_resolver": true,
+      "input_cardinality_basis": "PER_CELL_ABSTRACT_FACT_DOMAIN_CARDINALITY",
+      "joint_fact_distribution": "NOT_INSTRUMENTED",
+      "cross_cell_correlation": "NOT_INSTRUMENTED",
+      "per_cell_surjectivity": "VERIFIED",
+      "union_surjectivity": "VERIFIED",
+      "joint_vector_reachability": "NOT_ESTABLISHED"
+    },
+    "common_resolved_status_histogram": {
+      "PASS": 132,
+      "PARTIAL": 66,
+      "FAIL": 4752,
+      "NOT_INSTRUMENTED": 133056,
+      "UNDETERMINED": 4554,
+      "NOT_APPLICABLE": 12960
+    },
+    "declared_admissible_symbol_set": [
+      "PASS",
+      "PARTIAL",
+      "FAIL",
+      "NOT_INSTRUMENTED",
+      "UNDETERMINED"
+    ],
+    "cell_resolvers": [
+      {
+        "resolver_id": "f_1",
+        "cell_identifier": "cohort_membership",
+        "input_fact_schema": "evidence_state_model.raw_fact_schema",
+        "enumerated_input_count": 155520,
+        "resolved_status_histogram": {
+          "PASS": 132,
+          "PARTIAL": 66,
+          "FAIL": 4752,
+          "NOT_INSTRUMENTED": 133056,
+          "UNDETERMINED": 4554,
+          "NOT_APPLICABLE": 12960
+        },
+        "produced_symbol_set": ["PASS", "PARTIAL", "FAIL", "NOT_INSTRUMENTED", "UNDETERMINED", "NOT_APPLICABLE"],
+        "missing_admissible_symbols": [],
+        "surjectivity_onto_declared_cell_domain": "VERIFIED",
+        "input_cardinality_basis": "PER_CELL_ABSTRACT_FACT_DOMAIN_CARDINALITY",
+        "joint_fact_distribution": "NOT_INSTRUMENTED",
+        "cross_cell_correlation": "NOT_INSTRUMENTED",
+        "per_cell_surjectivity": "VERIFIED",
+        "union_surjectivity": "VERIFIED",
+        "joint_vector_reachability": "NOT_ESTABLISHED"
+      },
+      {
+        "resolver_id": "f_2",
+        "cell_identifier": "development_boundary",
+        "input_fact_schema": "evidence_state_model.raw_fact_schema",
+        "enumerated_input_count": 155520,
+        "resolved_status_histogram": {
+          "PASS": 132,
+          "PARTIAL": 66,
+          "FAIL": 4752,
+          "NOT_INSTRUMENTED": 133056,
+          "UNDETERMINED": 4554,
+          "NOT_APPLICABLE": 12960
+        },
+        "produced_symbol_set": ["PASS", "PARTIAL", "FAIL", "NOT_INSTRUMENTED", "UNDETERMINED", "NOT_APPLICABLE"],
+        "missing_admissible_symbols": [],
+        "surjectivity_onto_declared_cell_domain": "VERIFIED",
+        "input_cardinality_basis": "PER_CELL_ABSTRACT_FACT_DOMAIN_CARDINALITY",
+        "joint_fact_distribution": "NOT_INSTRUMENTED",
+        "cross_cell_correlation": "NOT_INSTRUMENTED",
+        "per_cell_surjectivity": "VERIFIED",
+        "union_surjectivity": "VERIFIED",
+        "joint_vector_reachability": "NOT_ESTABLISHED"
+      },
+      {
+        "resolver_id": "f_3",
+        "cell_identifier": "candidate_inventory_390",
+        "input_fact_schema": "evidence_state_model.raw_fact_schema",
+        "enumerated_input_count": 155520,
+        "resolved_status_histogram": {
+          "PASS": 132,
+          "PARTIAL": 66,
+          "FAIL": 4752,
+          "NOT_INSTRUMENTED": 133056,
+          "UNDETERMINED": 4554,
+          "NOT_APPLICABLE": 12960
+        },
+        "produced_symbol_set": ["PASS", "PARTIAL", "FAIL", "NOT_INSTRUMENTED", "UNDETERMINED", "NOT_APPLICABLE"],
+        "missing_admissible_symbols": [],
+        "surjectivity_onto_declared_cell_domain": "VERIFIED",
+        "input_cardinality_basis": "PER_CELL_ABSTRACT_FACT_DOMAIN_CARDINALITY",
+        "joint_fact_distribution": "NOT_INSTRUMENTED",
+        "cross_cell_correlation": "NOT_INSTRUMENTED",
+        "per_cell_surjectivity": "VERIFIED",
+        "union_surjectivity": "VERIFIED",
+        "joint_vector_reachability": "NOT_ESTABLISHED"
+      },
+      {
+        "resolver_id": "f_4",
+        "cell_identifier": "candidate_classification_390",
+        "input_fact_schema": "evidence_state_model.raw_fact_schema",
+        "enumerated_input_count": 155520,
+        "resolved_status_histogram": {
+          "PASS": 132,
+          "PARTIAL": 66,
+          "FAIL": 4752,
+          "NOT_INSTRUMENTED": 133056,
+          "UNDETERMINED": 4554,
+          "NOT_APPLICABLE": 12960
+        },
+        "produced_symbol_set": ["PASS", "PARTIAL", "FAIL", "NOT_INSTRUMENTED", "UNDETERMINED", "NOT_APPLICABLE"],
+        "missing_admissible_symbols": [],
+        "surjectivity_onto_declared_cell_domain": "VERIFIED",
+        "input_cardinality_basis": "PER_CELL_ABSTRACT_FACT_DOMAIN_CARDINALITY",
+        "joint_fact_distribution": "NOT_INSTRUMENTED",
+        "cross_cell_correlation": "NOT_INSTRUMENTED",
+        "per_cell_surjectivity": "VERIFIED",
+        "union_surjectivity": "VERIFIED",
+        "joint_vector_reachability": "NOT_ESTABLISHED"
+      },
+      {
+        "resolver_id": "f_5",
+        "cell_identifier": "acquisition",
+        "input_fact_schema": "evidence_state_model.raw_fact_schema",
+        "enumerated_input_count": 155520,
+        "resolved_status_histogram": {
+          "PASS": 132,
+          "PARTIAL": 66,
+          "FAIL": 4752,
+          "NOT_INSTRUMENTED": 133056,
+          "UNDETERMINED": 4554,
+          "NOT_APPLICABLE": 12960
+        },
+        "produced_symbol_set": ["PASS", "PARTIAL", "FAIL", "NOT_INSTRUMENTED", "UNDETERMINED", "NOT_APPLICABLE"],
+        "missing_admissible_symbols": [],
+        "surjectivity_onto_declared_cell_domain": "VERIFIED",
+        "input_cardinality_basis": "PER_CELL_ABSTRACT_FACT_DOMAIN_CARDINALITY",
+        "joint_fact_distribution": "NOT_INSTRUMENTED",
+        "cross_cell_correlation": "NOT_INSTRUMENTED",
+        "per_cell_surjectivity": "VERIFIED",
+        "union_surjectivity": "VERIFIED",
+        "joint_vector_reachability": "NOT_ESTABLISHED"
+      },
+      {
+        "resolver_id": "f_6",
+        "cell_identifier": "normalization",
+        "input_fact_schema": "evidence_state_model.raw_fact_schema",
+        "enumerated_input_count": 155520,
+        "resolved_status_histogram": {
+          "PASS": 132,
+          "PARTIAL": 66,
+          "FAIL": 4752,
+          "NOT_INSTRUMENTED": 133056,
+          "UNDETERMINED": 4554,
+          "NOT_APPLICABLE": 12960
+        },
+        "produced_symbol_set": ["PASS", "PARTIAL", "FAIL", "NOT_INSTRUMENTED", "UNDETERMINED", "NOT_APPLICABLE"],
+        "missing_admissible_symbols": [],
+        "surjectivity_onto_declared_cell_domain": "VERIFIED",
+        "input_cardinality_basis": "PER_CELL_ABSTRACT_FACT_DOMAIN_CARDINALITY",
+        "joint_fact_distribution": "NOT_INSTRUMENTED",
+        "cross_cell_correlation": "NOT_INSTRUMENTED",
+        "per_cell_surjectivity": "VERIFIED",
+        "union_surjectivity": "VERIFIED",
+        "joint_vector_reachability": "NOT_ESTABLISHED"
+      },
+      {
+        "resolver_id": "f_7",
+        "cell_identifier": "selection",
+        "input_fact_schema": "evidence_state_model.raw_fact_schema",
+        "enumerated_input_count": 155520,
+        "resolved_status_histogram": {
+          "PASS": 132,
+          "PARTIAL": 66,
+          "FAIL": 4752,
+          "NOT_INSTRUMENTED": 133056,
+          "UNDETERMINED": 4554,
+          "NOT_APPLICABLE": 12960
+        },
+        "produced_symbol_set": ["PASS", "PARTIAL", "FAIL", "NOT_INSTRUMENTED", "UNDETERMINED", "NOT_APPLICABLE"],
+        "missing_admissible_symbols": [],
+        "surjectivity_onto_declared_cell_domain": "VERIFIED",
+        "input_cardinality_basis": "PER_CELL_ABSTRACT_FACT_DOMAIN_CARDINALITY",
+        "joint_fact_distribution": "NOT_INSTRUMENTED",
+        "cross_cell_correlation": "NOT_INSTRUMENTED",
+        "per_cell_surjectivity": "VERIFIED",
+        "union_surjectivity": "VERIFIED",
+        "joint_vector_reachability": "NOT_ESTABLISHED"
+      },
+      {
+        "resolver_id": "f_8",
+        "cell_identifier": "retrieval",
+        "input_fact_schema": "evidence_state_model.raw_fact_schema",
+        "enumerated_input_count": 155520,
+        "resolved_status_histogram": {
+          "PASS": 132,
+          "PARTIAL": 66,
+          "FAIL": 4752,
+          "NOT_INSTRUMENTED": 133056,
+          "UNDETERMINED": 4554,
+          "NOT_APPLICABLE": 12960
+        },
+        "produced_symbol_set": ["PASS", "PARTIAL", "FAIL", "NOT_INSTRUMENTED", "UNDETERMINED", "NOT_APPLICABLE"],
+        "missing_admissible_symbols": [],
+        "surjectivity_onto_declared_cell_domain": "VERIFIED",
+        "input_cardinality_basis": "PER_CELL_ABSTRACT_FACT_DOMAIN_CARDINALITY",
+        "joint_fact_distribution": "NOT_INSTRUMENTED",
+        "cross_cell_correlation": "NOT_INSTRUMENTED",
+        "per_cell_surjectivity": "VERIFIED",
+        "union_surjectivity": "VERIFIED",
+        "joint_vector_reachability": "NOT_ESTABLISHED"
+      },
+      {
+        "resolver_id": "f_9",
+        "cell_identifier": "ingestion",
+        "input_fact_schema": "evidence_state_model.raw_fact_schema",
+        "enumerated_input_count": 155520,
+        "resolved_status_histogram": {
+          "PASS": 132,
+          "PARTIAL": 66,
+          "FAIL": 4752,
+          "NOT_INSTRUMENTED": 133056,
+          "UNDETERMINED": 4554,
+          "NOT_APPLICABLE": 12960
+        },
+        "produced_symbol_set": ["PASS", "PARTIAL", "FAIL", "NOT_INSTRUMENTED", "UNDETERMINED", "NOT_APPLICABLE"],
+        "missing_admissible_symbols": [],
+        "surjectivity_onto_declared_cell_domain": "VERIFIED",
+        "input_cardinality_basis": "PER_CELL_ABSTRACT_FACT_DOMAIN_CARDINALITY",
+        "joint_fact_distribution": "NOT_INSTRUMENTED",
+        "cross_cell_correlation": "NOT_INSTRUMENTED",
+        "per_cell_surjectivity": "VERIFIED",
+        "union_surjectivity": "VERIFIED",
+        "joint_vector_reachability": "NOT_ESTABLISHED"
+      },
+      {
+        "resolver_id": "f_10",
+        "cell_identifier": "verification",
+        "input_fact_schema": "evidence_state_model.raw_fact_schema",
+        "enumerated_input_count": 155520,
+        "resolved_status_histogram": {
+          "PASS": 132,
+          "PARTIAL": 66,
+          "FAIL": 4752,
+          "NOT_INSTRUMENTED": 133056,
+          "UNDETERMINED": 4554,
+          "NOT_APPLICABLE": 12960
+        },
+        "produced_symbol_set": ["PASS", "PARTIAL", "FAIL", "NOT_INSTRUMENTED", "UNDETERMINED", "NOT_APPLICABLE"],
+        "missing_admissible_symbols": [],
+        "surjectivity_onto_declared_cell_domain": "VERIFIED",
+        "input_cardinality_basis": "PER_CELL_ABSTRACT_FACT_DOMAIN_CARDINALITY",
+        "joint_fact_distribution": "NOT_INSTRUMENTED",
+        "cross_cell_correlation": "NOT_INSTRUMENTED",
+        "per_cell_surjectivity": "VERIFIED",
+        "union_surjectivity": "VERIFIED",
+        "joint_vector_reachability": "NOT_ESTABLISHED"
+      },
+      {
+        "resolver_id": "f_11",
+        "cell_identifier": "evidence_integrity",
+        "input_fact_schema": "evidence_state_model.raw_fact_schema",
+        "enumerated_input_count": 155520,
+        "resolved_status_histogram": {
+          "PASS": 132,
+          "PARTIAL": 66,
+          "FAIL": 4752,
+          "NOT_INSTRUMENTED": 133056,
+          "UNDETERMINED": 4554,
+          "NOT_APPLICABLE": 12960
+        },
+        "produced_symbol_set": ["PASS", "PARTIAL", "FAIL", "NOT_INSTRUMENTED", "UNDETERMINED", "NOT_APPLICABLE"],
+        "missing_admissible_symbols": [],
+        "surjectivity_onto_declared_cell_domain": "VERIFIED",
+        "input_cardinality_basis": "PER_CELL_ABSTRACT_FACT_DOMAIN_CARDINALITY",
+        "joint_fact_distribution": "NOT_INSTRUMENTED",
+        "cross_cell_correlation": "NOT_INSTRUMENTED",
+        "per_cell_surjectivity": "VERIFIED",
+        "union_surjectivity": "VERIFIED",
+        "joint_vector_reachability": "NOT_ESTABLISHED"
+      },
+      {
+        "resolver_id": "f_12",
+        "cell_identifier": "offline_isolation",
+        "input_fact_schema": "evidence_state_model.raw_fact_schema",
+        "enumerated_input_count": 155520,
+        "resolved_status_histogram": {
+          "PASS": 132,
+          "PARTIAL": 66,
+          "FAIL": 4752,
+          "NOT_INSTRUMENTED": 133056,
+          "UNDETERMINED": 4554,
+          "NOT_APPLICABLE": 12960
+        },
+        "produced_symbol_set": ["PASS", "PARTIAL", "FAIL", "NOT_INSTRUMENTED", "UNDETERMINED", "NOT_APPLICABLE"],
+        "missing_admissible_symbols": [],
+        "surjectivity_onto_declared_cell_domain": "VERIFIED",
+        "input_cardinality_basis": "PER_CELL_ABSTRACT_FACT_DOMAIN_CARDINALITY",
+        "joint_fact_distribution": "NOT_INSTRUMENTED",
+        "cross_cell_correlation": "NOT_INSTRUMENTED",
+        "per_cell_surjectivity": "VERIFIED",
+        "union_surjectivity": "VERIFIED",
+        "joint_vector_reachability": "NOT_ESTABLISHED"
+      },
+      {
+        "resolver_id": "f_13",
+        "cell_identifier": "artifact_reproduction",
+        "input_fact_schema": "evidence_state_model.raw_fact_schema",
+        "enumerated_input_count": 155520,
+        "resolved_status_histogram": {
+          "PASS": 132,
+          "PARTIAL": 66,
+          "FAIL": 4752,
+          "NOT_INSTRUMENTED": 133056,
+          "UNDETERMINED": 4554,
+          "NOT_APPLICABLE": 12960
+        },
+        "produced_symbol_set": ["PASS", "PARTIAL", "FAIL", "NOT_INSTRUMENTED", "UNDETERMINED", "NOT_APPLICABLE"],
+        "missing_admissible_symbols": [],
+        "surjectivity_onto_declared_cell_domain": "VERIFIED",
+        "input_cardinality_basis": "PER_CELL_ABSTRACT_FACT_DOMAIN_CARDINALITY",
+        "joint_fact_distribution": "NOT_INSTRUMENTED",
+        "cross_cell_correlation": "NOT_INSTRUMENTED",
+        "per_cell_surjectivity": "VERIFIED",
+        "union_surjectivity": "VERIFIED",
+        "joint_vector_reachability": "NOT_ESTABLISHED"
+      },
+      {
+        "resolver_id": "f_14",
+        "cell_identifier": "allowed_claim_support",
+        "input_fact_schema": "evidence_state_model.raw_fact_schema",
+        "enumerated_input_count": 155520,
+        "resolved_status_histogram": {
+          "PASS": 132,
+          "PARTIAL": 66,
+          "FAIL": 4752,
+          "NOT_INSTRUMENTED": 133056,
+          "UNDETERMINED": 4554,
+          "NOT_APPLICABLE": 12960
+        },
+        "produced_symbol_set": ["PASS", "PARTIAL", "FAIL", "NOT_INSTRUMENTED", "UNDETERMINED", "NOT_APPLICABLE"],
+        "missing_admissible_symbols": [],
+        "surjectivity_onto_declared_cell_domain": "VERIFIED",
+        "input_cardinality_basis": "PER_CELL_ABSTRACT_FACT_DOMAIN_CARDINALITY",
+        "joint_fact_distribution": "NOT_INSTRUMENTED",
+        "cross_cell_correlation": "NOT_INSTRUMENTED",
+        "per_cell_surjectivity": "VERIFIED",
+        "union_surjectivity": "VERIFIED",
+        "joint_vector_reachability": "NOT_ESTABLISHED"
+      }
+    ],
+    "EVIDENCE_TO_RESOLVED_STATUS_MAP": "DEFINED",
+    "UNION_SYMBOL_SET": [
+      "PASS",
+      "PARTIAL",
+      "FAIL",
+      "NOT_INSTRUMENTED",
+      "UNDETERMINED",
+      "NOT_APPLICABLE"
+    ],
+    "SURJECTIVITY_ONTO_5_ADMISSIBLE_SYMBOLS": "VERIFIED",
+    "PER_CELL_SURJECTIVITY": "VERIFIED",
+    "JOINT_FACT_DISTRIBUTION": "NOT_INSTRUMENTED",
+    "CROSS_CELL_CORRELATION": "NOT_INSTRUMENTED",
+    "CELL_OUTPUT_INDEPENDENCE": "NOT_INSTRUMENTED",
+    "EMPIRICAL_REACHABILITY_OF_ALL_6^14_VECTORS": "NOT_ESTABLISHED",
+    "independence_claim_boundary": "Per-cell and union surjectivity do not establish cross-cell output independence or empirical reachability of every resolved vector.",
+    "STRUCTURAL_SYMBOL_DOMAIN": {
+      "TYPE": "OVERAPPROXIMATION_FOR_AGGREGATOR_TOTALITY"
+    }
+  },
+  "component_model": {
+    "component_order": [
+      "rank-2",
+      "rank-3",
+      "rank-4"
+    ],
+    "component_status_enum": [
+      "PASS",
+      "PARTIAL",
+      "FAIL",
+      "NOT_INSTRUMENTED",
+      "UNDETERMINED",
+      "NOT_APPLICABLE"
+    ],
+    "required_cells": [
+      {
+        "cell_id": "cohort_membership",
+        "value_type": "enum:MATCH|MISMATCH|UNKNOWN",
+        "required": true
+      },
+      {
+        "cell_id": "development_boundary",
+        "value_type": "enum:DISJOINT|CONTAMINATED|UNKNOWN",
+        "required": true
+      },
+      {
+        "cell_id": "candidate_inventory_390",
+        "value_type": "object:nonnegative_integer_counts",
+        "required": true
+      },
+      {
+        "cell_id": "candidate_classification_390",
+        "value_type": "object:included_excluded_and_rule_ids",
+        "required": true
+      },
+      {
+        "cell_id": "acquisition",
+        "value_type": "object:request_count_response_count_and_hashes",
+        "required": true
+      },
+      {
+        "cell_id": "normalization",
+        "value_type": "object:raw_normalized_pairs_and_rule_id",
+        "required": true
+      },
+      {
+        "cell_id": "selection",
+        "value_type": "object:included_selected_stable_identifier_sets",
+        "required": true
+      },
+      {
+        "cell_id": "retrieval",
+        "value_type": "object:selected_and_retrieved_counts_and_hashes",
+        "required": true
+      },
+      {
+        "cell_id": "ingestion",
+        "value_type": "object:retrieved_and_ingested_counts",
+        "required": true
+      },
+      {
+        "cell_id": "verification",
+        "value_type": "object:ingested_and_verified_counts",
+        "required": true
+      },
+      {
+        "cell_id": "evidence_integrity",
+        "value_type": "enum:VERIFIED|MISMATCH|UNKNOWN",
+        "required": true
+      },
+      {
+        "cell_id": "offline_isolation",
+        "value_type": "object:snapshot_network_cache_and_input_manifest_states",
+        "required": true
+      },
+      {
+        "cell_id": "artifact_reproduction",
+        "value_type": "object:command_exit_code_and_output_hashes",
+        "required": true
+      },
+      {
+        "cell_id": "allowed_claim_support",
+        "value_type": "object:nine_required_boolean_elements",
+        "required": true
+      }
+    ],
+    "cell_record_required_fields": {
+      "component_stable_identifier": "enum:rank-2|rank-3|rank-4",
+      "cell_id": "enum:required_cells.cell_id",
+      "measured_value": "typed_by_required_cells",
+      "normalized_case": "enum:evidence_state_model.normalized_case_enum",
+      "derived_state": "enum:evidence_state_model.state_enum",
+      "evidence_path": "nonempty repository-relative or run-root-relative UTF-8 path unless NOT_APPLICABLE",
+      "evidence_locator": "positive line number or nonempty stable record identifier unless NOT_APPLICABLE",
+      "evidence_sha256": "64 lowercase hexadecimal characters unless NOT_APPLICABLE",
+      "derivation_rule_id": "nonempty protocol rule identifier",
+      "derivation": "nonempty deterministic expression result",
+      "alternative_interpretation_count": "integer exactly 0"
+    },
+    "arithmetic_constraints": [
+      "All count fields are nonnegative integers.",
+      "Across rank-2, rank-3, and rank-4, candidate_total sums to exactly 390.",
+      "For each component, unique_candidate_count=candidate_total.",
+      "For each component, classified_count=candidate_total.",
+      "For each component, included_count+excluded_count=candidate_total.",
+      "For each component, 0<=verified_count<=ingested_count<=retrieved_count<=selected_count<=included_count<=candidate_total.",
+      "Every set count equals the cardinality of its enumerated stable-identifier set.",
+      "Any false arithmetic constraint produces a trusted violation in candidate_inventory_390 or the first affected pipeline cell."
+    ],
+    "cell_specific_resolution_boundary": {
+      "purpose": "Derive each resolved cell status from facts specific to that cell before component aggregation.",
+      "may_depend_on": [
+        "cell identifier",
+        "layer",
+        "cell meaning",
+        "cell position"
+      ],
+      "completeness_domain": "The per-cell evidence_state_model abstract raw-fact Cartesian product, evaluated independently for each resolver without asserting a joint 14-cell fact distribution.",
+      "per_cell_abstract_fact_domain_cardinality": 155520,
+      "resolver_count": 14,
+      "resolver_evaluation_count": 2177280,
+      "joint_14_cell_fact_domain_cardinality": "NOT_ESTABLISHED",
+      "aggregation_must_not_reinspect_cell_facts": true
+    },
+    "aggregation_contract": {
+      "input": "Exactly 14 resolved cell statuses interpreted as a multiset.",
+      "required_total_cell_count": 14,
+      "permitted_information": [
+        "count of each declared status",
+        "whether each declared status has count greater than zero",
+        "total resolved cell count"
+      ],
+      "forbidden_references": [
+        "cell identifier",
+        "cell position",
+        "ordinal",
+        "layer name",
+        "status of a specifically identified cell",
+        "input array order"
+      ],
+      "restricted_rule_schema": {
+        "allowed_node_forms": [
+          "all",
+          "field_op_value"
+        ],
+        "allowed_context_fields": [
+          "cell_states"
+        ],
+        "cell_states_semantics": "Multiset only; array indexing and order-sensitive operators are prohibited.",
+        "allowed_operators": [
+          "COUNT_EQ",
+          "COUNT_GT"
+        ],
+        "allowed_value_shape": "An object with exactly item and count; item is in component_status_enum and count is a nonnegative integer.",
+        "total_count_validation": "Before applying status_derivation_rules, require cell_states count to equal 14."
+      },
+      "mechanical_proof": "Traverse the complete aggregation DSL AST and reject every field, operator, node form, value shape, or property outside restricted_rule_schema; then exhaustively evaluate all 11,628 status-count equivalence classes.",
+      "random_or_partial_permutation_testing_is_sufficient": false,
+      "pass_result": "COMPONENT_PERMUTATION_INVARIANCE: PROVEN_BY_RESTRICTED_RULE_SCHEMA",
+      "failure_result": {
+        "label": "COMPONENT_PERMUTATION_INVARIANCE_UNPROVEN",
+        "classification": "BLOCKING",
+        "status": "PROTOCOL_DRAFT_BLOCKED"
+      }
+    },
+    "status_priority_high_to_low": [
+      "FAIL",
+      "NOT_INSTRUMENTED",
+      "UNDETERMINED",
+      "PARTIAL",
+      "PASS"
+    ],
+    "status_derivation_rules": [
+      {
+        "priority": 1,
+        "component_status": "FAIL",
+        "match": {
+          "field": "cell_states",
+          "op": "COUNT_GT",
+          "value": {
+            "item": "FAIL",
+            "count": 0
+          }
+        },
+        "condition": "At least one required cell is FAIL."
+      },
+      {
+        "priority": 2,
+        "component_status": "NOT_INSTRUMENTED",
+        "match": {
+          "all": [
+            {
+              "field": "cell_states",
+              "op": "COUNT_EQ",
+              "value": {
+                "item": "FAIL",
+                "count": 0
+              }
+            },
+            {
+              "field": "cell_states",
+              "op": "COUNT_GT",
+              "value": {
+                "item": "NOT_INSTRUMENTED",
+                "count": 0
+              }
+            }
+          ]
+        },
+        "condition": "No cell is FAIL and at least one required cell is NOT_INSTRUMENTED."
+      },
+      {
+        "priority": 3,
+        "component_status": "UNDETERMINED",
+        "match": {
+          "all": [
+            {
+              "field": "cell_states",
+              "op": "COUNT_EQ",
+              "value": {
+                "item": "FAIL",
+                "count": 0
+              }
+            },
+            {
+              "field": "cell_states",
+              "op": "COUNT_EQ",
+              "value": {
+                "item": "NOT_INSTRUMENTED",
+                "count": 0
+              }
+            },
+            {
+              "field": "cell_states",
+              "op": "COUNT_GT",
+              "value": {
+                "item": "UNDETERMINED",
+                "count": 0
+              }
+            }
+          ]
+        },
+        "condition": "No cell is FAIL or NOT_INSTRUMENTED and at least one required cell is UNDETERMINED."
+      },
+      {
+        "priority": 4,
+        "component_status": "PARTIAL",
+        "match": {
+          "all": [
+            {
+              "field": "cell_states",
+              "op": "COUNT_EQ",
+              "value": {
+                "item": "FAIL",
+                "count": 0
+              }
+            },
+            {
+              "field": "cell_states",
+              "op": "COUNT_EQ",
+              "value": {
+                "item": "NOT_INSTRUMENTED",
+                "count": 0
+              }
+            },
+            {
+              "field": "cell_states",
+              "op": "COUNT_EQ",
+              "value": {
+                "item": "UNDETERMINED",
+                "count": 0
+              }
+            },
+            {
+              "field": "cell_states",
+              "op": "COUNT_GT",
+              "value": {
+                "item": "PARTIAL",
+                "count": 0
+              }
+            }
+          ]
+        },
+        "condition": "No higher-priority state exists and at least one required cell is PARTIAL."
+      },
+      {
+        "priority": 5,
+        "component_status": "PASS",
+        "match": {
+          "all": [
+            {
+              "field": "cell_states",
+              "op": "COUNT_EQ",
+              "value": {
+                "item": "FAIL",
+                "count": 0
+              }
+            },
+            {
+              "field": "cell_states",
+              "op": "COUNT_EQ",
+              "value": {
+                "item": "NOT_INSTRUMENTED",
+                "count": 0
+              }
+            },
+            {
+              "field": "cell_states",
+              "op": "COUNT_EQ",
+              "value": {
+                "item": "UNDETERMINED",
+                "count": 0
+              }
+            },
+            {
+              "field": "cell_states",
+              "op": "COUNT_EQ",
+              "value": {
+                "item": "PARTIAL",
+                "count": 0
+              }
+            },
+            {
+              "field": "cell_states",
+              "op": "COUNT_GT",
+              "value": {
+                "item": "PASS",
+                "count": 0
+              }
+            }
+          ]
+        },
+        "condition": "Every required cell is PASS or evidenced NOT_APPLICABLE and at least one required cell is PASS."
+      }
+    ],
+    "count_equivalence_domain": {
+      "resolved_state_vector_count_expression": "6^14",
+      "resolved_state_vector_count": 78364164096,
+      "count_equivalence_class_expression": "C(19,5)",
+      "count_equivalence_class_count": 11628,
+      "protocol_admissible_component_class_count": 11627,
+      "protocol_excluded_component_guard_class_count": 1,
+      "class_identity": "The six nonnegative status counts in component_status_enum order, summing to exactly 14.",
+      "guard_only_class": {
+        "status_counts": {
+          "PASS": 0,
+          "PARTIAL": 0,
+          "FAIL": 0,
+          "NOT_INSTRUMENTED": 0,
+          "UNDETERMINED": 0,
+          "NOT_APPLICABLE": 14
+        },
+        "CLASS": "PROTOCOL_EXCLUDED_GUARD_CLASS",
+        "JOINT_EVIDENCE_REACHABILITY": "NOT_INSTRUMENTED",
+        "EMPIRICALLY_OBSERVED": false,
+        "VALIDATION_ROLE": "NEGATIVE_DOMAIN_GUARD",
+        "TERMINAL_ACTION": "PRE_FROZEN_RULE_INCOMPLETE"
+      }
+    },
+    "outcome_histogram": {
+      "generation_method": "Exhaustively enumerate all 11,628 count equivalence classes, validate total count 14, and select the unique minimum-priority matching aggregation rule; route the all-NOT_APPLICABLE class to the separate negative-domain guard.",
+      "generated_before_odd007r_execution": true,
+      "entries": [
+        {
+          "outcome": "FAIL",
+          "class_count": 8568,
+          "declared_protocol_admissibility": "PROTOCOL_ADMISSIBLE",
+          "witness_class": {
+            "PASS": 13,
+            "PARTIAL": 0,
+            "FAIL": 1,
+            "NOT_INSTRUMENTED": 0,
+            "UNDETERMINED": 0,
+            "NOT_APPLICABLE": 0
+          }
+        },
+        {
+          "outcome": "NOT_INSTRUMENTED",
+          "class_count": 2380,
+          "declared_protocol_admissibility": "PROTOCOL_ADMISSIBLE",
+          "witness_class": {
+            "PASS": 13,
+            "PARTIAL": 0,
+            "FAIL": 0,
+            "NOT_INSTRUMENTED": 1,
+            "UNDETERMINED": 0,
+            "NOT_APPLICABLE": 0
+          }
+        },
+        {
+          "outcome": "UNDETERMINED",
+          "class_count": 560,
+          "declared_protocol_admissibility": "PROTOCOL_ADMISSIBLE",
+          "witness_class": {
+            "PASS": 13,
+            "PARTIAL": 0,
+            "FAIL": 0,
+            "NOT_INSTRUMENTED": 0,
+            "UNDETERMINED": 1,
+            "NOT_APPLICABLE": 0
+          }
+        },
+        {
+          "outcome": "PARTIAL",
+          "class_count": 105,
+          "declared_protocol_admissibility": "PROTOCOL_ADMISSIBLE",
+          "witness_class": {
+            "PASS": 13,
+            "PARTIAL": 1,
+            "FAIL": 0,
+            "NOT_INSTRUMENTED": 0,
+            "UNDETERMINED": 0,
+            "NOT_APPLICABLE": 0
+          }
+        },
+        {
+          "outcome": "PASS",
+          "class_count": 14,
+          "declared_protocol_admissibility": "PROTOCOL_ADMISSIBLE",
+          "witness_class": {
+            "PASS": 14,
+            "PARTIAL": 0,
+            "FAIL": 0,
+            "NOT_INSTRUMENTED": 0,
+            "UNDETERMINED": 0,
+            "NOT_APPLICABLE": 0
+          }
+        },
+        {
+          "outcome": "NOT_APPLICABLE",
+          "class_count": 0,
+          "declared_protocol_admissibility": "PROTOCOL_EXCLUDED_GUARD_HANDLED",
+          "witness_class": {
+            "exists": false,
+            "reason": "The all-NOT_APPLICABLE count class is not assigned as a component outcome; it is handled by PROTOCOL_EXCLUDED_GUARD_CLASS without asserting joint evidence unreachability."
+          }
+        },
+        {
+          "outcome": "NEGATIVE_DOMAIN_GUARD",
+          "outcome_kind": "VALIDATION_PARTITION_NOT_COMPONENT_STATUS_OR_PROTOCOL_DEFECT",
+          "class_count": 1,
+          "declared_protocol_admissibility": "PROTOCOL_EXCLUDED_GUARD_CLASS",
+          "witness_class": {
+            "PASS": 0,
+            "PARTIAL": 0,
+            "FAIL": 0,
+            "NOT_INSTRUMENTED": 0,
+            "UNDETERMINED": 0,
+            "NOT_APPLICABLE": 14
+          }
+        }
+      ],
+      "expected_class_count_sum": 11628,
+      "protocol_admissible_component_outcome_class_count_sum": 11627,
+      "protocol_excluded_component_guard_class_count": 1,
+      "guard_accounting_rule": "NEGATIVE_DOMAIN_GUARD accounts for the complete mathematical class domain. It is not a component status or protocol defect count, is excluded from the protocol-admissible component domain, and is never supplied to the run aggregator; its joint evidence reachability is not instrumented.",
+      "duplicate_class_count": 0,
+      "unclassified_class_count": 0,
+      "protocol_admissible_outcome_zero_count": 0,
+      "zero_count_policy": "A zero count is valid only for an outcome excluded from the protocol-admissible domain before execution; this is a protocol-domain declaration, not an empirical reachability claim.",
+      "zero_protocol_admissible_result": {
+        "label": "DECLARED_OUTCOME_UNREACHABLE",
+        "classification": "BLOCKING",
+        "status": "PROTOCOL_DRAFT_BLOCKED"
+      },
+      "protocol_defect_counts_are_included": false
+    },
+    "not_applicable_component_status": {
+      "protocol_admissible": false,
+      "guard_class": "PROTOCOL_EXCLUDED_GUARD_CLASS",
+      "joint_evidence_reachability": "NOT_INSTRUMENTED",
+      "reason": "The protocol excludes the all-NOT_APPLICABLE class from ordinary component adjudication without asserting that evidence cannot generate it.",
+      "if_observed": "Emit PRE_FROZEN_RULE_INCOMPLETE and stop."
+    },
+    "non_unique_or_uncovered_result": {
+      "label": "PRE_FROZEN_RULE_INCOMPLETE",
+      "classification": "BLOCKING",
+      "status": "COMMIT_BLOCKED",
+      "runtime_rule_gap_repair": "PROHIBITED"
+    }
+  },
+  "run_model": {
+    "component_count": 3,
+    "component_order_affects_result": false,
+    "input_component_status_enum": [
+      "PASS",
+      "PARTIAL",
+      "FAIL",
+      "NOT_INSTRUMENTED",
+      "UNDETERMINED",
+      "NOT_APPLICABLE"
+    ],
+    "theoretical_component_combinations": 216,
+    "run_status_enum": [
+      "RUN_PASS",
+      "RUN_PARTIAL",
+      "COMMIT_BLOCKED"
+    ],
+    "decision_priority_high_to_low": [
+      {
+        "priority": 1,
+        "run_status": "COMMIT_BLOCKED",
+        "match": {
+          "field": "has_unsuppressed_blocking_defect",
+          "op": "EQ",
+          "value": true
+        },
+        "condition": "At least one unsuppressed BLOCKING defect exists."
+      },
+      {
+        "priority": 2,
+        "run_status": "COMMIT_BLOCKED",
+        "match": {
+          "all": [
+            {
+              "field": "has_unsuppressed_blocking_defect",
+              "op": "EQ",
+              "value": false
+            },
+            {
+              "field": "component_statuses",
+              "op": "CONTAINS_ANY",
+              "value": [
+                "FAIL",
+                "NOT_INSTRUMENTED",
+                "UNDETERMINED",
+                "NOT_APPLICABLE"
+              ]
+            }
+          ]
+        },
+        "condition": "No unsuppressed BLOCKING defect exists and at least one component is FAIL, NOT_INSTRUMENTED, UNDETERMINED, or NOT_APPLICABLE."
+      },
+      {
+        "priority": 3,
+        "run_status": "RUN_PARTIAL",
+        "match": {
+          "all": [
+            {
+              "field": "has_unsuppressed_blocking_defect",
+              "op": "EQ",
+              "value": false
+            },
+            {
+              "field": "component_statuses",
+              "op": "ALL_VALUES_IN",
+              "value": [
+                "PASS",
+                "PARTIAL"
+              ]
+            },
+            {
+              "field": "component_statuses",
+              "op": "COUNT_GT",
+              "value": {
+                "item": "PARTIAL",
+                "count": 0
+              }
+            }
+          ]
+        },
+        "condition": "Every component is PASS or PARTIAL and at least one component is PARTIAL."
+      },
+      {
+        "priority": 4,
+        "run_status": "RUN_PASS",
+        "match": {
+          "all": [
+            {
+              "field": "has_unsuppressed_blocking_defect",
+              "op": "EQ",
+              "value": false
+            },
+            {
+              "field": "component_statuses",
+              "op": "ALL_VALUES_IN",
+              "value": [
+                "PASS"
+              ]
+            }
+          ]
+        },
+        "condition": "All three components are PASS."
+      }
+    ],
+    "commit_eligibility": {
+      "RUN_PASS": true,
+      "RUN_PARTIAL": false,
+      "COMMIT_BLOCKED": false
+    },
+    "coverage_proof_rule": "Enumerate the ordered Cartesian product of six component terminal symbols in the three named component slots and both values of has_unsuppressed_blocking_defect; require exactly one first-matching decision for each of 432 inputs and compare every S3 slot permutation.",
+    "named_component_slots": [
+      "rank-2:metformin",
+      "rank-3:levothyroxine",
+      "rank-4:lisinopril"
+    ],
+    "slot_identity_rule": "The three component slots remain ordered so evidence stays associated with metformin, levothyroxine, and lisinopril; the run outcome function is nevertheless required to be invariant under every permutation of the three resolved terminal symbols.",
+    "protocol_excluded_guard_inputs": {
+      "condition": "At least one component status is NOT_APPLICABLE.",
+      "definition": "A structural ordered run input containing at least one protocol-excluded component symbol.",
+      "empirical_reachability_claim": "NOT_MADE",
+      "ordered_input_count_expression": "(6^3 - 5^3) * 2",
+      "ordered_input_count": 182,
+      "result": "PRE_FROZEN_RULE_INCOMPLETE",
+      "run_aggregator_totality_role": "These inputs remain in the 432-input structural overapproximation and deterministically select COMMIT_BLOCKED, while the separate guard emits PRE_FROZEN_RULE_INCOMPLETE."
+    },
+    "slot_permutation_invariance": {
+      "terminal_symbol_domain_count": 6,
+      "component_slot_count": 3,
+      "blocking_flag_count": 2,
+      "ordered_structural_input_count_expression": "6^3 * 2",
+      "ordered_structural_input_count": 432,
+      "permutation_group": "S3",
+      "permutations_per_input": 6,
+      "domain_checked": 432,
+      "outcome_changes_under_permutation": 0,
+      "pass_result": "RUN_SLOT_PERMUTATION_INVARIANCE",
+      "protocol_admissible_subdomain": {
+        "admissible_terminal_symbol_count": 5,
+        "ordered_input_count_expression": "5^3 * 2",
+        "ordered_input_count": 250,
+        "blocking_true_input_count_expression": "5^3",
+        "blocking_true_input_count": 125,
+        "blocking_true_outcome": "COMMIT_BLOCKED",
+        "blocking_false_nonblocked_input_count_expression": "2^3",
+        "blocking_false_nonblocked_input_count": 8,
+        "blocking_false_remainder_expression": "5^3 - 2^3",
+        "blocking_false_remainder_count": 117,
+        "blocking_false_remainder_outcome": "COMMIT_BLOCKED",
+        "commit_blocked_input_count_expression": "125 + 117",
+        "commit_blocked_input_count": 242
+      },
+      "nonblocked_inputs_literal": [
+        {
+          "literal": "PASS/PASS/PASS -> RUN_PASS",
+          "component_statuses": ["PASS", "PASS", "PASS"],
+          "has_unsuppressed_blocking_defect": false,
+          "outcome": "RUN_PASS"
+        },
+        {
+          "literal": "PASS/PASS/PARTIAL -> RUN_PARTIAL",
+          "component_statuses": ["PASS", "PASS", "PARTIAL"],
+          "has_unsuppressed_blocking_defect": false,
+          "outcome": "RUN_PARTIAL"
+        },
+        {
+          "literal": "PASS/PARTIAL/PASS -> RUN_PARTIAL",
+          "component_statuses": ["PASS", "PARTIAL", "PASS"],
+          "has_unsuppressed_blocking_defect": false,
+          "outcome": "RUN_PARTIAL"
+        },
+        {
+          "literal": "PARTIAL/PASS/PASS -> RUN_PARTIAL",
+          "component_statuses": ["PARTIAL", "PASS", "PASS"],
+          "has_unsuppressed_blocking_defect": false,
+          "outcome": "RUN_PARTIAL"
+        },
+        {
+          "literal": "PASS/PARTIAL/PARTIAL -> RUN_PARTIAL",
+          "component_statuses": ["PASS", "PARTIAL", "PARTIAL"],
+          "has_unsuppressed_blocking_defect": false,
+          "outcome": "RUN_PARTIAL"
+        },
+        {
+          "literal": "PARTIAL/PASS/PARTIAL -> RUN_PARTIAL",
+          "component_statuses": ["PARTIAL", "PASS", "PARTIAL"],
+          "has_unsuppressed_blocking_defect": false,
+          "outcome": "RUN_PARTIAL"
+        },
+        {
+          "literal": "PARTIAL/PARTIAL/PASS -> RUN_PARTIAL",
+          "component_statuses": ["PARTIAL", "PARTIAL", "PASS"],
+          "has_unsuppressed_blocking_defect": false,
+          "outcome": "RUN_PARTIAL"
+        },
+        {
+          "literal": "PARTIAL/PARTIAL/PARTIAL -> RUN_PARTIAL",
+          "component_statuses": ["PARTIAL", "PARTIAL", "PARTIAL"],
+          "has_unsuppressed_blocking_defect": false,
+          "outcome": "RUN_PARTIAL"
+        }
+      ]
+    },
+    "outcome_histogram": {
+      "generation_method": "Exhaustively enumerate six component statuses at each of three ordered named slots and both boolean values of has_unsuppressed_blocking_defect, then select the unique minimum-priority matching run rule.",
+      "generated_before_odd007r_execution": true,
+      "entries": [
+        {
+          "outcome": "RUN_PASS",
+          "input_count": 1,
+          "declared_protocol_admissibility": "PRODUCED_IN_PROTOCOL_ADMISSIBLE_DOMAIN",
+          "witness_input": {
+            "component_statuses": [
+              "PASS",
+              "PASS",
+              "PASS"
+            ],
+            "has_unsuppressed_blocking_defect": false
+          }
+        },
+        {
+          "outcome": "RUN_PARTIAL",
+          "input_count": 7,
+          "declared_protocol_admissibility": "PRODUCED_IN_PROTOCOL_ADMISSIBLE_DOMAIN",
+          "witness_input": {
+            "component_statuses": [
+              "PARTIAL",
+              "PASS",
+              "PASS"
+            ],
+            "has_unsuppressed_blocking_defect": false
+          }
+        },
+        {
+          "outcome": "COMMIT_BLOCKED",
+          "input_count": 424,
+          "declared_protocol_admissibility": "PRODUCED_IN_PROTOCOL_ADMISSIBLE_DOMAIN",
+          "witness_input": {
+            "component_statuses": [
+              "PASS",
+              "PASS",
+              "PASS"
+            ],
+            "has_unsuppressed_blocking_defect": true
+          }
+        }
+      ],
+      "expected_input_count_sum": 432,
+      "protocol_admissible_input_count": 250,
+      "protocol_excluded_guard_input_count": 182,
+      "duplicate_input_count": 0,
+      "unclassified_input_count": 0,
+      "protocol_admissible_outcome_zero_count": 0,
+      "zero_count_policy": "A zero count is valid only for a run outcome excluded from the protocol-admissible domain before execution; no empirical reachability inference is permitted.",
+      "protocol_defect_synthetic_witnesses_are_added_to_histogram": false
+    }
+  },
+  "domain_level_separation": {
+    "EMPIRICAL_REACHABILITY": "NOT_MEASURED",
+    "PER_CELL_ABSTRACT_FACT_DOMAIN_CARDINALITY": {
+      "source_level": "EVIDENCE_FACT",
+      "count": 155520,
+      "scope": "EACH_CELL_RESOLVER_SEPARATELY"
+    },
+    "RESOLVER_EVALUATION_COUNT": {
+      "count_expression": "14 * 155,520",
+      "count": 2177280
+    },
+    "JOINT_14_CELL_FACT_DOMAIN_CARDINALITY": "NOT_ESTABLISHED",
+    "CELL_OUTPUT_INDEPENDENCE": "NOT_INSTRUMENTED",
+    "EMPIRICAL_REACHABILITY_OF_ALL_6^14_VECTORS": "NOT_ESTABLISHED",
+    "COMPONENT_COUNT_EQUIVALENCE_DOMAIN": {
+      "level": "QUOTIENTED_WITHIN_14_CELL_MULTISET",
+      "count_expression": "C(19,5)",
+      "count": 11628
+    },
+    "PROTOCOL_ADMISSIBLE_COMPONENT_CLASS_COUNT": {
+      "level": "QUOTIENTED_WITHIN_14_CELL_MULTISET",
+      "count_expression": "C(19,5) - 1",
+      "count": 11627
+    },
+    "PROTOCOL_EXCLUDED_COMPONENT_GUARD_CLASS_COUNT": {
+      "count": 1,
+      "class": "all 14 cells are NOT_APPLICABLE",
+      "classification": "PROTOCOL_EXCLUDED_GUARD_CLASS",
+      "JOINT_EVIDENCE_REACHABILITY": "NOT_INSTRUMENTED",
+      "EMPIRICALLY_OBSERVED": false,
+      "VALIDATION_ROLE": "NEGATIVE_DOMAIN_GUARD",
+      "TERMINAL_ACTION": "PRE_FROZEN_RULE_INCOMPLETE"
+    },
+    "RUN_ORDERED_SLOT_STRUCTURAL_DOMAIN": {
+      "component_slot_level": "ORDERED",
+      "count_expression": "6^3 * 2",
+      "count": 432
+    },
+    "PROTOCOL_ADMISSIBLE_RUN_ORDERED_INPUT_COUNT": {
+      "component_slot_level": "ORDERED",
+      "count_expression": "5^3 * 2",
+      "count": 250
+    },
+    "PROTOCOL_EXCLUDED_RUN_GUARD_INPUT_COUNT": {
+      "component_slot_level": "ORDERED",
+      "count_expression": "(6^3 - 5^3) * 2",
+      "count": 182,
+      "definition": "Structural inputs containing a protocol-excluded symbol in at least one named component slot.",
+      "empirical_unreachability_claim": false
+    },
+    "RUN_SLOT_QUOTIENT_PROTOCOL_ADMISSIBLE_DOMAIN": {
+      "component_slot_level": "QUOTIENTED_BY_SLOT_PERMUTATION",
+      "count_expression": "C(7,3) * 2",
+      "count": 70
+    },
+    "RUN_ORDERED_SLOT_COMPONENT_QUOTIENT_CLASS_DOMAIN": {
+      "within_each_component": "QUOTIENTED",
+      "across_the_three_named_component_slots": "ORDERED",
+      "count_expression": "2 * 11,627^3",
+      "count": 3143641497766,
+      "exhaustive_enumeration": "NOT_PERFORMED",
+      "validation_method": "ANALYTIC_AGGREGATION"
+    },
+    "RUN_RESOLVED_VECTOR_COMBINATION_DOMAIN": {
+      "source_level": "RESOLVED_STATUS_VECTOR",
+      "count_expression": "2 * (6^14 - 1)^3",
+      "count": "962459606759903199598078202314750",
+      "exhaustive_enumeration": "NOT_PERFORMED",
+      "validation_method": "ANALYTIC_AGGREGATION"
+    },
+    "RAW_EVIDENCE_FACT_DOMAIN": {
+      "source_level": "EVIDENCE_FACT",
+      "per_cell_abstract_fact_domain_cardinality": 155520,
+      "resolver_evaluation_count": 2177280,
+      "joint_14_cell_fact_domain_cardinality": "NOT_ESTABLISHED",
+      "relation_to_resolved_vector_domain": "EXPLICIT_MAPPING_REQUIRED",
+      "mapping": "evidence_to_resolved_status_map"
+    },
+    "separation_rules": [
+      "Component aggregation uses the multiset quotient within each 14-cell component.",
+      "Run validation preserves the three named component slots as ordered so evidence remains associated with metformin, levothyroxine, and lisinopril.",
+      "The 11,628 component count classes and 432 run ordered structural inputs are different abstraction levels.",
+      "The 3,143,641,497,766 ordered-slot component-quotient inputs are derived analytically and are not claimed to have been exhaustively enumerated.",
+      "A resolved-status-vector domain must not be described as a raw evidence-fact domain.",
+      "The 155,520 input count applies independently to each cell resolver; it is not a joint 14-cell fact-domain cardinality.",
+      "Per-cell or union surjectivity does not establish cross-cell independence or reachability of all 6^14 joint vectors.",
+      "The 6^14 resolved vectors and 11,628 count classes are structural overapproximations used to prove aggregator totality; they are not empirical distributions and do not establish empirical occurrence."
+    ],
+    "STRUCTURAL_SYMBOL_DOMAIN": {
+      "TYPE": "OVERAPPROXIMATION_FOR_AGGREGATOR_TOTALITY"
+    }
+  },
+  "defect_taxonomy": {
+    "classification_enum": [
+      "BLOCKING",
+      "RECORD_AND_PROCEED",
+      "OUT_OF_SCOPE"
+    ],
+    "unknown_label_policy": {
+      "action": "DO_NOT_CREATE_OR_CLASSIFY_THE_UNKNOWN_LABEL",
+      "emit_instead": "PRE_FROZEN_RULE_INCOMPLETE",
+      "status": "COMMIT_BLOCKED"
+    },
+    "labels": {
+      "BLOCKING": [
+        "PRE_FREEZE_ORDER_UNVERIFIED",
+        "FROZEN_RULE_ARTIFACT_MISSING",
+        "FROZEN_CLAIM_ARTIFACT_MISSING",
+        "FROZEN_SCOPE_ARTIFACT_MISSING",
+        "FROZEN_RULE_BYTES_MISMATCH",
+        "FROZEN_CLAIM_BYTES_MISMATCH",
+        "FROZEN_SCOPE_BYTES_MISMATCH",
+        "FREEZE_AND_REREAD_NOT_ORDERED",
+        "DAG_ANCHOR_DURABILITY_UNPROVEN",
+        "LIMITED_COHORT_UNDEFINED",
+        "COHORT_IDENTITY_CONFLICT",
+        "PRE_FROZEN_RULE_INCOMPLETE",
+        "DEVELOPMENT_BOUNDARY_CONTAMINATED",
+        "CANDIDATE_CLASSIFICATION_INCOMPLETE",
+        "PROTOCOL_X_SCOPE_CONTAMINATED",
+        "PRIMARY_MAIN_CONTAMINATION_PATH_PRESENT",
+        "OLD_EVIDENCE_REUSED",
+        "NEW_EVIDENCE_SEQUENCE_VIOLATION",
+        "RUN_IDENTITY_INVALID",
+        "OFFLINE_INPUT_UNDECLARED",
+        "OFFLINE_NETWORK_DEPENDENCY",
+        "OFFLINE_REPRODUCTION_FAILED",
+        "ALLOWED_CLAIM_UNSUPPORTED",
+        "PROTOCOL_MANIFEST_HASH_CYCLE",
+        "MANIFEST_BINDING_UNSUPPORTED",
+        "MANIFEST_REQUIRED_DIGEST_MISSING",
+        "MANIFEST_BINDING_MISMATCH",
+        "COMPONENT_PERMUTATION_INVARIANCE_UNPROVEN",
+        "DECLARED_OUTCOME_UNREACHABLE",
+        "INDEX_BLOB_BYTES_MISMATCH",
+        "COMMIT_BLOB_BYTES_MISMATCH",
+        "COMMIT_X_CANDIDATE_ABANDONED",
+        "PUBLICATION_REF_COLLISION",
+        "REMOTE_BRANCH_SHA_MISMATCH",
+        "REMOTE_TAG_PEELED_SHA_MISMATCH",
+        "FRESH_CLONE_HEAD_MISMATCH",
+        "FRESH_CLONE_BLOB_MISMATCH",
+        "REMOTE_PUBLICATION_UNVERIFIED"
+      ],
+      "RECORD_AND_PROCEED": [
+        "EXTERNAL_BYTES_NOT_AVAILABLE"
+      ],
+      "OUT_OF_SCOPE": [
+        "ODD_008",
+        "TOP_100_EXPANSION",
+        "EMA_PMDA_INTEGRATION",
+        "PMDA_ADVANTAGE_EVALUATION",
+        "DIFFERENTIATION_DELTA_DESIGN",
+        "KILL_CRITERIA_DESIGN",
+        "UI_MONETIZATION"
+      ]
+    },
+    "comparison_state_enum": [
+      "EXPECTED_MISSING",
+      "ACTUAL_MISSING",
+      "COMPARABLE_MATCH",
+      "COMPARABLE_MISMATCH"
+    ],
+    "comparison_rules": [
+      "Use an ARTIFACT_MISSING label when the required actual artifact does not exist.",
+      "Use an ARTIFACT_MISSING or PRE_FREEZE_ORDER_UNVERIFIED parent when no frozen expected hash exists; never call that state MISMATCH.",
+      "Use a BYTES_MISMATCH label only when both frozen expected bytes/hash and current actual bytes/hash exist and differ.",
+      "A comparison that was not performed is not a mismatch."
+    ],
+    "parent_child_suppression": [
+      {
+        "parent": "PRE_FREEZE_ORDER_UNVERIFIED",
+        "suppress_children": [
+          "FREEZE_AND_REREAD_NOT_ORDERED",
+          "DAG_ANCHOR_DURABILITY_UNPROVEN"
+        ],
+        "condition": "No valid X or Y commit exists."
+      },
+      {
+        "parent": "FROZEN_CLAIM_ARTIFACT_MISSING",
+        "suppress_children": [
+          "FROZEN_CLAIM_BYTES_MISMATCH",
+          "ALLOWED_CLAIM_UNSUPPORTED"
+        ],
+        "condition": "The claim artifact itself is absent."
+      },
+      {
+        "parent": "FROZEN_RULE_ARTIFACT_MISSING",
+        "suppress_children": [
+          "FROZEN_RULE_BYTES_MISMATCH",
+          "PRE_FROZEN_RULE_INCOMPLETE"
+        ],
+        "condition": "The rule artifact itself is absent."
+      },
+      {
+        "parent": "FROZEN_SCOPE_ARTIFACT_MISSING",
+        "suppress_children": [
+          "FROZEN_SCOPE_BYTES_MISMATCH",
+          "PROTOCOL_X_SCOPE_CONTAMINATED"
+        ],
+        "condition": "The scope artifact itself is absent."
+      },
+      {
+        "parent": "LIMITED_COHORT_UNDEFINED",
+        "suppress_children": [
+          "COHORT_IDENTITY_CONFLICT",
+          "DEVELOPMENT_BOUNDARY_CONTAMINATED",
+          "CANDIDATE_CLASSIFICATION_INCOMPLETE"
+        ],
+        "condition": "The finite cohort or stable identifier namespace is absent or invalid."
+      },
+      {
+        "parent": "PRE_FROZEN_RULE_INCOMPLETE",
+        "suppress_children": [
+          "OFFLINE_REPRODUCTION_FAILED",
+          "ALLOWED_CLAIM_UNSUPPORTED"
+        ],
+        "condition": "The missing rule prevents unique derivation of the child finding."
+      },
+      {
+        "parent": "COMPONENT_PERMUTATION_INVARIANCE_UNPROVEN",
+        "suppress_children": [
+          "DECLARED_OUTCOME_UNREACHABLE"
+        ],
+        "condition": "A forbidden aggregator dependency or unsupported AST node invalidates the component histogram before outcome structural admissibility can be evaluated."
+      },
+      {
+        "parent": "PRIMARY_MAIN_CONTAMINATION_PATH_PRESENT",
+        "suppress_children": [
+          "INDEX_BLOB_BYTES_MISMATCH",
+          "COMMIT_BLOB_BYTES_MISMATCH",
+          "COMMIT_X_CANDIDATE_ABANDONED",
+          "PUBLICATION_REF_COLLISION",
+          "REMOTE_BRANCH_SHA_MISMATCH",
+          "REMOTE_TAG_PEELED_SHA_MISMATCH",
+          "FRESH_CLONE_HEAD_MISMATCH",
+          "FRESH_CLONE_BLOB_MISMATCH",
+          "REMOTE_PUBLICATION_UNVERIFIED"
+        ],
+        "condition": "The frozen state machine permits candidate creation on PRIMARY_MAIN_REF, a primary-index write, a primary-worktree commit, or an abandoned-candidate ancestry path into primary main; candidate execution is blocked before dependent findings are evaluated."
+      },
+      {
+        "parent": "INDEX_BLOB_BYTES_MISMATCH",
+        "suppress_children": [
+          "COMMIT_BLOB_BYTES_MISMATCH",
+          "COMMIT_X_CANDIDATE_ABANDONED",
+          "PUBLICATION_REF_COLLISION",
+          "REMOTE_BRANCH_SHA_MISMATCH",
+          "REMOTE_TAG_PEELED_SHA_MISMATCH",
+          "FRESH_CLONE_HEAD_MISMATCH",
+          "FRESH_CLONE_BLOB_MISMATCH",
+          "REMOTE_PUBLICATION_UNVERIFIED"
+        ],
+        "condition": "S2 fails before any X_candidate is created; S3 through S12 are NOT_PERFORMED and their findings are not emitted."
+      },
+      {
+        "parent": "COMMIT_BLOB_BYTES_MISMATCH",
+        "suppress_children": [
+          "COMMIT_X_CANDIDATE_ABANDONED",
+          "PUBLICATION_REF_COLLISION",
+          "REMOTE_BRANCH_SHA_MISMATCH",
+          "REMOTE_TAG_PEELED_SHA_MISMATCH",
+          "FRESH_CLONE_HEAD_MISMATCH",
+          "FRESH_CLONE_BLOB_MISMATCH",
+          "REMOTE_PUBLICATION_UNVERIFIED"
+        ],
+        "condition": "S5 invalidates the candidate and S6 through S12 are NOT_PERFORMED; abandonment is a derived lifecycle state, not a second independent defect count."
+      },
+      {
+        "parent": "PUBLICATION_REF_COLLISION",
+        "suppress_children": [
+          "REMOTE_BRANCH_SHA_MISMATCH",
+          "REMOTE_TAG_PEELED_SHA_MISMATCH",
+          "FRESH_CLONE_HEAD_MISMATCH",
+          "FRESH_CLONE_BLOB_MISMATCH",
+          "REMOTE_PUBLICATION_UNVERIFIED"
+        ],
+        "condition": "A candidate or final tag name collision blocks dependent verification for that selected name; existing refs remain unchanged and later findings caused solely by the collision are not additionally emitted."
+      },
+      {
+        "parent": "REMOTE_BRANCH_SHA_MISMATCH",
+        "suppress_children": [
+          "FRESH_CLONE_HEAD_MISMATCH",
+          "FRESH_CLONE_BLOB_MISMATCH",
+          "REMOTE_PUBLICATION_UNVERIFIED"
+        ],
+        "condition": "Legacy branch mismatch is not a mandatory S6 through S11 gate; S12 main divergence is represented by MAIN_INTEGRATION_DEFERRED_DIVERGED rather than multiplying downstream publication findings."
+      },
+      {
+        "parent": "REMOTE_TAG_PEELED_SHA_MISMATCH",
+        "suppress_children": [
+          "FRESH_CLONE_HEAD_MISMATCH",
+          "FRESH_CLONE_BLOB_MISMATCH",
+          "REMOTE_PUBLICATION_UNVERIFIED"
+        ],
+        "condition": "Candidate S7 or final S10 peeled-tag verification fails; the dependent fresh raw-blob step is NOT_PERFORMED and the generic publication finding is suppressed by the specific cause."
+      },
+      {
+        "parent": "FRESH_CLONE_HEAD_MISMATCH",
+        "suppress_children": [
+          "FRESH_CLONE_BLOB_MISMATCH",
+          "COMMIT_X_CANDIDATE_ABANDONED",
+          "REMOTE_PUBLICATION_UNVERIFIED"
+        ],
+        "condition": "The legacy label denotes a fresh no-checkout repository whose explicitly fetched tag does not peel to the expected commit; downstream blob comparisons are not performed."
+      },
+      {
+        "parent": "FRESH_CLONE_BLOB_MISMATCH",
+        "suppress_children": [
+          "COMMIT_X_CANDIDATE_ABANDONED",
+          "REMOTE_PUBLICATION_UNVERIFIED"
+        ],
+        "condition": "The legacy label denotes an S8 or S11 fresh no-checkout raw-blob mismatch after procedure staging; candidate abandonment or final-publication incompleteness is a derived lifecycle state."
+      }
+    ],
+    "candidate_absence_suppression": {
+      "condition": "No X_candidate SHA exists.",
+      "do_not_emit": [
+        "COMMIT_X_CANDIDATE_ABANDONED",
+        "PUBLICATION_REF_COLLISION",
+        "REMOTE_BRANCH_SHA_MISMATCH",
+        "REMOTE_TAG_PEELED_SHA_MISMATCH",
+        "FRESH_CLONE_HEAD_MISMATCH",
+        "FRESH_CLONE_BLOB_MISMATCH",
+        "REMOTE_PUBLICATION_UNVERIFIED"
+      ]
+    },
+    "emission_rule": "Emit the earliest applicable causal parent and all causally independent siblings. Do not emit a suppressed child as an independent count."
+  },
+  "dag_freeze": {
+    "commit_X_definition": "The single-parent protocol-only candidate commit object created on an isolated candidate branch from PARENT_P, whose parent-relative changed path set is exactly the four paths in protocol_only_commit_x.allowed_exact_paths, whose tree contains their content-bound bytes, which contains no evidence or execution result, and whose lifecycle status is promoted to commit X only after S8 passes.",
+    "x_candidate_is_commit_x_before_s8": false,
+    "commit_Y_definition": "A later commit that content-binds the new ODD-007R ordered input manifest, reread-start marker, all evidence bytes used by adjudication, and their manifests before any semantic evidence reread or adjudication.",
+    "required_conditions": [
+      "X != Y",
+      "git merge-base --is-ancestor X Y exits with code 0",
+      "X has passed protocol_only_commit_x.future_execution_steps S0 through S8, with S1 through S5 executed only in the isolated candidate worktree and candidate local branch",
+      "X has a verified remote candidate annotated-tag object whose peeled commit equals X",
+      "a fresh no-checkout repository fetched only that candidate tag and verified all four raw blobs",
+      "S11 final-tag fresh-remote verification passes before RUN_IDENTITY derivation",
+      "X tree contains all four protocol artifacts with frozen bytes",
+      "Y tree contains every declared new-run input and evidence artifact used"
+    ],
+    "required_conditions_are_digest_edges": false,
+    "required_conditions_scope": "Overall pre-reread and RUN_IDENTITY gates; content edges are defined only in content_binding_model.CONTENT_BINDING_DAG and publication gates are defined only in publication_workflow.",
+    "content_binding_graph_reference": "content_binding_model.CONTENT_BINDING_DAG",
+    "publication_workflow_reference": "publication_workflow.PUBLICATION_WORKFLOW",
+    "publication_graph_membership": false,
+    "run_identity_publication_gate": {
+      "required_event": "S11_PASS",
+      "purpose": "Availability and retrievability evidence before RUN_IDENTITY derivation.",
+      "digest_graph_membership": false,
+      "content_identity_component": false
+    },
+    "forbidden_order_evidence": [
+      "commit timestamp",
+      "filesystem mtime",
+      "chat timestamp",
+      "artifact-authored timestamp"
+    ],
+    "context_sha_rule": "Recording a context SHA in an artifact does not make that commit X or Y unless the commit tree actually contains the required artifact bytes.",
+    "legacy_defect_label_semantics": "DAG_ANCHOR_DURABILITY_UNPROVEN means required publication and retrievability evidence is absent; it does not assert that any branch or tag can be absolutely durable or immutable.",
+    "step_2_fail_action": {
+      "status": "COMMIT_BLOCKED",
+      "downstream_evidence_reread": "NOT_PERFORMED",
+      "candidate_audit": "NOT_PERFORMED",
+      "component_adjudication": "NOT_PERFORMED",
+      "offline_reproduction": "NOT_PERFORMED"
+    }
+  },
+  "protocol_only_commit_x": {
+    "allowed_artifact_roles": [
+      "ADJUDICATION_RULES",
+      "ALLOWED_CLAIM",
+      "PROTOCOL_SCOPE_MANIFEST",
+      "PROTOCOL_FREEZE_MANIFEST"
+    ],
+    "allowed_exact_paths": [
+      "docs/research/ODD-007R_ADJUDICATION_RULES.json",
+      "docs/research/ODD-007R_ALLOWED_CLAIM.txt",
+      "docs/research/ODD-007R_PROTOCOL_FREEZE_MANIFEST.json",
+      "docs/research/ODD-007R_PROTOCOL_SCOPE_MANIFEST.json"
+    ],
+    "forbidden_artifact_classes": [
+      "EVIDENCE",
+      "DATA",
+      "LOG",
+      "REREAD_RESULT",
+      "ADJUDICATION_RESULT",
+      "PIPELINE",
+      "VERIFIER",
+      "ACQUISITION_SCRIPT",
+      "FIXTURE",
+      "CACHE",
+      "MIGRATION",
+      "SCHEMA_CHANGE",
+      "IMPLEMENTATION_CODE",
+      "TEST_CODE",
+      "TEST_RESULT",
+      "MODIFIED_HISTORICAL_ODD-007_ARTIFACT",
+      "ODD-008_OR_LATER_ARTIFACT"
+    ],
+    "parent_relative_diff_rule": {
+      "parent_count": 1,
+      "changed_path_set": "Exactly equal to allowed_exact_paths; ordering is ignored for set equality.",
+      "unknown_path": "PROHIBITED",
+      "missing_path": "PROHIBITED",
+      "extra_path": "PROHIBITED",
+      "unrelated_staged_or_committed_change": {
+        "label": "PROTOCOL_X_SCOPE_CONTAMINATED",
+        "classification": "BLOCKING",
+        "status": "COMMIT_BLOCKED"
+      }
+    },
+    "manifest_binding_specification": {
+      "content_binding_dependency_order": [
+        [
+          "ADJUDICATION_RULES",
+          "ALLOWED_CLAIM"
+        ],
+        [
+          "PROTOCOL_SCOPE_MANIFEST"
+        ],
+        [
+          "PROTOCOL_FREEZE_MANIFEST"
+        ],
+        [
+            "CANDIDATE_COMMIT_OBJECT"
+        ]
+      ],
+      "content_binding_dag_reference": "content_binding_model.CONTENT_BINDING_DAG",
+      "publication_is_outside_content_digest_graph": true,
+      "artifact_content_digest": {
+        "algorithm": "SHA-256",
+        "input": "Exact artifact bytes.",
+        "output": "64 lowercase hexadecimal ASCII characters.",
+        "git_object_format_independent": true,
+        "git_blob_id_is_artifact_sha256": false
+      },
+      "allowed_content_bindings": [
+        "sha256_inline",
+        "sha256_in_protocol_freeze_manifest",
+        "git_blob_in_commit_x"
+      ],
+      "scope_manifest_schema": {
+        "expected_entry_count": 4,
+        "required_common_entry_fields": [
+          "path",
+          "artifact_role",
+          "required",
+          "allowed_in_commit_x",
+          "content_binding"
+        ],
+        "required_and_allowed_values": true,
+        "binding_by_artifact_role": {
+          "ADJUDICATION_RULES": "sha256_inline",
+          "ALLOWED_CLAIM": "sha256_inline",
+          "PROTOCOL_SCOPE_MANIFEST": "sha256_in_protocol_freeze_manifest",
+          "PROTOCOL_FREEZE_MANIFEST": "git_blob_in_commit_x"
+        },
+        "inline_digest_fields": [
+          "exact_size_bytes",
+          "sha256"
+        ],
+        "inline_digest_roles": [
+          "ADJUDICATION_RULES",
+          "ALLOWED_CLAIM"
+        ],
+        "externally_bound_roles_must_omit": [
+          "exact_size_bytes",
+          "sha256",
+          "expected_sha256",
+          "null hash placeholders"
+        ]
+      },
+      "freeze_manifest_schema": {
+        "digest_entry_roles_exactly": [
+          "ADJUDICATION_RULES",
+          "ALLOWED_CLAIM",
+          "PROTOCOL_SCOPE_MANIFEST"
+        ],
+        "required_digest_entry_fields": [
+          "path",
+          "artifact_role",
+          "exact_size_bytes",
+          "sha256"
+        ],
+        "self_binding_required": {
+          "self_path": "docs/research/ODD-007R_PROTOCOL_FREEZE_MANIFEST.json",
+          "content_binding": "git_blob_in_commit_x",
+          "self_digest_embedded": false
+        },
+        "self_binding_must_omit": [
+          "exact_size_bytes",
+          "sha256",
+          "expected_sha256",
+          "commit X object ID",
+          "null hash placeholders"
+        ]
+      },
+      "manifest_digest_reference_arcs": [
+        "PROTOCOL_SCOPE_MANIFEST -> ADJUDICATION_RULES",
+        "PROTOCOL_SCOPE_MANIFEST -> ALLOWED_CLAIM",
+        "PROTOCOL_FREEZE_MANIFEST -> ADJUDICATION_RULES",
+        "PROTOCOL_FREEZE_MANIFEST -> ALLOWED_CLAIM",
+        "PROTOCOL_FREEZE_MANIFEST -> PROTOCOL_SCOPE_MANIFEST"
+      ],
+      "manifest_digest_reference_arc_semantics": "Each arc is written container -> artifact whose digest is stored in that container. These reference arcs are schema checks and are not the content-binding dependency direction; content-binding dependency edges are defined only in content_binding_model.CONTENT_BINDING_DAG.",
+      "forbidden_digest_references": [
+        "PROTOCOL_SCOPE_MANIFEST -> PROTOCOL_SCOPE_MANIFEST",
+        "PROTOCOL_SCOPE_MANIFEST -> PROTOCOL_FREEZE_MANIFEST",
+        "PROTOCOL_FREEZE_MANIFEST -> PROTOCOL_FREEZE_MANIFEST"
+      ],
+      "validation_rules": [
+        "Scope fixes Rules and Claim with sha256_inline over their exact bytes.",
+        "Freeze fixes Rules, Claim, and Scope with SHA-256 over their exact bytes.",
+        "Scope is fixed by the digest recorded in Freeze; Scope does not record its own digest or a digest of Freeze.",
+        "Freeze is fixed by its exact Git blob in commit X; Freeze does not record its own digest, expected size, or an unfinalized commit X object ID.",
+        "A hash omitted exactly as required by content_binding is bound by the named higher anchor and is not a missing-hash defect.",
+        "A required inline digest omission is BLOCKING.",
+        "An unknown content_binding or a binding inconsistent with the artifact role is BLOCKING.",
+        "A null hash value is never a valid binding or a substitute for an intentionally omitted field.",
+        "Self-digest requirements and mutual Scope/Freeze digest requirements are PROHIBITED.",
+        "Rules MUST NOT contain an actual RUN_IDENTITY value."
+      ],
+      "failure_results": [
+        {
+          "label": "PROTOCOL_MANIFEST_HASH_CYCLE",
+          "classification": "BLOCKING",
+          "status": "COMMIT_BLOCKED",
+          "condition": "The digest-reference graph contains a directed cycle, a self edge, or mutual Scope/Freeze digest edges."
+        },
+        {
+          "label": "MANIFEST_BINDING_UNSUPPORTED",
+          "classification": "BLOCKING",
+          "status": "COMMIT_BLOCKED",
+          "condition": "content_binding is unknown or is not permitted for the artifact role."
+        },
+        {
+          "label": "MANIFEST_REQUIRED_DIGEST_MISSING",
+          "classification": "BLOCKING",
+          "status": "COMMIT_BLOCKED",
+          "condition": "A sha256_inline or Freeze digest entry omits exact_size_bytes or sha256, or supplies null instead of a digest."
+        },
+        {
+          "label": "MANIFEST_BINDING_MISMATCH",
+          "classification": "BLOCKING",
+          "status": "COMMIT_BLOCKED",
+          "condition": "A recorded size or SHA-256 differs from exact bytes, an externally bound entry embeds a prohibited digest field, or a required anchor does not bind the declared artifact."
+        }
+      ],
+      "commit_x_content_binding_verification": [
+        "The path set changed by X relative to its single parent exactly equals the four paths in the Scope manifest.",
+        "All four paths exist in the tree of X.",
+        "Exact bytes for all four paths are retrievable from their blobs in the tree of X.",
+        "Artifact SHA-256 values for Rules, Claim, and Scope recomputed from the blobs in X match Freeze.",
+        "Artifact SHA-256 values for Rules and Claim recomputed from the blobs in X also match Scope.",
+      "The exact Freeze bytes are fixed as a Git blob in the tree of X and match the externally review-approved Freeze SHA-256."
+    ],
+    "publication_separation": "Publication is specified exclusively by publication_workflow and is not a member of content_binding_model.CONTENT_BINDING_DAG. It adds availability and retrievability evidence but no digest edge and no RUN_IDENTITY field.",
+      "run_identity_value_binding": "PROHIBITED_IN_RULES"
+    },
+    "primary_main_isolation": {
+      "terms": {
+        "PRIMARY_WORKTREE": "D:\\OpenDrugDatabase",
+        "PRIMARY_MAIN_REF": "refs/heads/main",
+        "PARENT_P": "The exact PRIMARY_MAIN_REF commit OID captured at S0 before any candidate attempt action.",
+        "CANDIDATE_LOCAL_BRANCH": "refs/heads/odd-007r-protocol-x-candidate-{attempt:04d}",
+        "CANDIDATE_TEMP_WORKTREE": "A unique explicitly resolved temporary path created for exactly one candidate attempt."
+      },
+      "candidate_creation_context": "CANDIDATE_TEMP_WORKTREE_ONLY",
+      "candidate_parent_rule": "Every new candidate local branch is created directly from the same PARENT_P captured at S0; an abandoned candidate is never the parent of a new attempt.",
+      "candidate_local_branch_rule": {
+        "attempt_starts_at": 1,
+        "attempt_monotonic_increase": true,
+        "attempt_reuse": "PROHIBITED",
+        "branch_name_attempt_must_match": true,
+        "existing_branch_name_result": "COLLISION_STOP",
+        "abandoned_branch_state": "RETAINED_AND_FROZEN_BY_POLICY",
+        "delete_move_reuse_or_force_update": "PROHIBITED"
+      },
+      "primary_snapshot_fields": [
+        "PRIMARY_WORKTREE path",
+        "PRIMARY_MAIN_REF",
+        "PARENT_P",
+        "primary index fingerprint",
+        "primary status fingerprint",
+        "primary staged path set",
+        "primary tracked-unstaged path set",
+        "primary untracked path set",
+        "four protocol artifact disk sizes and SHA-256 values"
+      ],
+      "boundary_invariants_S0_through_S11": {
+        "steps": ["S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10", "S11"],
+        "at_every_boundary": {
+          "primary_main_ref": "PARENT_P",
+          "primary_index_write_count": 0,
+          "primary_index_fingerprint": "EQUAL_TO_S0",
+          "primary_status_path_inventory": "EQUAL_TO_S0",
+          "primary_commit_command_count": 0,
+          "local_primary_main_mutation_count": 0,
+          "remote_main_mutation_attempt_count": 0
+        }
+      },
+      "candidate_failure_policy": {
+        "S2_or_earlier_failure": {
+          "X_candidate": "NOT_CREATED",
+          "attempt_number": "CONSUMED",
+          "primary_main": "UNCHANGED"
+        },
+        "S3_or_later_candidate_failure": {
+          "X_candidate": "ABANDONED",
+          "candidate_branch": "RETAINED_AND_FROZEN_BY_POLICY",
+          "primary_main": "UNCHANGED",
+          "RUN_IDENTITY": "NOT_DERIVED"
+        },
+        "new_attempt": "Allocate the next unused attempt number and create a new candidate local branch from PARENT_P."
+      },
+      "temporary_worktree_cleanup": "After all required SHA, blob, index, and status evidence is recorded, remove only the verified explicit temporary path for that attempt; never target HOME, the repository root, a broad directory, or an unresolved variable. The candidate branch ref is retained.",
+      "transition_analysis": {
+        "PRIMARY_MAIN_CONTAMINATION_PATH_COUNT": 0,
+        "ABANDONED_CANDIDATE_TO_PRIMARY_MAIN_ANCESTRY_PATH_COUNT": 0,
+        "PRIMARY_INDEX_WRITE_COUNT": 0,
+        "PRIMARY_WORKTREE_COMMIT_COMMAND_COUNT": 0,
+        "LOCAL_PRIMARY_MAIN_MUTATION_TRANSITION_COUNT": 0,
+        "REMOTE_MAIN_MUTATION_TRANSITIONS": ["S12"],
+        "force_reset_rebase_amend_path_count": 0
+      },
+      "failure_result": {
+        "label": "PRIMARY_MAIN_CONTAMINATION_PATH_PRESENT",
+        "classification": "BLOCKING",
+        "status": "PROTOCOL_DRAFT_BLOCKED"
+      }
+    },
+    "future_execution_steps": {
+      "execution_state_in_this_draft": "NOT_EXECUTED",
+      "ordered_steps": [
+        "S0",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+      "S6",
+      "S7",
+      "S8",
+      "S9",
+      "S10",
+      "S11",
+      "S12"
+    ],
+    "gating_rule": "S0 through S11 are ordered gates for the applicable publication attempt; an earlier failure makes a dependent later step NOT_PERFORMED rather than independently failed. S8 assigns commit X and validates content binding. An S9 through S11 failure leaves that commit X and content binding valid but keeps final publication incomplete and RUN_IDENTITY locked. S12 is optional and is not a RUN_IDENTITY gate.",
+      "S0": {
+        "name": "PRIMARY_SNAPSHOT",
+        "execution_context": "PRIMARY_WORKTREE_READ_ONLY",
+        "record_exactly": [
+          "PRIMARY_WORKTREE resolved path",
+          "PRIMARY_MAIN_REF = refs/heads/main",
+          "git symbolic-ref -q HEAD in PRIMARY_WORKTREE, required to equal PRIMARY_MAIN_REF",
+          "PARENT_P = git rev-parse refs/heads/main",
+          "primary index fingerprint",
+          "primary git status --porcelain fingerprint",
+          "primary staged path set",
+          "primary tracked-unstaged path set",
+          "primary untracked path set",
+          "git rev-parse --show-object-format",
+          "git config --get core.autocrlf",
+          "git config --get core.attributesFile",
+          "git ls-files count = N as a measured value without a fixed expected count",
+          ".gitattributes exact bytes, exact size, and artifact SHA-256",
+          "git config --get core.hooksPath",
+          "path and artifact SHA-256 of every effective commit hook",
+          "disk exact size and artifact SHA-256 for all four protocol artifacts",
+          "git check-attr -a -- <each of the four Scope paths>"
+        ],
+        "explicit_absence_states": {
+          "gitattributes_absent": "GITATTRIBUTES_ABSENT",
+          "core_hooks_path_unset": "CORE_HOOKS_PATH_UNSET",
+          "effective_commit_hook_absent": "COMMIT_HOOK_ABSENT"
+        },
+        "working_tree_rule": "Do not require git status --porcelain to contain only four lines; record existing staged, tracked-unstaged, and untracked path sets independently. Record git ls-files count as N without assuming that a status count is the repository tracked-file count.",
+        "attributes_change_rule": "If .gitattributes must change, stop the commit X workflow. Use a separately scoped commit, repeat preflight, regenerate affected artifact bindings if necessary, and obtain a new review; identical artifact hashes do not authorize automatic resumption.",
+        "mutation": "PROHIBITED"
+      },
+      "S1": {
+        "name": "ISOLATED_CANDIDATE_WORKTREE_CREATION",
+        "precondition": "S0 snapshot complete and candidate attempt number allocated but not previously used",
+        "command_shape": "git worktree add -b odd-007r-protocol-x-candidate-{attempt:04d} <explicit-temp-path> <PARENT_P>",
+        "candidate_local_branch": "refs/heads/odd-007r-protocol-x-candidate-{attempt:04d}",
+        "branch_and_attempt_match_required": true,
+        "temporary_path_rules": [
+          "Allocate a new unique explicit path for this attempt.",
+          "Do not reuse an existing path.",
+          "Do not use HOME, the repository root, a broad directory, or an unresolved variable as the target."
+        ],
+        "branch_collision_result": "STOP_WITHOUT_REUSE",
+        "branch_name_reuse": "PROHIBITED",
+        "primary_worktree_checkout_or_switch": "PROHIBITED",
+        "primary_main_ref_after_step": "PARENT_P",
+        "primary_index_write_count": 0
+      },
+      "S2": {
+        "name": "EXACT_ARTIFACT_PLACEMENT_AND_CANDIDATE_INDEX_VERIFICATION",
+        "execution_context": "CANDIDATE_TEMP_WORKTREE_ONLY",
+        "copy_source": "The exact four Set D artifact files in PRIMARY_WORKTREE.",
+        "copy_method": "Byte-preserving binary copy; no text decoding, newline conversion, or content filter application is permitted.",
+        "copy_targets": "The corresponding four repository-relative Scope paths in CANDIDATE_TEMP_WORKTREE.",
+        "post_copy_pass_condition": "All four candidate-worktree disk sizes and SHA-256 values equal the reviewed Set D values.",
+        "effective_attributes_recording": "Run git check-attr -a -- <four paths> in the candidate temporary worktree and record core.autocrlf, core.attributesFile, and repository object format.",
+        "stage_rule": "Stage exactly the four Scope paths in the candidate temporary worktree only.",
+        "cached_diff_validation_commands": [
+          "git diff --cached --name-status",
+          "git diff --cached --name-only"
+        ],
+        "cached_diff_pass_conditions": {
+          "staged_path_count": 4,
+          "status_for_every_path": "A",
+          "missing_path_count": 0,
+          "extra_path_count": 0,
+          "rename_count": 0,
+          "delete_count": 0,
+          "unrelated_staged_file_count": 0
+        },
+        "raw_blob_command_template": "git cat-file blob :<path>",
+        "raw_byte_requirement": "Capture stdout as raw bytes with a binary-safe API such as Python subprocess.check_output(); do not pass blob bytes through a PowerShell text pipeline or text re-encoding.",
+        "record_per_path": [
+          "path",
+          "candidate index blob OID",
+          "artifact SHA-256 over raw index blob bytes",
+          "expected Set D artifact SHA-256",
+          "exact raw blob size",
+          "match"
+        ],
+        "expected_digest_sources": {
+          "ADJUDICATION_RULES": "Freeze manifest digest entry",
+          "ALLOWED_CLAIM": "Scope inline digest and Freeze manifest digest entry",
+          "PROTOCOL_SCOPE_MANIFEST": "Freeze manifest digest entry",
+          "PROTOCOL_FREEZE_MANIFEST": "External review-approved Freeze exact-byte SHA-256 reported outside Freeze"
+        },
+        "pass_condition": "The candidate cached diff is exactly four A paths and all four raw index blob sizes and artifact SHA-256 values match Set D.",
+        "primary_artifact_rule": "The four untracked protocol artifacts in PRIMARY_WORKTREE are not changed, staged, or deleted.",
+        "primary_index_write_count": 0,
+        "failure_result": {
+          "label": "INDEX_BLOB_BYTES_MISMATCH",
+          "classification": "BLOCKING",
+          "action": "ABORT_BEFORE_COMMIT",
+          "attempt_number": "CONSUMED",
+          "primary_main": "UNCHANGED"
+        }
+      },
+      "S3": {
+        "name": "CREATE_COMMIT_CANDIDATE",
+        "precondition": "S2 PASS",
+        "execution_context": "CANDIDATE_TEMP_WORKTREE_ONLY",
+        "command_shape": "git commit -m \"docs(odd): freeze ODD-007R protocol\"",
+        "commit_message": "docs(odd): freeze ODD-007R protocol",
+        "source": "The already verified candidate-worktree index without path-selection options.",
+        "forbidden": [
+          "git commit -o",
+          "git commit --only",
+          "git commit --amend",
+          "unapproved hook bypass",
+          "commit in PRIMARY_WORKTREE",
+          "candidate commit on PRIMARY_MAIN_REF",
+          "amend",
+          "rebase-based identity reuse"
+        ],
+        "resulting_identity": "X_candidate",
+        "candidate_branch_tip": "X_candidate SHA",
+        "candidate_parent": "PARENT_P",
+        "primary_main_ref_after_step": "PARENT_P",
+        "primary_commit_command_count": 0,
+        "commit_x_assigned": false
+      },
+      "S4": {
+        "name": "CANDIDATE_PARENT_DIFF_VERIFICATION",
+        "execution_context": "CANDIDATE_TEMP_WORKTREE_AND_CANDIDATE_LOCAL_BRANCH",
+        "parent_pass_condition": "X_candidate has exactly one parent and it equals PARENT_P.",
+        "command": "git diff-tree --no-commit-id --name-status -r <PARENT_P> <X_candidate-SHA>",
+        "pass_conditions": {
+          "line_count": 4,
+          "status_for_every_path": "A",
+          "path_set": "Exactly equal to Scope entries.path",
+          "extra_path_count": 0,
+          "missing_path_count": 0,
+          "rename_count": 0,
+          "delete_count": 0,
+          "primary_main_ref": "PARENT_P",
+          "primary_index_fingerprint": "EQUAL_TO_S0",
+          "primary_status_path_inventory": "EQUAL_TO_S0"
+        },
+        "repository_tree_file_count_assumption": "PROHIBITED",
+        "tracked_status_entry_count_is_total_tracked_file_count": false,
+        "auxiliary_tree_count_rule": "Only after the parent diff proves that all four Scope paths are new A entries may N + 4 be used as an auxiliary tree-count check; the exact four-entry parent diff remains the primary evidence."
+      },
+      "S5": {
+        "name": "CANDIDATE_COMMIT_BLOB_VERIFICATION",
+        "execution_context": "CANDIDATE_TEMP_WORKTREE_AND_CANDIDATE_LOCAL_BRANCH",
+        "raw_blob_command_template": "git cat-file blob <X_candidate-SHA>:<path>",
+        "blob_oid_command_template": "git rev-parse <X_candidate-SHA>:<path>",
+        "raw_byte_requirement": "Capture git cat-file stdout as raw bytes with a binary-safe API such as Python subprocess.check_output(); do not pass blob bytes through a PowerShell text pipeline or text re-encoding.",
+        "record_per_path": [
+          "path",
+          "candidate commit blob OID",
+          "artifact SHA-256 over raw commit blob bytes",
+          "expected Set D artifact SHA-256",
+          "exact raw blob size",
+          "match",
+          "commit blob OID equals S2 candidate index blob OID"
+        ],
+        "pass_condition": "All four candidate commit blobs match Set D bytes, their OIDs equal the corresponding S2 candidate index blob OIDs, and the primary main ref, primary index fingerprint, and primary status path inventory still equal S0.",
+        "failure_result": {
+          "label": "COMMIT_BLOB_BYTES_MISMATCH",
+          "classification": "BLOCKING",
+          "X_candidate": "ABANDONED",
+          "candidate_branch": "RETAINED_AND_FROZEN_BY_POLICY",
+          "primary_main": "UNCHANGED",
+          "COMMIT_X": "NOT_ASSIGNED",
+          "RUN_IDENTITY": "NOT_DERIVED",
+          "amend_to_rescue": "PROHIBITED"
+        }
+      },
+      "S6": {
+        "name": "CANDIDATE_TAG_PUBLICATION",
+        "precondition": "S5 PASS",
+        "remote": "origin",
+        "candidate_tag_template": "refs/tags/odd-007r-protocol-x-candidate-{attempt:04d}",
+        "candidate_tag_message_template": "ODD-007R protocol X candidate {attempt:04d}",
+        "tag_kind": "ANNOTATED",
+        "tag_object_creation_rule": "Create the candidate-specific annotated tag object exactly once for this attempt, record its local tag object OID, and never regenerate it for a retry.",
+        "publication_rule": "Push only the candidate-specific annotated tag; do not update main or any other branch or tag.",
+        "main_update": "NOT_PERFORMED",
+        "UNREACHABLE_COMMIT_TAG_PUBLICATION_SUPPORT": "NOT_VERIFIED_BEFORE_S7",
+        "transient_transport_failure_rule": "Retry only the same candidate tag name and byte-identical local tag object OID pointing to the same X_candidate SHA.",
+        "candidate_tag_retention_rule": "Never delete, force-update, or retarget a candidate tag; a tag for an ABANDONED candidate remains on the remote.",
+        "failure_class": "CANDIDATE_TAG_PUBLICATION_FAILURE",
+        "forbidden": [
+          "main update",
+          "force push",
+          "candidate tag deletion",
+          "candidate tag retargeting",
+          "candidate tag object regeneration",
+          "amend",
+          "rebase"
+        ]
+      },
+      "S7": {
+        "name": "CANDIDATE_TAG_REMOTE_VERIFICATION",
+        "precondition": "S6 candidate tag publication response received",
+        "push_output_is_sufficient_evidence": false,
+        "query_exact_refs": [
+          "refs/tags/odd-007r-protocol-x-candidate-{attempt:04d}",
+          "refs/tags/odd-007r-protocol-x-candidate-{attempt:04d}^{}"
+        ],
+        "identity_pass_conditions": [
+          "remote candidate tag object OID equals expected local candidate tag object OID",
+          "remote peeled candidate commit equals expected X_candidate SHA"
+        ],
+        "tag_object_oid_is_commit_sha": false,
+        "main_condition_present": false,
+        "record": [
+          "remote candidate tag object OID",
+          "expected local candidate tag object OID",
+          "remote peeled candidate commit",
+          "expected X_candidate SHA",
+          "remote object-format information or exact response",
+          "tag protection state"
+        ],
+        "tag_protection_if_not_confirmed": "NOT_VERIFIED",
+        "success_result": {
+          "UNREACHABLE_COMMIT_TAG_PUBLICATION_SUPPORT": "VERIFIED_FOR_THIS_PUBLICATION_ATTEMPT",
+          "general_or_permanent_support_claim": "PROHIBITED"
+        },
+        "tag_object_mismatch_result": {
+          "label": "TAG_OBJECT_COLLISION",
+          "classification": "BLOCKING",
+          "SAME_TAG_IDENTITY": false
+        },
+        "peeled_commit_mismatch_result": {
+          "label": "REMOTE_TAG_PEELED_SHA_MISMATCH",
+          "classification": "BLOCKING"
+        },
+        "permitted_recovery": "For transport uncertainty only, re-push and re-query the same candidate tag object; do not change the commit, tag object, or tag name."
+      },
+      "S8": {
+        "name": "CANDIDATE_FRESH_REMOTE_RAW_BLOB_VERIFICATION",
+        "precondition": "S7 PASS",
+        "fresh_repository_location": "A newly allocated unique temporary directory recorded as an exact resolved path.",
+        "repository_creation_and_fetch": [
+          "git init <fresh-temp>",
+          "git -C <fresh-temp> remote add origin <non-local-remote-url>",
+          "git -C <fresh-temp> fetch --no-tags --depth=1 origin refs/tags/<candidate-tag>:refs/tags/<candidate-tag>"
+        ],
+        "fresh_tag_identity_precheck": "Before A, require the fetched refs/tags/<candidate-tag> object type to be tag and its tag object OID to equal the expected local S6 candidate tag object OID; a peeled-commit match alone is insufficient.",
+        "verification_order": [
+          "A. refs/tags/<candidate-tag>^{} equals expected X_candidate commit",
+          "B. refs/tags/<candidate-tag>^{}:<path> equals expected S5 blob OID",
+          "C. git cat-file -t <blob OID> equals blob",
+          "D. git cat-file blob <blob OID> is captured as raw bytes",
+          "E. raw size equals expected size",
+          "F. SHA-256(raw bytes) equals expected artifact SHA-256"
+        ],
+        "record_per_path": [
+          "repository-relative path",
+          "fresh tag-tree blob OID",
+          "expected S5 blob OID",
+          "object type",
+          "raw byte size",
+          "expected size",
+          "artifact SHA-256 over raw bytes",
+          "expected artifact SHA-256",
+          "match"
+        ],
+        "raw_byte_requirement": "Capture git cat-file blob stdout without decoding or re-encoding, using a binary-safe API such as Python subprocess.check_output(); a PowerShell text pipeline is prohibited.",
+        "procedure_states": {
+          "WORKTREE_FILE_HASHING": "PROHIBITED",
+          "CHECKOUT": "NOT_PERFORMED",
+          "SMUDGE_FILTER_APPLICATION": "NOT_APPLICABLE",
+          "EOL_CHECKOUT_CONVERSION": "NOT_APPLICABLE",
+          "LOCAL_PATH_REMOTE": "PROHIBITED",
+          "SHARED_OBJECT_STORE": "PROHIBITED",
+          "OBJECT_ALTERNATES": "PROHIBITED"
+        },
+        "alternates_pass_condition": "<fresh-temp>/.git/objects/info/alternates does not exist.",
+        "object_format_recording": "Record both local S5 and fresh repository object formats; keep Git blob OIDs distinct from artifact SHA-256 values.",
+        "structural_revalidation": [
+          "Scope manifest schema and exact four-path closure",
+          "Freeze manifest three-entry digest closure and self binding",
+          "one-way digest graph with zero cycles and zero self edges"
+        ],
+        "success_result": {
+          "X_candidate": "PROMOTED",
+          "COMMIT_X": "ASSIGNED",
+          "CONTENT_BINDING": "VALID",
+          "FINAL_PUBLICATION_STATUS": "NOT_YET_VERIFIED",
+          "RUN_IDENTITY_DERIVATION": "NOT_YET_ALLOWED"
+        },
+        "failure_result": {
+          "X_candidate": "ABANDONED",
+          "COMMIT_X": "NOT_ASSIGNED",
+          "main": "UNCHANGED",
+          "candidate_tag": "RETAINED",
+          "RUN_IDENTITY": "NOT_DERIVED",
+          "failure_label_source": "remote_integrity_failure_staging"
+        },
+        "temporary_directory_cleanup": "Only after validation evidence is recorded, delete the exact resolved temporary path allocated for this attempt; broad paths, unresolved variables, HOME, and parent directories are prohibited deletion targets."
+      },
+      "S9": {
+        "name": "FINAL_TAG_SELECTION_AND_PUBLICATION",
+        "precondition": "S8 PASS and commit X assigned",
+        "remote": "origin",
+        "final_tag_template": "refs/tags/odd-007r-protocol-x-v{n}",
+        "final_tag_message_template": "ODD-007R protocol commit X v{n}",
+        "final_tag_name_regex": "^odd-007r-protocol-x-v([1-9][0-9]*)$",
+        "inventory_at_start": "Independently query remote tags at S9 start and record every exact-regex matching tag name, tag object OID, and peeled commit.",
+        "inventory_fingerprint": "Sort records by UTF-8 tag-name bytes, serialize the array as UTF-8 canonical JSON with lexicographically sorted object keys, comma/colon separators, no insignificant whitespace, no BOM, and no terminal newline, then record SHA-256 of those bytes before selecting n.",
+        "version_selection_rule": [
+          "If the observed matching set is empty, select n = 1.",
+          "If a pending local final tag already has the selected name and the remote tag object OID equals that local object OID and the peeled commit equals commit X, treat publication as idempotently successful.",
+          "If the observed matching set is nonempty and there is no idempotently matching pending local final tag, select n = max(existing n) + 1.",
+          "If the selected remote name refers to a different tag object or peeled commit, classify a collision and select n = max(existing n) + 1 without altering the existing tag.",
+          "After any push race or collision response, re-query the remote inventory, record its new deterministic fingerprint, and apply this rule again.",
+          "Never force, delete, overwrite, or retarget an existing final tag."
+        ],
+        "tag_object_creation_rule": "After deterministic name selection, create one annotated final-tag object pointing to commit X, record its local tag object OID, and retain the same object bytes, tagger timestamp, and message for every transport retry.",
+        "publication_rule": "Push only the selected final annotated tag; main remains unchanged.",
+        "main_update": "NOT_PERFORMED",
+        "transport_failure_rule": "If the remote tag is absent, retry only the same local tag object. If the remote has the identical object and peeled commit, continue idempotently. If it differs, leave it unchanged and select the next version by the deterministic rule.",
+        "collision_result": {
+          "label": "FINAL_TAG_SELECTION_COLLISION",
+          "classification": "BLOCKING_FOR_THAT_TAG_NAME",
+          "existing_tag_mutation": "PROHIBITED",
+          "next_action": "SELECT_NEXT_VERSION_DETERMINISTICALLY"
+        }
+      },
+      "S10": {
+        "name": "FINAL_TAG_REMOTE_VERIFICATION",
+        "precondition": "S9 publication response or idempotent remote match",
+        "main_condition_present": false,
+        "identity_pass_conditions": [
+          "remote final tag object OID equals expected local final tag object OID",
+          "remote final tag peeled commit equals commit X"
+        ],
+        "record": [
+          "remote final tag object OID",
+          "expected local final tag object OID",
+          "remote final tag peeled commit",
+          "expected commit X SHA",
+          "remote object-format information or exact response",
+          "tag protection state"
+        ],
+        "tag_protection_if_not_confirmed": "NOT_VERIFIED",
+        "tag_object_oid_is_commit_sha": false,
+        "tag_object_mismatch_result": {
+          "label": "FINAL_TAG_OBJECT_IDENTITY_MISMATCH",
+          "classification": "BLOCKING",
+          "SAME_TAG_IDENTITY": false
+        },
+        "peeled_commit_mismatch_result": {
+          "label": "FINAL_TAG_PEELED_COMMIT_MISMATCH",
+          "classification": "BLOCKING"
+        }
+      },
+      "S11": {
+        "name": "FINAL_TAG_FRESH_REMOTE_RAW_BLOB_VERIFICATION",
+        "precondition": "S10 PASS",
+        "fresh_repository_location": "A newly allocated unique temporary directory recorded as an exact resolved path, different from every prior validation directory.",
+        "repository_creation_and_fetch": [
+          "git init <fresh-temp>",
+          "git -C <fresh-temp> remote add origin <non-local-remote-url>",
+          "git -C <fresh-temp> fetch --no-tags --depth=1 origin refs/tags/<final-tag>:refs/tags/<final-tag>"
+        ],
+        "fresh_tag_identity_precheck": "Before A, require the fetched refs/tags/<final-tag> object type to be tag and its tag object OID to equal the expected local S9 final tag object OID; a peeled-commit match alone is insufficient.",
+        "verification_order": [
+          "A. refs/tags/<final-tag>^{} equals commit X",
+          "B. refs/tags/<final-tag>^{}:<path> equals expected S5 blob OID",
+          "C. git cat-file -t <blob OID> equals blob",
+          "D. git cat-file blob <blob OID> is captured as raw bytes",
+          "E. raw size equals expected size",
+          "F. SHA-256(raw bytes) equals expected artifact SHA-256"
+        ],
+        "record_per_path": [
+          "repository-relative path",
+          "fresh final-tag tree blob OID",
+          "expected S5 blob OID",
+          "object type",
+          "raw byte size",
+          "expected size",
+          "artifact SHA-256 over raw bytes",
+          "expected artifact SHA-256",
+          "match"
+        ],
+        "raw_byte_requirement": "Capture git cat-file blob stdout without decoding or re-encoding, using a binary-safe API such as Python subprocess.check_output(); a PowerShell text pipeline is prohibited.",
+        "procedure_states": {
+          "WORKTREE_FILE_HASHING": "PROHIBITED",
+          "CHECKOUT": "NOT_PERFORMED",
+          "SMUDGE_FILTER_APPLICATION": "NOT_APPLICABLE",
+          "EOL_CHECKOUT_CONVERSION": "NOT_APPLICABLE",
+          "LOCAL_PATH_REMOTE": "PROHIBITED",
+          "SHARED_OBJECT_STORE": "PROHIBITED",
+          "OBJECT_ALTERNATES": "PROHIBITED"
+        },
+        "alternates_pass_condition": "<fresh-temp>/.git/objects/info/alternates does not exist.",
+        "object_format_recording": "Record both local S5 and fresh repository object formats; keep Git blob OIDs distinct from artifact SHA-256 values.",
+        "structural_revalidation": [
+          "Scope manifest schema and exact four-path closure",
+          "Freeze manifest three-entry digest closure and self binding",
+          "one-way digest graph with zero cycles and zero self edges"
+        ],
+        "success_result": {
+          "COMMIT_X": "VALID",
+          "CONTENT_BINDING": "VALID",
+          "FINAL_PUBLICATION_STATUS": "PUBLISHED_AND_TAMPER_DETECTABLE_AT_VERIFICATION_TIME",
+          "RUN_IDENTITY_DERIVATION": "ALLOWED"
+        },
+        "failure_result": {
+          "COMMIT_X": "VALID",
+          "CONTENT_BINDING": "VALID",
+          "FINAL_PUBLICATION_STATUS": "INCOMPLETE",
+          "RUN_IDENTITY": "NOT_DERIVED",
+          "failure_label_source": "remote_integrity_failure_staging"
+        },
+        "temporary_directory_cleanup": "Only after validation evidence is recorded, delete the exact resolved temporary path allocated for this attempt; broad paths, unresolved variables, HOME, and parent directories are prohibited deletion targets."
+      },
+      "S12": {
+        "name": "OPTIONAL_MAIN_INTEGRATION",
+        "required_for_run_identity": false,
+        "remote": "origin",
+        "branch_ref": "refs/heads/main",
+        "precondition": "remote refs/heads/main tip equals PARENT_P, which is the parent SHA of commit X",
+        "permitted_update": "Use the explicit command shape git push origin <commit-X-SHA>:refs/heads/main to fast-forward remote main without changing commit X.",
+        "explicit_commit_sha_required": true,
+        "primary_local_main_move_required": false,
+        "primary_main_ref_after_step": "PARENT_P",
+        "primary_index_fingerprint_after_step": "EQUAL_TO_S0",
+        "primary_status_path_inventory_after_step": "EQUAL_TO_S0",
+        "local_primary_main_mutation_count": 0,
+        "primary_index_write_count": 0,
+        "divergence_result": {
+          "label": "MAIN_INTEGRATION_DEFERRED_DIVERGED",
+          "COMMIT_X": "VALID",
+          "CONTENT_BINDING": "VALID",
+          "FINAL_TAG": "VALID",
+          "main_update": "NOT_PERFORMED",
+          "rebase": "PROHIBITED",
+          "amend": "PROHIBITED",
+          "force_push": "PROHIBITED",
+          "RUN_IDENTITY_ELIGIBILITY": "UNCHANGED"
+        },
+        "later_integration_rule": "If integration is still desired after divergence, preserve commit X and use a separately reviewed later workflow that may create a merge commit; do not rewrite commit X."
+      }
+    }
+  },
+  "commit_x_candidate_lifecycle": {
+    "definitions": {
+      "X_candidate": "A Git commit created at S3 only in CANDIDATE_TEMP_WORKTREE on CANDIDATE_LOCAL_BRANCH from PARENT_P, which has not yet passed candidate-tag fresh-remote verification at S8.",
+      "commit_X": "The one X_candidate that passes every S0 through S8 condition and is promoted by the S8 transition; later final-publication failure does not invalidate its content binding.",
+      "ABANDONED_candidate": "A candidate commit SHA that failed a pre-promotion post-commit condition or was explicitly abandoned; its candidate local branch is retained and frozen, and its SHA is permanently prohibited from use as commit X or as a RUN_IDENTITY input."
+    },
+    "candidate_identifier": {
+      "canonical_template": "ODD-007R-X-CANDIDATE-{attempt:04d}",
+      "canonical_example": "ODD-007R-X-CANDIDATE-0001",
+      "canonical_regex": "^ODD-007R-X-CANDIDATE-(?!0000)[0-9]{4}$",
+      "attempt_number_start": 1,
+      "attempt_number_range": "0001 through 9999",
+      "allocation_time": "At the start of each recorded attempt, before S0.",
+      "monotonic_increase": true,
+      "reuse_after_precommit_failure": "PROHIBITED",
+      "reuse_after_abandonment": "PROHIBITED",
+      "reuse_after_commit_recreation": "PROHIBITED"
+    },
+    "candidate_local_branch_identifier": {
+      "canonical_template": "refs/heads/odd-007r-protocol-x-candidate-{attempt:04d}",
+      "canonical_example": "refs/heads/odd-007r-protocol-x-candidate-0001",
+      "attempt_matches_candidate_identifier": true,
+      "created_from": "PARENT_P",
+      "creation_context": "CANDIDATE_TEMP_WORKTREE",
+      "reuse": "PROHIBITED",
+      "delete_move_or_force_update_after_abandonment": "PROHIBITED"
+    },
+    "candidate_tag_identifier": {
+      "canonical_template": "odd-007r-protocol-x-candidate-{attempt:04d}",
+      "canonical_example": "odd-007r-protocol-x-candidate-0001",
+      "canonical_regex": "^odd-007r-protocol-x-candidate-(?!0000)[0-9]{4}$",
+      "attempt_matches_candidate_identifier": true,
+      "delete": "PROHIBITED",
+      "retarget": "PROHIBITED",
+      "force_update": "PROHIBITED",
+      "retained_after_abandonment": true
+    },
+    "candidate_local_branch_and_remote_tag_are_distinct": true,
+    "commit_identity_inputs": [
+      "parent object ID",
+      "tree object ID",
+      "author identity and timestamp",
+      "committer identity and timestamp",
+      "commit message",
+      "other canonical Git commit-object bytes"
+    ],
+    "recreated_commit_identity_rule": "A recreated commit is a new commit with a new object ID and a new candidate identifier even if its tree bytes are identical; never describe it as recreation of the same commit X.",
+    "retry_policy": [
+      {
+        "case": "FAILURE_BEFORE_COMMIT_CREATION",
+        "candidate_sha_exists": false,
+        "result": "Close the attempt without creating X_candidate, consume the attempt number, retain any already-created candidate branch without reuse, keep primary main unchanged, and give any retry the next unused attempt number and a new candidate branch from PARENT_P."
+      },
+      {
+        "case": "POST_COMMIT_PRE_CANDIDATE_PROMOTION_FAILURE",
+        "result": "Record the SHA as ABANDONED, retain and freeze its candidate local branch and any published candidate tag, keep primary main unchanged, prohibit amend, prohibit calling the same SHA commit X, and prohibit use in RUN_IDENTITY."
+      },
+      {
+        "case": "TRANSIENT_CANDIDATE_TAG_PUSH_FAILURE",
+        "result": "Permit only re-push of the same X_candidate SHA under the same candidate tag object OID; tag regeneration, amend, rebase, and commit recreation are prohibited."
+      },
+      {
+        "case": "COMMIT_RECREATION_REQUIRED",
+        "result": "Keep the old SHA ABANDONED, retain and freeze its candidate local branch and candidate tag, allocate the next unused candidate identifier, candidate local branch, and candidate tag, create the new branch from PARENT_P, and create a new commit SHA; do not call it the same commit X."
+      },
+      {
+        "case": "COMMIT_X_ASSIGNMENT",
+        "result": "Only an X_candidate that passes S8 is called commit X; RUN_IDENTITY remains locked until S11 passes."
+      },
+      {
+        "case": "TRANSIENT_FINAL_TAG_PUSH_FAILURE",
+        "result": "Re-push only the exact existing local final tag object OID; do not regenerate it by changing tagger timestamp, message, target, or object bytes."
+      },
+      {
+        "case": "FINAL_TAG_NAME_COLLISION",
+        "result": "Leave the existing remote tag unchanged, refresh and fingerprint the remote inventory, select the next deterministic version, and create a new local tag object only for that new name."
+      },
+      {
+        "case": "S11_FAILURE_AFTER_COMMIT_X_ASSIGNMENT",
+        "result": "Keep commit X and content binding valid, set final publication INCOMPLETE, and keep RUN_IDENTITY NOT_DERIVED."
+      }
+    ],
+    "state_enum": [
+      "PRE_COMMIT_ATTEMPT",
+      "PRE_COMMIT_FAILED",
+      "X_CANDIDATE_ISOLATED_BRANCH",
+      "CANDIDATE_TAG_PUBLICATION_PENDING",
+      "CANDIDATE_TAG_REMOTE_VERIFIED",
+      "ABANDONED",
+      "COMMIT_X_FINAL_TAG_SELECTION",
+      "FINAL_TAG_PUBLICATION_PENDING",
+      "FINAL_TAG_REMOTE_VERIFIED",
+      "FINAL_PUBLICATION_INCOMPLETE",
+      "FINAL_PUBLICATION_COMPLETE",
+      "MAIN_INTEGRATED",
+      "MAIN_INTEGRATION_DEFERRED"
+    ],
+    "initial_state": "PRE_COMMIT_ATTEMPT",
+    "terminal_states": [
+      "PRE_COMMIT_FAILED",
+      "ABANDONED",
+      "FINAL_PUBLICATION_INCOMPLETE",
+      "MAIN_INTEGRATED",
+      "MAIN_INTEGRATION_DEFERRED"
+    ],
+    "stable_accepting_state": "FINAL_PUBLICATION_COMPLETE",
+    "transition_table": [
+      {"from": "PRE_COMMIT_ATTEMPT", "event": "S0_S1_OR_S2_FAIL", "to": "PRE_COMMIT_FAILED", "commit_sha_rule": "NO_COMMIT_SHA_EXISTS"},
+      {"from": "PRE_COMMIT_ATTEMPT", "event": "S2_PASS_AND_S3_COMMIT_CREATED", "to": "X_CANDIDATE_ISOLATED_BRANCH", "commit_sha_rule": "RECORD_NEW_SHA_WITH_PARENT_P_ON_CANDIDATE_LOCAL_BRANCH"},
+      {"from": "X_CANDIDATE_ISOLATED_BRANCH", "event": "S4_OR_S5_FAIL", "to": "ABANDONED", "commit_sha_rule": "PRESERVE_SHA_AND_FREEZE_CANDIDATE_BRANCH"},
+      {"from": "X_CANDIDATE_ISOLATED_BRANCH", "event": "S5_PASS", "to": "CANDIDATE_TAG_PUBLICATION_PENDING", "commit_sha_rule": "MUST_REMAIN_BYTE_IDENTICAL_ON_CANDIDATE_BRANCH"},
+      {"from": "X_CANDIDATE_ISOLATED_BRANCH", "event": "EXPLICIT_ABANDONMENT", "to": "ABANDONED", "commit_sha_rule": "PRESERVE_SHA_AND_FREEZE_CANDIDATE_BRANCH"},
+      {"from": "CANDIDATE_TAG_PUBLICATION_PENDING", "event": "S6_TRANSPORT_FAILURE", "to": "CANDIDATE_TAG_PUBLICATION_PENDING", "commit_sha_rule": "SAME_SHA_AND_SAME_TAG_OBJECT"},
+      {"from": "CANDIDATE_TAG_PUBLICATION_PENDING", "event": "S6_RETRY_SAME_TAG_OBJECT", "to": "CANDIDATE_TAG_PUBLICATION_PENDING", "commit_sha_rule": "SAME_SHA_AND_SAME_TAG_OBJECT"},
+      {"from": "CANDIDATE_TAG_PUBLICATION_PENDING", "event": "S6_NONTRANSIENT_PUBLICATION_FAILURE", "to": "ABANDONED", "commit_sha_rule": "PRESERVE_AND_PROHIBIT_AND_RETAIN_LOCAL_OR_REMOTE_CANDIDATE_TAG"},
+      {"from": "CANDIDATE_TAG_PUBLICATION_PENDING", "event": "S7_PASS", "to": "CANDIDATE_TAG_REMOTE_VERIFIED", "commit_sha_rule": "MUST_REMAIN_BYTE_IDENTICAL"},
+      {"from": "CANDIDATE_TAG_PUBLICATION_PENDING", "event": "S7_QUERY_UNVERIFIED", "to": "CANDIDATE_TAG_PUBLICATION_PENDING", "commit_sha_rule": "SAME_SHA_AND_SAME_TAG_OBJECT"},
+      {"from": "CANDIDATE_TAG_PUBLICATION_PENDING", "event": "S7_IDENTITY_FAIL", "to": "ABANDONED", "commit_sha_rule": "PRESERVE_AND_PROHIBIT_AND_RETAIN_CANDIDATE_TAG"},
+      {"from": "CANDIDATE_TAG_PUBLICATION_PENDING", "event": "EXPLICIT_ABANDONMENT", "to": "ABANDONED", "commit_sha_rule": "PRESERVE_AND_PROHIBIT_AND_RETAIN_CANDIDATE_TAG"},
+      {"from": "CANDIDATE_TAG_REMOTE_VERIFIED", "event": "S8_FAIL", "to": "ABANDONED", "commit_sha_rule": "PRESERVE_AND_PROHIBIT_AND_RETAIN_CANDIDATE_TAG"},
+      {"from": "CANDIDATE_TAG_REMOTE_VERIFIED", "event": "S8_PASS", "to": "COMMIT_X_FINAL_TAG_SELECTION", "commit_sha_rule": "ASSIGN_COMMIT_X_WITHOUT_SHA_CHANGE"},
+      {"from": "CANDIDATE_TAG_REMOTE_VERIFIED", "event": "EXPLICIT_ABANDONMENT", "to": "ABANDONED", "commit_sha_rule": "PRESERVE_AND_PROHIBIT_AND_RETAIN_CANDIDATE_TAG"},
+      {"from": "COMMIT_X_FINAL_TAG_SELECTION", "event": "S9_TAG_CREATED_AND_PUSH_ATTEMPTED", "to": "FINAL_TAG_PUBLICATION_PENDING", "commit_sha_rule": "COMMIT_X_UNCHANGED"},
+      {"from": "COMMIT_X_FINAL_TAG_SELECTION", "event": "S9_INVENTORY_COLLISION_RESELECT", "to": "COMMIT_X_FINAL_TAG_SELECTION", "commit_sha_rule": "COMMIT_X_UNCHANGED_AND_NEXT_VERSION"},
+      {"from": "FINAL_TAG_PUBLICATION_PENDING", "event": "S9_TRANSPORT_FAILURE", "to": "FINAL_TAG_PUBLICATION_PENDING", "commit_sha_rule": "SAME_COMMIT_X_AND_SAME_FINAL_TAG_OBJECT"},
+      {"from": "FINAL_TAG_PUBLICATION_PENDING", "event": "S9_RETRY_SAME_TAG_OBJECT", "to": "FINAL_TAG_PUBLICATION_PENDING", "commit_sha_rule": "SAME_COMMIT_X_AND_SAME_FINAL_TAG_OBJECT"},
+      {"from": "FINAL_TAG_PUBLICATION_PENDING", "event": "S9_TRANSPORT_RETRY_ABANDONED", "to": "FINAL_PUBLICATION_INCOMPLETE", "commit_sha_rule": "COMMIT_X_AND_CONTENT_BINDING_REMAIN_VALID"},
+      {"from": "FINAL_TAG_PUBLICATION_PENDING", "event": "S10_PASS", "to": "FINAL_TAG_REMOTE_VERIFIED", "commit_sha_rule": "COMMIT_X_UNCHANGED"},
+      {"from": "FINAL_TAG_PUBLICATION_PENDING", "event": "S10_QUERY_UNVERIFIED", "to": "FINAL_TAG_PUBLICATION_PENDING", "commit_sha_rule": "SAME_COMMIT_X_AND_SAME_FINAL_TAG_OBJECT"},
+      {"from": "FINAL_TAG_PUBLICATION_PENDING", "event": "S10_COLLISION", "to": "COMMIT_X_FINAL_TAG_SELECTION", "commit_sha_rule": "COMMIT_X_UNCHANGED_AND_EXISTING_TAG_UNCHANGED"},
+      {"from": "FINAL_TAG_REMOTE_VERIFIED", "event": "S11_FAIL", "to": "FINAL_PUBLICATION_INCOMPLETE", "commit_sha_rule": "COMMIT_X_AND_CONTENT_BINDING_REMAIN_VALID"},
+      {"from": "FINAL_TAG_REMOTE_VERIFIED", "event": "S11_PASS", "to": "FINAL_PUBLICATION_COMPLETE", "commit_sha_rule": "COMMIT_X_UNCHANGED_AND_RUN_IDENTITY_UNLOCKED"},
+      {"from": "FINAL_PUBLICATION_COMPLETE", "event": "S12_NOT_REQUESTED", "to": "FINAL_PUBLICATION_COMPLETE", "commit_sha_rule": "COMMIT_X_UNCHANGED"},
+      {"from": "FINAL_PUBLICATION_COMPLETE", "event": "S12_FAST_FORWARD_PASS", "to": "MAIN_INTEGRATED", "commit_sha_rule": "COMMIT_X_UNCHANGED"},
+      {"from": "FINAL_PUBLICATION_COMPLETE", "event": "S12_MAIN_DIVERGED", "to": "MAIN_INTEGRATION_DEFERRED", "commit_sha_rule": "COMMIT_X_UNCHANGED"}
+    ],
+    "determinism_rule": "For each state and event pair exactly one transition exists; terminal states have no outgoing transitions; every declared state is reachable from PRE_COMMIT_ATTEMPT under at least one declared event path.",
+    "push_retry_sha_changes": false,
+    "transport_retry_regenerates_tag_object": false,
+    "force_delete_or_retarget_transition_count": 0,
+    "candidate_failure_changes_main": false,
+    "candidate_commit_context": "CANDIDATE_TEMP_WORKTREE_ONLY",
+    "candidate_parent_for_every_attempt": "PARENT_P",
+    "primary_main_ref_S0_through_S11": "PARENT_P",
+    "primary_index_write_count_S0_through_S11": 0,
+    "primary_commit_command_count": 0,
+    "abandoned_candidate_to_primary_main_path_count": 0,
+    "local_primary_main_mutation_transition_count": 0,
+    "remote_main_mutation_transition_steps": ["S12"],
+    "candidate_tag_retained_after_abandonment": true,
+    "candidate_local_branch_retained_and_frozen_after_abandonment": true,
+    "commit_x_assignment_event": "S8_PASS",
+    "run_identity_unlock_event": "S11_PASS",
+    "s12_is_run_identity_gate": false,
+    "run_identity_derivation_before_s11": "PROHIBITED"
+  },
+  "content_binding_model": {
+    "terms": {
+      "artifact_sha256": "SHA-256 over exact ODD artifact bytes; this is the artifact content binding and is independent of the Git object format.",
+      "git_blob_oid": "Identity of a blob in the Git object database; its algorithm and length depend on the repository object format.",
+      "candidate_commit_object": "The content-addressed candidate commit object created on CANDIDATE_LOCAL_BRANCH from PARENT_P; it binds its tree and metadata but does not itself assert publication or retrievability.",
+      "commit_X": "The same candidate commit object after S8 promotion; promotion changes lifecycle status, not object bytes or content identity."
+    },
+    "CONTENT_BINDING_DAG": {
+      "nodes": [
+        "ADJUDICATION_RULES",
+        "ALLOWED_CLAIM",
+        "PROTOCOL_SCOPE_MANIFEST",
+        "PROTOCOL_FREEZE_MANIFEST",
+        "CANDIDATE_COMMIT_OBJECT"
+      ],
+      "edges": [
+        ["ADJUDICATION_RULES", "PROTOCOL_SCOPE_MANIFEST"],
+        ["ALLOWED_CLAIM", "PROTOCOL_SCOPE_MANIFEST"],
+        ["PROTOCOL_SCOPE_MANIFEST", "PROTOCOL_FREEZE_MANIFEST"],
+        ["PROTOCOL_FREEZE_MANIFEST", "CANDIDATE_COMMIT_OBJECT"]
+      ],
+      "dependency_order": [
+        ["ADJUDICATION_RULES", "ALLOWED_CLAIM"],
+        ["PROTOCOL_SCOPE_MANIFEST"],
+        ["PROTOCOL_FREEZE_MANIFEST"],
+        ["CANDIDATE_COMMIT_OBJECT"]
+      ],
+      "candidate_commit_binding": "The candidate commit tree contains exact Git blobs for all four artifacts; the externally reviewed Freeze SHA-256 checks the Freeze bytes without an embedded self digest.",
+      "promotion_rule": "After the unchanged candidate commit object passes S8, its lifecycle name is commit X.",
+      "CONTENT_BINDING_TERMINUS": "commit X",
+      "CONTENT_BINDING_DAG_CYCLE_COUNT": 0,
+      "CONTENT_BINDING_DAG_SELF_EDGE_COUNT": 0,
+      "PUBLICATION_NODE_IN_DIGEST_GRAPH_COUNT": 0
+    },
+    "forbidden_node_classes": [
+      "candidate remote tag",
+      "final remote tag",
+      "remote branch",
+      "fresh fetch",
+      "main integration",
+      "publication status",
+      "availability claim"
+    ],
+    "validation_scope": "One-way seal acyclicity, self-edge, and topological-order checks apply only to CONTENT_BINDING_DAG.",
+    "publication_required_for_artifact_content_identity": false
+  },
+  "publication_workflow": {
+    "PUBLICATION_WORKFLOW": [
+      "candidate tag publication",
+      "candidate remote verification",
+      "candidate fresh raw-blob verification",
+      "final tag publication",
+      "final tag remote verification",
+      "final fresh raw-blob verification",
+      "optional main integration"
+    ],
+    "step_mapping": ["S6", "S7", "S8", "S9", "S10", "S11", "S12"],
+    "DIGEST_GRAPH_MEMBERSHIP": false,
+    "CONTENT_IDENTITY_COMPONENT": false,
+    "AVAILABILITY_AND_RETRIEVABILITY_EVIDENCE": true,
+    "terms": {
+      "annotated_tag_object_oid": "Identity of the annotated tag object, including its target, tagger metadata, message, and other canonical tag-object bytes; it must not be confused with the peeled commit OID.",
+      "remote_branch_or_tag": "Publication, retrievability, and third-party reverification evidence at the time checked; it does not guarantee absolute immutability against force-push or deletion."
+    },
+    "required_checks": [
+      "S7 verifies candidate annotated-tag object OID and peeled commit",
+      "S8 uses a fresh no-checkout repository for candidate-tag raw-blob verification without local path remotes, object sharing, or alternates",
+      "S10 verifies final annotated-tag object OID and peeled commit",
+      "S11 uses a fresh no-checkout repository for final-tag raw-blob verification without local path remotes, object sharing, or alternates"
+    ],
+    "optional_main_integration_is_required": false,
+    "maximum_claim": "PUBLISHED_AND_TAMPER_DETECTABLE_AT_VERIFICATION_TIME",
+    "tag_protection": "NOT_VERIFIED",
+    "claims_prohibited_without_direct_measurement": [
+      "IMMUTABLE_REMOTE_REF",
+      "PROTECTED_TAG",
+      "PERMANENTLY_AVAILABLE",
+      "ABSOLUTELY_DURABLE"
+    ],
+    "TAG_IDENTITY_CRITERION": {
+      "remote_tag_object_oid_equals_expected_local_tag_object_oid": true,
+      "remote_peeled_commit_equals_expected_commit": true,
+      "both_conditions_required": true,
+      "peeled_commit_only_is_sufficient": false,
+      "peeled_match_with_different_tag_object_result": {
+        "label": "TAG_OBJECT_COLLISION",
+        "classification": "BLOCKING",
+        "SAME_TAG_IDENTITY": false
+      }
+    },
+    "tag_identity_boundary": {
+      "tag_object_oid_in_run_identity": false,
+      "tag_role": "PUBLICATION_ATTEMPT_EVIDENCE",
+      "tag_is_run_content_identity_component": false,
+      "run_identity_field_count_remains": 7
+    },
+    "main_integration_changes_run_identity": false,
+    "publication_effect_on_content_binding": "NONE",
+    "publication_effect_on_content_identity": "NONE"
+  },
+  "remote_integrity_failure_staging": {
+    "namespace": "PUBLICATION_LIFECYCLE_FINDING",
+    "separate_from_protocol_defect_satisfiability_37": true,
+    "classification_effect": "BLOCKING",
+    "ordered_finding_precedence": [
+      "TAG_PEELED_COMMIT_MISMATCH",
+      "TAG_TREE_PATH_MISMATCH",
+      "BLOB_OID_MISMATCH",
+      "OBJECT_TYPE_MISMATCH",
+      "RAW_BYTE_HASH_PROCEDURE_UNVERIFIED",
+      "HASH_VERIFICATION_PROCEDURE_CONFLICT",
+      "REMOTE_OBJECT_INTEGRITY_FAILURE"
+    ],
+    "finding_predicates": {
+      "TAG_PEELED_COMMIT_MISMATCH": "The explicitly fetched annotated tag does not peel to the expected candidate or final commit.",
+      "TAG_TREE_PATH_MISMATCH": "The intended repository-relative path cannot be resolved unambiguously in the verified peeled tag tree or the supplied ref/path input is not exact.",
+      "BLOB_OID_MISMATCH": "The exact verified tag-tree path resolves successfully but its blob OID differs from the expected local S5 blob OID.",
+      "OBJECT_TYPE_MISMATCH": "git cat-file -t for the directly specified expected blob OID does not return blob.",
+      "RAW_BYTE_HASH_PROCEDURE_UNVERIFIED": "Binary-safe raw-byte acquisition, no-checkout conditions, object-format recording, or procedure provenance is incomplete.",
+      "HASH_VERIFICATION_PROCEDURE_CONFLICT": "Two independent binary-safe SHA-256 methods applied to independently acquired raw bytes for the same blob OID disagree.",
+      "REMOTE_OBJECT_INTEGRITY_FAILURE": "Only after every procedure prerequisite is proven, two independent methods agree on the same raw bytes and SHA-256, and that agreed SHA-256 differs from the expected artifact SHA-256 for the directly specified expected blob OID."
+    },
+    "remote_object_integrity_failure_prerequisites_all_required": [
+      "worktree bytes were not read",
+      "checkout was not performed",
+      "the exact intended annotated tag was fetched and peeled to the expected commit",
+      "the repository-relative path was exact and its tree lookup was recorded",
+      "the expected local S5 blob OID was directly specified for object inspection and raw-byte retrieval",
+      "git cat-file -t reported blob",
+      "local and fresh repository object formats were recorded",
+      "raw bytes were obtained without decoding, newline conversion, or text-pipeline encoding",
+      "SHA-256 was recomputed by two independent methods over independently acquired raw byte streams",
+      "hash implementation names and versions were recorded and implementation disagreement was excluded",
+      "ref, path, OID, and expected-digest input errors were excluded"
+    ],
+    "independent_hash_methods": [
+      "Python subprocess.check_output() plus hashlib.sha256() over returned bytes",
+      "A separate git cat-file blob invocation consumed through a binary process stream and hashed with System.Security.Cryptography.SHA256 without text conversion"
+    ],
+    "procedure_conflict_result": {
+      "label": "HASH_VERIFICATION_PROCEDURE_CONFLICT",
+      "classification": "BLOCKING",
+      "REMOTE_OBJECT_INTEGRITY_FAILURE": "NOT_YET_ESTABLISHED",
+      "action": "STOP"
+    },
+    "final_integrity_result": {
+      "label": "REMOTE_OBJECT_INTEGRITY_FAILURE",
+      "classification": "BLOCKING",
+      "allowed_only_after_all_prerequisites": true
+    },
+    "parent_child_suppression": "Emit only the earliest applicable causal finding in ordered_finding_precedence. Do not additionally emit later procedure or integrity findings caused by the earlier failure.",
+    "raw_hash_mismatch_is_immediate_remote_integrity_failure": false
+  },
+  "publication_failure_classification": {
+    "namespace": "PUBLICATION_LIFECYCLE_FINDING",
+    "categories": [
+      {
+        "category": "candidate content verification failure",
+        "stage": "S8",
+        "result": "X_candidate ABANDONED; commit X NOT_ASSIGNED; candidate tag RETAINED; main UNCHANGED"
+      },
+      {
+        "category": "candidate tag publication failure",
+        "stage": "S6_OR_S7",
+        "result": "X_candidate not promoted; main UNCHANGED; only same tag object transport retry is permitted"
+      },
+      {
+        "category": "final tag selection collision",
+        "stage": "S9",
+        "result": "commit X and content binding VALID; existing tag UNCHANGED; select next deterministic version"
+      },
+      {
+        "category": "final tag publication transport failure",
+        "stage": "S9",
+        "result": "commit X and content binding VALID; retry only the same local final tag object"
+      },
+      {
+        "category": "final tag object identity mismatch",
+        "stage": "S10",
+        "result": "commit X and content binding VALID; SAME_TAG_IDENTITY false; RUN_IDENTITY NOT_DERIVED"
+      },
+      {
+        "category": "final tag peeled commit mismatch",
+        "stage": "S10",
+        "result": "commit X and content binding VALID; RUN_IDENTITY NOT_DERIVED"
+      },
+      {
+        "category": "fresh raw blob procedure conflict",
+        "stage": "S8_OR_S11",
+        "result": "Use HASH_VERIFICATION_PROCEDURE_CONFLICT; REMOTE_OBJECT_INTEGRITY_FAILURE NOT_YET_ESTABLISHED"
+      },
+      {
+        "category": "remote object integrity failure",
+        "stage": "S8_OR_S11",
+        "result": "Use only after all remote_integrity_failure_staging prerequisites pass"
+      },
+      {
+        "category": "optional main integration divergence",
+        "stage": "S12",
+        "result": "commit X, content binding, final tag, and RUN_IDENTITY eligibility remain unchanged; main update NOT_PERFORMED"
+      }
+    ],
+    "after_s8_pass_content_binding_invalidation_transition_count": 0,
+    "before_s11_pass_run_identity_derivation": "PROHIBITED"
+  },
+  "protocol_defect_satisfiability": {
+    "validation_scope": "Evaluate predicates only against in-memory synthetic objects; do not alter actual artifacts and do not describe a synthetic witness as an observed production failure.",
+    "entries": [
+      {
+        "defect_label": "PRE_FREEZE_ORDER_UNVERIFIED",
+        "predicate": {
+          "field": "valid_freeze_order_verified",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "valid_freeze_order_verified": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "FROZEN_CLAIM_ARTIFACT_MISSING",
+        "predicate": {
+          "field": "frozen_claim_artifact_present",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "frozen_claim_artifact_present": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "LIMITED_COHORT_UNDEFINED",
+        "predicate": {
+          "field": "limited_cohort_exactly_defined",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "limited_cohort_exactly_defined": false,
+          "reason": "Synthetic duplicate or missing stable identifier."
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "PRE_FROZEN_RULE_INCOMPLETE",
+        "predicate": {
+          "all": [
+            {
+              "field": "component_cell_states",
+              "op": "COUNT_EQ",
+              "value": {
+                "item": "NOT_APPLICABLE",
+                "count": 14
+              }
+            },
+            {
+              "field": "total_cell_count",
+              "op": "EQ",
+              "value": 14
+            }
+          ]
+        },
+        "synthetic_witness": {
+          "component_cell_states": [
+            "NOT_APPLICABLE",
+            "NOT_APPLICABLE",
+            "NOT_APPLICABLE",
+            "NOT_APPLICABLE",
+            "NOT_APPLICABLE",
+            "NOT_APPLICABLE",
+            "NOT_APPLICABLE",
+            "NOT_APPLICABLE",
+            "NOT_APPLICABLE",
+            "NOT_APPLICABLE",
+            "NOT_APPLICABLE",
+            "NOT_APPLICABLE",
+            "NOT_APPLICABLE",
+            "NOT_APPLICABLE"
+          ],
+          "total_cell_count": 14
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "COMPONENT_PERMUTATION_INVARIANCE_UNPROVEN",
+        "predicate": {
+          "field": "aggregation_restricted_schema_valid",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "aggregation_restricted_schema_valid": false,
+          "forbidden_reference": "cell_position"
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "PROTOCOL_DRAFT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "DECLARED_OUTCOME_UNREACHABLE",
+        "predicate": {
+          "all": [
+            {
+              "field": "outcome_declared_protocol_admissible",
+              "op": "EQ",
+              "value": true
+            },
+            {
+              "field": "enumerated_outcome_count",
+              "op": "EQ",
+              "value": 0
+            }
+          ]
+        },
+        "synthetic_witness": {
+          "outcome_declared_protocol_admissible": true,
+          "enumerated_outcome_count": 0
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "PROTOCOL_DRAFT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "INDEX_BLOB_BYTES_MISMATCH",
+        "predicate": {
+          "field": "index_blob_matches_expected",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "index_blob_matches_expected": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "ABORT_BEFORE_COMMIT",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "COMMIT_BLOB_BYTES_MISMATCH",
+        "predicate": {
+          "field": "commit_blob_matches_expected",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "commit_blob_matches_expected": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_X_NOT_ASSIGNED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "COMMIT_X_CANDIDATE_ABANDONED",
+        "predicate": {
+          "field": "candidate_state",
+          "op": "EQ",
+          "value": "ABANDONED"
+        },
+        "synthetic_witness": {
+          "candidate_state": "ABANDONED"
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_X_NOT_ASSIGNED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "PUBLICATION_REF_COLLISION",
+        "predicate": {
+          "field": "conflicting_ref_exists",
+          "op": "EQ",
+          "value": true
+        },
+        "synthetic_witness": {
+          "conflicting_ref_exists": true
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "PUBLICATION_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "REMOTE_BRANCH_SHA_MISMATCH",
+        "predicate": {
+          "field": "remote_branch_matches_candidate",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "remote_branch_matches_candidate": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "REMOTE_PUBLICATION_UNVERIFIED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "REMOTE_TAG_PEELED_SHA_MISMATCH",
+        "predicate": {
+          "field": "peeled_tag_commit_matches_candidate",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "peeled_tag_commit_matches_candidate": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "REMOTE_PUBLICATION_UNVERIFIED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "FRESH_CLONE_HEAD_MISMATCH",
+        "predicate": {
+          "field": "fresh_repository_tag_peel_matches_expected_commit",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "fresh_repository_tag_peel_matches_expected_commit": false,
+          "stage": "S8"
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_X_NOT_ASSIGNED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "FRESH_CLONE_BLOB_MISMATCH",
+        "predicate": {
+          "field": "fresh_repository_raw_blob_matches_expected",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "fresh_repository_raw_blob_matches_expected": false,
+          "stage": "S8"
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_X_NOT_ASSIGNED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "REMOTE_PUBLICATION_UNVERIFIED",
+        "predicate": {
+          "field": "publication_verification_complete",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "publication_verification_complete": false,
+          "stage": "S11"
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "FINAL_PUBLICATION_INCOMPLETE_AND_RUN_IDENTITY_NOT_DERIVED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "FROZEN_RULE_ARTIFACT_MISSING",
+        "predicate": {
+          "field": "frozen_rule_artifact_present",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "frozen_rule_artifact_present": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "FROZEN_SCOPE_ARTIFACT_MISSING",
+        "predicate": {
+          "field": "frozen_scope_artifact_present",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "frozen_scope_artifact_present": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "FROZEN_RULE_BYTES_MISMATCH",
+        "predicate": {
+          "field": "frozen_rule_bytes_match",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "frozen_rule_bytes_match": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "FROZEN_CLAIM_BYTES_MISMATCH",
+        "predicate": {
+          "field": "frozen_claim_bytes_match",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "frozen_claim_bytes_match": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "FROZEN_SCOPE_BYTES_MISMATCH",
+        "predicate": {
+          "field": "frozen_scope_bytes_match",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "frozen_scope_bytes_match": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "FREEZE_AND_REREAD_NOT_ORDERED",
+        "predicate": {
+          "field": "freeze_precedes_reread",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "freeze_precedes_reread": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "DAG_ANCHOR_DURABILITY_UNPROVEN",
+        "predicate": {
+          "field": "required_publication_evidence_complete",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "required_publication_evidence_complete": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "COHORT_IDENTITY_CONFLICT",
+        "predicate": {
+          "field": "cohort_identity_consistent",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "cohort_identity_consistent": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "DEVELOPMENT_BOUNDARY_CONTAMINATED",
+        "predicate": {
+          "field": "development_intersection_empty",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "development_intersection_empty": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "CANDIDATE_CLASSIFICATION_INCOMPLETE",
+        "predicate": {
+          "field": "candidate_classification_complete",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "candidate_classification_complete": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "PROTOCOL_X_SCOPE_CONTAMINATED",
+        "predicate": {
+          "field": "commit_x_path_set_exact",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "commit_x_path_set_exact": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "OLD_EVIDENCE_REUSED",
+        "predicate": {
+          "field": "old_evidence_reused",
+          "op": "EQ",
+          "value": true
+        },
+        "synthetic_witness": {
+          "old_evidence_reused": true
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "NEW_EVIDENCE_SEQUENCE_VIOLATION",
+        "predicate": {
+          "field": "new_evidence_sequence_valid",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "new_evidence_sequence_valid": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "RUN_IDENTITY_INVALID",
+        "predicate": {
+          "field": "run_identity_valid",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "run_identity_valid": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "OFFLINE_INPUT_UNDECLARED",
+        "predicate": {
+          "field": "offline_input_declared",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "offline_input_declared": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "OFFLINE_NETWORK_DEPENDENCY",
+        "predicate": {
+          "field": "offline_network_access_observed",
+          "op": "EQ",
+          "value": true
+        },
+        "synthetic_witness": {
+          "offline_network_access_observed": true
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "OFFLINE_REPRODUCTION_FAILED",
+        "predicate": {
+          "field": "offline_reproduction_matches",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "offline_reproduction_matches": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "ALLOWED_CLAIM_UNSUPPORTED",
+        "predicate": {
+          "field": "allowed_claim_supported",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "allowed_claim_supported": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "PROTOCOL_MANIFEST_HASH_CYCLE",
+        "predicate": {
+          "field": "protocol_manifest_digest_graph_acyclic",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "protocol_manifest_digest_graph_acyclic": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "MANIFEST_BINDING_UNSUPPORTED",
+        "predicate": {
+          "field": "manifest_content_binding_supported",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "manifest_content_binding_supported": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "MANIFEST_REQUIRED_DIGEST_MISSING",
+        "predicate": {
+          "field": "manifest_required_digest_present",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "manifest_required_digest_present": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "MANIFEST_BINDING_MISMATCH",
+        "predicate": {
+          "field": "manifest_binding_matches_bytes",
+          "op": "EQ",
+          "value": false
+        },
+        "synthetic_witness": {
+          "manifest_binding_matches_bytes": false
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "COMMIT_BLOCKED",
+        "satisfiable": true
+      },
+      {
+        "defect_label": "PRIMARY_MAIN_CONTAMINATION_PATH_PRESENT",
+        "predicate": {
+          "field": "primary_main_contamination_path_count",
+          "op": "COUNT_GT",
+          "value": 0
+        },
+        "synthetic_witness": {
+          "primary_main_contamination_path_count": 1,
+          "example_path": "candidate commit created on PRIMARY_MAIN_REF"
+        },
+        "expected_classification": "BLOCKING",
+        "expected_status": "PROTOCOL_DRAFT_BLOCKED",
+        "satisfiable": true
+      }
+    ],
+    "required_four_labels": [
+      "PRE_FREEZE_ORDER_UNVERIFIED",
+      "FROZEN_CLAIM_ARTIFACT_MISSING",
+      "LIMITED_COHORT_UNDEFINED",
+      "PRE_FROZEN_RULE_INCOMPLETE"
+    ],
+    "required_four_satisfiable_count": 4,
+    "all_blocking_labels_have_synthetic_witness": true,
+    "expected_blocking_label_count": 38,
+    "synthetic_witness_component_histogram_contribution": 0,
+    "synthetic_witness_run_histogram_contribution": 0,
+    "production_failure_empirically_verified": false,
+    "DEFECT_DETECTOR_COVERAGE": {
+      "value": "38/38",
+      "BASIS": "SYNTHETIC_SATISFIABILITY_WITNESSES",
+      "meaning": "Every one of the 38 frozen protocol-defect predicates is satisfiable and causes its detector to fire for at least one in-memory synthetic witness."
+    },
+    "FALSE_NEGATIVE_RATE_ON_NATURAL_DEFECTS": "NOT_INSTRUMENTED",
+    "FALSE_POSITIVE_RATE_ON_NATURAL_DEFECTS": "NOT_INSTRUMENTED",
+    "claims_prohibited_from_synthetic_coverage": [
+      "NATURAL_DEFECT_FULL_COVERAGE",
+      "FALSE_NEGATIVE_RATE_ZERO",
+      "FALSE_POSITIVE_RATE_ZERO",
+      "PRODUCTION_DEFECT_DETECTION_VALIDATED"
+    ],
+    "synthetic_claim_boundary": "The 38/38 result establishes only predicate satisfiability and detector activation on synthetic inputs; it is not production validation and does not measure natural-defect error rates.",
+    "defensive_guard_declarations": [
+      "The all-NOT_APPLICABLE component count class is a PROTOCOL_EXCLUDED_GUARD_CLASS with joint evidence reachability NOT_INSTRUMENTED; it exists only as NEGATIVE_DOMAIN_GUARD.",
+      "A zero-count terminal outcome is permitted only when excluded from the protocol-admissible domain before execution; that declaration is not an empirical reachability claim.",
+      "Later-step predicates are structurally gated off when an earlier gate makes those steps NOT_PERFORMED."
+    ]
+  },
+  "historical_evidence_policy": {
+    "prohibition": "commit Xより前に取得・生成・再読・判定された証拠、データ、ログおよび派生成果物を、ODD-007Rの判定入力として再利用してはならない。",
+    "existing_odd007_8348_files_classification": "integrity-confirmed but adjudication-ineligible historical evidence",
+    "existing_odd007_artifacts": "PRESERVE_UNMODIFIED_AND_EXCLUDE_FROM_ODD-007R_INPUT_SET",
+    "historical_hash_comparison": "DIAGNOSTIC_ONLY; it is neither an ODD-007R adjudication input nor a substitute for new acquisition.",
+    "reuse_result": {
+      "label": "OLD_EVIDENCE_REUSED",
+      "classification": "BLOCKING",
+      "status": "COMMIT_BLOCKED"
+    }
+  },
+  "new_evidence_sequence": {
+    "steps": [
+      {
+        "order": 1,
+        "action": "COMPLETE_S0_THROUGH_S5_IN_THE_ISOLATED_CANDIDATE_TEMP_WORKTREE_AND_CREATE_X_CANDIDATE_ON_ITS_ATTEMPT_BRANCH_FROM_PARENT_P"
+      },
+      {
+        "order": 2,
+        "action": "CREATE_AND_PUBLISH_THE_CANDIDATE_SPECIFIC_ANNOTATED_TAG_UNDER_S6_WITHOUT_MAIN_UPDATE"
+      },
+      {
+        "order": 3,
+        "action": "VERIFY_CANDIDATE_TAG_OBJECT_OID_AND_PEELED_COMMIT_UNDER_S7"
+      },
+      {
+        "order": 4,
+        "action": "PASS_S8_FRESH_NO_CHECKOUT_RAW_BLOB_VERIFICATION_AND_ASSIGN_COMMIT_X"
+      },
+      {
+        "order": 5,
+        "action": "DETERMINISTICALLY_SELECT_CREATE_AND_PUBLISH_THE_FINAL_ANNOTATED_TAG_UNDER_S9"
+      },
+      {
+        "order": 6,
+        "action": "VERIFY_FINAL_TAG_OBJECT_OID_AND_PEELED_COMMIT_UNDER_S10"
+      },
+      {
+        "order": 7,
+        "action": "PASS_S11_FRESH_NO_CHECKOUT_RAW_BLOB_VERIFICATION_AND_UNLOCK_RUN_IDENTITY"
+      },
+      {
+        "order": 8,
+        "action": "CREATE_ORDERED_INPUT_MANIFEST_WITHOUT_EVIDENCE_OR_RUN_IDENTITY_THEN_DERIVE_SEVEN_FIELD_RUN_IDENTITY"
+      },
+      {
+        "order": 9,
+        "action": "CREATE_NEW_EMPTY_SAVE_LOCATION_NAMED_BY_RUN_IDENTITY"
+      },
+      {
+        "order": 10,
+        "action": "START_NEW_EVIDENCE_ACQUISITION"
+      }
+    ],
+    "before_step_10": "No ODD-007R evidence request, response, log, candidate classification, or adjudication may be created or read.",
+    "old_run_append": "PROHIBITED",
+    "old_save_location_reuse": "PROHIBITED",
+    "old_run_identity_reuse": "PROHIBITED",
+    "sequence_violation_result": {
+      "label": "NEW_EVIDENCE_SEQUENCE_VIOLATION",
+      "classification": "BLOCKING",
+      "status": "COMMIT_BLOCKED"
+    }
+  },
+  "run_identity": {
+    "actual_value_in_this_document": false,
+    "freeze_anchor_commit_X_value_in_this_document": false,
+    "protocol_freeze_manifest_sha256_value_in_this_document": false,
+    "hash_algorithm": "SHA-256",
+    "text_encoding": "UTF-8 without BOM",
+    "digest_input_representation": "lowercase ASCII hexadecimal",
+    "output_representation": "odd007r-sha256:<64 lowercase hexadecimal SHA-256 digest>",
+    "field_order": [
+      "rule_document_sha256",
+      "allowed_claim_sha256",
+      "commit_scope_manifest_sha256",
+      "protocol_freeze_manifest_sha256",
+      "freeze_anchor_commit_X",
+      "ordered_input_manifest_sha256",
+      "explicit_run_nonce"
+    ],
+    "field_constraints": {
+      "rule_document_sha256": "exactly 64 lowercase hexadecimal ASCII bytes",
+      "allowed_claim_sha256": "exactly 64 lowercase hexadecimal ASCII bytes",
+      "commit_scope_manifest_sha256": "exactly 64 lowercase hexadecimal ASCII bytes",
+      "protocol_freeze_manifest_sha256": "exactly 64 lowercase hexadecimal ASCII bytes computed over the externally review-approved exact Freeze bytes and verified again from commit X, the S8 candidate-tag fresh repository, and the S11 final-tag fresh repository",
+      "freeze_anchor_commit_X": "lowercase hexadecimal ASCII encoding of the exact final commit X object ID, with length determined by the Git object format recorded at S0",
+      "ordered_input_manifest_sha256": "exactly 64 lowercase hexadecimal ASCII bytes",
+      "explicit_run_nonce": "exactly 64 lowercase hexadecimal ASCII bytes encoding 32 cryptographically random bytes generated only after S11 completes final publication verification"
+    },
+    "canonical_serialization": {
+      "simple_string_concatenation": "PROHIBITED",
+      "integer_encoding": "unsigned big-endian",
+      "prefix": "u32be field_count with value 7",
+      "field_count": 7,
+      "field_count_encoding": "u32be(7)",
+      "per_field": "u16be UTF-8 field-name byte length || field-name bytes || u64be UTF-8 value byte length || value bytes",
+      "field_sequence": "Exactly field_order; no separators, whitespace, terminator, normalization, optional fields, or reordering.",
+      "hash_input": "prefix followed by the seven encoded fields",
+      "result": "SHA-256(hash_input), rendered using output_representation"
+    },
+    "ordered_input_manifest_rules": {
+      "creation_point": "After S11 has verified final publication and unlocked RUN_IDENTITY derivation.",
+      "exact_path": "audit/odd007r-run-init/ODD-007R_ORDERED_INPUT_MANIFEST.json",
+      "path_constraints": {
+        "repository_relative": true,
+        "slash_separator": "/",
+        "contains_run_identity": false,
+        "contains_explicit_run_nonce": false,
+        "inside_historical_run_directory": false,
+        "wildcards": "PROHIBITED",
+        "environment_dependent_expansion": "PROHIBITED"
+      },
+      "top_level_key_order": [
+        "schema",
+        "manifest_version",
+        "protocol_anchor",
+        "limited_cohort",
+        "development_exclusions",
+        "acquisition_requests",
+        "preexisting_inputs",
+        "historical_evidence_exclusions",
+        "offline_reproduction_plan"
+      ],
+      "field_schema": {
+        "schema": {
+          "json_type": "string",
+          "const": "odd007r-ordered-input-manifest/1.0.0"
+        },
+        "manifest_version": {
+          "json_type": "string",
+          "const": "1.0.0"
+        },
+        "protocol_anchor": {
+          "json_type": "object",
+          "key_order": [
+            "rule_document_sha256",
+            "allowed_claim_sha256",
+            "commit_scope_manifest_sha256",
+            "protocol_freeze_manifest_sha256",
+            "freeze_anchor_commit_x",
+            "protocol_final_tag"
+          ],
+          "additional_properties": false,
+          "properties": {
+            "rule_document_sha256": {
+              "json_type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "allowed_claim_sha256": {
+              "json_type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "commit_scope_manifest_sha256": {
+              "json_type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "protocol_freeze_manifest_sha256": {
+              "json_type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "freeze_anchor_commit_x": {
+              "json_type": "string",
+              "constraint": "Lowercase hexadecimal exact commit X object ID with length fixed by the repository object format."
+            },
+            "protocol_final_tag": {
+              "json_type": "string",
+              "constraint": "Non-empty exact final annotated tag name verified at S10 and S11."
+            }
+          },
+          "common_constraints": [
+            "ALL_FIELDS_REQUIRED",
+            "NON_EMPTY_STRINGS",
+            "NULL_PROHIBITED",
+            "PLACEHOLDER_PROHIBITED",
+            "UNRESOLVED_VALUE_PROHIBITED"
+          ]
+        },
+        "limited_cohort": {
+          "json_type": "array",
+          "array_order": "ordinal ascending",
+          "item_count": 3,
+          "item_key_order": [
+            "ordinal",
+            "namespace",
+            "stable_identifier",
+            "display_name",
+            "development_consumed"
+          ],
+          "item_schema": {
+            "ordinal": "JSON integer; one-based, consecutive, unique",
+            "namespace": "non-empty string",
+            "stable_identifier": "non-empty string compared by limited_cohort.stable_identifier_comparison",
+            "display_name": "non-empty diagnostic string; PROHIBITED for identity comparison",
+            "development_consumed": "JSON boolean"
+          },
+          "expected_entries": [
+            {
+              "ordinal": 1,
+              "namespace": "us-top10-2023/source_row_identifier",
+              "stable_identifier": "rank-2",
+              "display_name": "metformin",
+              "development_consumed": false
+            },
+            {
+              "ordinal": 2,
+              "namespace": "us-top10-2023/source_row_identifier",
+              "stable_identifier": "rank-3",
+              "display_name": "levothyroxine",
+              "development_consumed": false
+            },
+            {
+              "ordinal": 3,
+              "namespace": "us-top10-2023/source_row_identifier",
+              "stable_identifier": "rank-4",
+              "display_name": "lisinopril",
+              "development_consumed": false
+            }
+          ],
+          "additional_item_properties": false
+        },
+        "development_exclusions": {
+          "json_type": "array",
+          "array_order": "ordinal ascending",
+          "item_count": 1,
+          "item_key_order": [
+            "ordinal",
+            "namespace",
+            "stable_identifier",
+            "display_name",
+            "exclusion_reason"
+          ],
+          "item_schema": {
+            "ordinal": "JSON integer; one-based, consecutive, unique",
+            "namespace": "non-empty string",
+            "stable_identifier": "non-empty string compared by limited_cohort.stable_identifier_comparison",
+            "display_name": "non-empty diagnostic string; PROHIBITED for identity comparison",
+            "exclusion_reason": "non-empty string"
+          },
+          "expected_entries": [
+            {
+              "ordinal": 1,
+              "namespace": "us-top10-2023/source_row_identifier",
+              "stable_identifier": "rank-1",
+              "display_name": "atorvastatin",
+              "exclusion_reason": "DEVELOPMENT_CONSUMED"
+            }
+          ],
+          "additional_item_properties": false
+        },
+        "acquisition_requests": {
+          "json_type": "array",
+          "array_order": "ordinal ascending",
+          "minimum_item_count": 1,
+          "item_key_order": [
+            "ordinal",
+            "component_stable_identifier",
+            "source_authority",
+            "source_endpoint",
+            "http_method",
+            "ordered_query_parameters",
+            "ordered_request_headers",
+            "destination_path",
+            "artifact_role",
+            "pagination_policy",
+            "retry_policy",
+            "cache_policy"
+          ],
+          "item_schema": {
+            "ordinal": "JSON integer; one-based, consecutive, unique",
+            "component_stable_identifier": "non-empty LIMITED_COHORT stable identifier",
+            "source_authority": "non-empty official source authority string",
+            "source_endpoint": "non-empty absolute official HTTPS endpoint without wildcard, environment expansion, placeholder, credential, token, cookie, or secret",
+            "http_method": {
+              "json_type": "string",
+              "allowed_values": [
+                "GET"
+              ]
+            },
+            "ordered_query_parameters": {
+              "json_type": "array",
+              "array_order": "ordinal ascending",
+              "empty_representation": [],
+              "item_key_order": [
+                "ordinal",
+                "name",
+                "value"
+              ],
+              "item_schema": {
+                "ordinal": "JSON integer; one-based, consecutive, unique",
+                "name": "non-empty string",
+                "value": "string"
+              },
+              "additional_item_properties": false
+            },
+            "ordered_request_headers": {
+              "json_type": "array",
+              "array_order": "ordinal ascending",
+              "empty_representation": [],
+              "item_key_order": [
+                "ordinal",
+                "name",
+                "value"
+              ],
+              "item_schema": {
+                "ordinal": "JSON integer; one-based, consecutive, unique",
+                "name": "non-empty string; credential, token, cookie, and secret header names are prohibited",
+                "value": "string; credential, token, cookie, and secret values are prohibited"
+              },
+              "additional_item_properties": false
+            },
+            "destination_path": "unique non-empty repository-relative slash-separated path without wildcard, environment expansion, or unresolved placeholder",
+            "artifact_role": "non-empty string",
+            "pagination_policy": "non-empty deterministic pre-acquisition string",
+            "retry_policy": "non-empty deterministic pre-acquisition string",
+            "cache_policy": "non-empty deterministic string that must not permit historical or undeclared cache"
+          },
+          "cross_item_constraints": [
+            "ORDINALS_ONE_BASED_CONSECUTIVE_UNIQUE",
+            "DESTINATION_PATHS_UNIQUE",
+            "ARRAY_ORDER_PRESERVED_AFTER_ACQUISITION_START",
+            "POST_ACQUISITION_ADD_DELETE_REORDER_PROHIBITED"
+          ],
+          "additional_item_properties": false
+        },
+        "preexisting_inputs": {
+          "json_type": "array",
+          "array_order": "ordinal ascending",
+          "empty_representation": [],
+          "item_key_order": [
+            "ordinal",
+            "path",
+            "role",
+            "exact_size_bytes",
+            "sha256"
+          ],
+          "item_schema": {
+            "ordinal": "JSON integer; one-based, consecutive, unique",
+            "path": "unique non-empty repository-relative slash-separated protocol-authorized input path",
+            "role": "non-empty string",
+            "exact_size_bytes": "non-negative JSON integer",
+            "sha256": "64 lowercase hexadecimal string"
+          },
+          "prohibited_content_roles": [
+            "OLD_ODD-007_EVIDENCE",
+            "OLD_HTTP_RESPONSE",
+            "OLD_CACHE",
+            "OLD_LOG"
+          ],
+          "additional_item_properties": false
+        },
+        "historical_evidence_exclusions": {
+          "json_type": "array",
+          "array_order": "ordinal ascending",
+          "empty_representation": [],
+          "item_key_order": [
+            "ordinal",
+            "path",
+            "exclusion_role",
+            "sha256"
+          ],
+          "item_schema": {
+            "ordinal": "JSON integer; one-based, consecutive, unique",
+            "path": "unique non-empty repository-relative slash-separated saved historical manifest path",
+            "exclusion_role": {
+              "json_type": "string",
+              "const": "integrity-confirmed but adjudication-ineligible historical evidence"
+            },
+            "sha256": "64 lowercase hexadecimal exact saved-manifest digest"
+          },
+          "directory_without_hash_rule": "Do not create an entry for a directory without an exact saved-manifest hash; use only a Rules-authorized manifest path.",
+          "additional_item_properties": false
+        },
+        "offline_reproduction_plan": {
+          "json_type": "object",
+          "key_order": [
+            "snapshot_base_commit",
+            "network_policy",
+            "declared_cache_paths",
+            "command_argv",
+            "expected_output_paths"
+          ],
+          "additional_properties": false,
+          "properties": {
+            "snapshot_base_commit": "lowercase hexadecimal exact new Set E commit X object ID",
+            "network_policy": {
+              "json_type": "string",
+              "const": "DENY_ALL_NETWORK_ACCESS_INCLUDING_OPENFDA_AND_DAILYMED"
+            },
+            "declared_cache_paths": "ordered array of unique repository-relative slash-separated strings; undeclared cache prohibited; [] when none",
+            "command_argv": "non-empty ordered array of strings representing argv directly, not a shell command string",
+            "expected_output_paths": "non-empty ordered array of unique repository-relative slash-separated strings fixed before acquisition"
+          }
+        }
+      },
+      "serialization": {
+        "format": "JSON",
+        "encoding": "UTF-8",
+        "bom": "ABSENT",
+        "line_ending": "LF_ONLY",
+        "terminal_newline_count": 1,
+        "indent_spaces": 2,
+        "tabs": "PROHIBITED",
+        "trailing_whitespace": "PROHIBITED",
+        "object_key_order": "Exactly top_level_key_order and every nested key_order or item_key_order declared in field_schema.",
+        "array_order": "Ordinal-bearing arrays are sorted by ordinal ascending; other arrays preserve their declared order.",
+        "ordinal_json_type": "integer",
+        "boolean_json_literals": [
+          true,
+          false
+        ],
+        "null": "PROHIBITED",
+        "unknown_key": "PROHIBITED",
+        "duplicate_key": "PROHIBITED",
+        "unicode_normalization": "NONE",
+        "slash_conversion_to_backslash": "PROHIBITED",
+        "digest": "SHA-256 over the exact serialized bytes rendered as 64 lowercase hexadecimal characters."
+      },
+      "immutability": {
+        "after_creation_within_same_run": "PROHIBITED_TO_CHANGE",
+        "same_run_overwrite_repair": "PROHIBITED",
+        "new_run_distinguishers": [
+          "freeze_anchor_commit_x",
+          "separate run manifest"
+        ]
+      },
+      "must_not_contain": [
+        "RUN_IDENTITY",
+        "its own SHA-256",
+        "explicit_run_nonce",
+        "run output",
+        "evidence acquired for ODD-007R"
+      ],
+      "validation_failure_conditions": [
+        "MISSING_REQUIRED_FIELD",
+        "EXTRA_FIELD",
+        "UNKNOWN_FIELD",
+        "DUPLICATE_FIELD",
+        "FIELD_ORDER_MISMATCH",
+        "TYPE_MISMATCH",
+        "PLACEHOLDER_PRESENT",
+        "NULL_PRESENT",
+        "NONDETERMINISTIC_VALUE_PRESENT"
+      ],
+      "validation_failure_result": {
+        "label": "PRE_FROZEN_RULE_INCOMPLETE",
+        "classification": "BLOCKING",
+        "status": "COMMIT_BLOCKED"
+      }
+    },
+    "non_circular_generation_order": [
+      "Complete S8 candidate-tag fresh no-checkout raw-blob verification and assign the passing X_candidate as final commit X.",
+      "Complete S9 final-tag selection/publication and S10 tag-object plus peeled-commit verification without changing commit X.",
+      "Complete S11 final-tag fresh no-checkout raw-blob verification; this is the only event that unlocks RUN_IDENTITY derivation.",
+      "Compute and cross-check rule, claim, scope, and Freeze exact-byte SHA-256 values from commit X and both S8 and S11 fresh repositories.",
+      "Create the ordered input manifest without RUN_IDENTITY, nonce, self-hash, outputs, or new evidence.",
+      "Compute ordered_input_manifest_sha256.",
+      "Generate explicit_run_nonce.",
+      "Serialize the seven fields and derive RUN_IDENTITY.",
+      "Create the new save location.",
+      "Store the already-fixed ordered input manifest and derived RUN_IDENTITY in a separate run manifest; the run manifest is not an input to RUN_IDENTITY."
+    ],
+    "git_sha1_repository_still_requires_freeze_sha256": true,
+    "commit_sha_alone_is_run_identity": false,
+    "tag_object_oid_is_run_identity_field": false,
+    "run_identity_field_count_remains": 7,
+    "s11_is_only_derivation_unlock_gate": true,
+    "derive_before_s11": "PROHIBITED",
+    "store_derived_value": "SEPARATE_RUN_MANIFEST_ONLY",
+    "self_reference": "PROHIBITED",
+    "invalid_result": {
+      "label": "RUN_IDENTITY_INVALID",
+      "classification": "BLOCKING",
+      "status": "COMMIT_BLOCKED"
+    }
+  },
+  "offline_reproduction": {
+    "snapshot": "Use a clean immutable checkout of the frozen commit-candidate snapshot; never use the live working tree.",
+    "network": "Explicitly deny all network access, including openFDA and DailyMed.",
+    "cache": "Only cache paths explicitly listed with exact bytes and SHA-256 in the ordered input manifest are permitted; undeclared cache is prohibited.",
+    "inputs": "Enumerate every input path, size, SHA-256, role, and ordering in the input manifest.",
+    "execution_record_required_fields": [
+      "snapshot_commit_sha",
+      "input_manifest_sha256",
+      "exact_command_argv",
+      "exit_code",
+      "ordered_output_paths",
+      "ordered_output_sha256_values",
+      "network_denial_method",
+      "declared_cache_paths"
+    ],
+    "external_bytes_absent_allowed_states": [
+      "EXTERNAL_COMMITMENT_PRESENT",
+      "EXTERNAL_BYTES_NOT_AVAILABLE",
+      "NOT_VERIFIED_IN_OFFLINE_MODE"
+    ],
+    "external_bytes_absent_defect": {
+      "label": "EXTERNAL_BYTES_NOT_AVAILABLE",
+      "classification": "RECORD_AND_PROCEED",
+      "condition": "The commitment is frozen and verified, the external bytes are absent by declared design, and no claim asserts their offline verification."
+    },
+    "undeclared_input_result": "OFFLINE_INPUT_UNDECLARED",
+    "network_dependency_result": "OFFLINE_NETWORK_DEPENDENCY",
+    "shield_generalization": "Gate, verifier, or test success is shield validation only and must not be generalized to population performance, differentiation, or PMDA advantage."
+  },
+  "allowed_claim_semantic_validation": {
+    "claim_artifact_path": "docs/research/ODD-007R_ALLOWED_CLAIM.txt",
+    "required_elements": [
+      {
+        "term": "事前に凍結された",
+        "supported_only_if": "Valid distinct X and Y satisfy every dag_freeze.required_condition before semantic reread."
+      },
+      {
+        "term": "対象範囲",
+        "supported_only_if": "The parent-relative X changed-path set exactly equals the frozen protocol scope manifest and all bytes match."
+      },
+      {
+        "term": "判定規則",
+        "supported_only_if": "The frozen rule bytes match X and every finite state/component/run completeness check passes."
+      },
+      {
+        "term": "保存済み",
+        "supported_only_if": "Every used new-run input and evidence byte is included in Y and a verified durable remote ref contains Y."
+      },
+      {
+        "term": "限定コホート",
+        "supported_only_if": "The actual component identifiers equal LIMITED_COHORT exactly and the development intersection is empty."
+      },
+      {
+        "term": "隔離offline検証",
+        "supported_only_if": "The immutable snapshot, network denial, declared-input-only cache policy, command, exit code, and hashes are all evidenced."
+      },
+      {
+        "term": "再現",
+        "supported_only_if": "The frozen command completes under isolation and every required output exact-byte hash equals the frozen expected output hash."
+      },
+      {
+        "term": "commit候補",
+        "supported_only_if": "The verified snapshot commit and its parent-relative changed path set equal the declared commit-candidate scope."
+      },
+      {
+        "term": "artifactの整合性",
+        "supported_only_if": "Every required artifact exists once, has a safe declared path, and matches exact size and SHA-256."
+      }
+    ],
+    "decision_rule": "Evaluate all nine elements as booleans. Exactly nine true values are required. Any false, missing, or non-boolean value emits ALLOWED_CLAIM_UNSUPPORTED.",
+    "unsupported_result": {
+      "label": "ALLOWED_CLAIM_UNSUPPORTED",
+      "classification": "BLOCKING",
+      "status": "COMMIT_BLOCKED"
+    },
+    "post_result_claim_edit": "PROHIBITED",
+    "claim_rewording_to_rescue_same_run": "PROHIBITED"
+  },
+  "runtime_prohibitions": [
+    "Read downstream evidence after Step 2 failure",
+    "Infer missing facts",
+    "Add a status or defect label at runtime",
+    "Repair a rule gap after observing results",
+    "Reuse ODD-007 evidence as ODD-007R input",
+    "Expand to ODD-008, top 100, EMA, or PMDA",
+    "Design differentiation delta or kill criteria within this protocol"
+  ]
+}
