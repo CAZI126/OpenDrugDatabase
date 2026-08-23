@@ -66,15 +66,47 @@ __all__ = [
 
 
 @dataclass(frozen=True, slots=True)
+class Occurrence:
+    """One position in the SPL where an application number is stated."""
+
+    xml_locator: str
+    evidence_xml: str
+    evidence_sha256: str
+
+    def as_dict(self) -> dict[str, str]:
+        return {
+            "evidence_sha256": self.evidence_sha256,
+            "evidence_xml": self.evidence_xml,
+            "xml_locator": self.xml_locator,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class ApplicationReference:
-    """An application number read out of the preserved SPL, with its position."""
+    """An application number read out of the preserved SPL, with every position.
+
+    A label states the same application number once per product, so the same
+    value routinely appears several times. Keeping only the first position would
+    silently discard evidence the document actually carries, so every occurrence
+    is retained and the repeats are treated as repeats of one value.
+    """
 
     application_number: str
     application_type: str
     numeric_key: str
-    xml_locator: str
-    evidence_xml: str
-    evidence_sha256: str
+    occurrences: tuple[Occurrence, ...]
+
+    @property
+    def xml_locator(self) -> str:
+        return self.occurrences[0].xml_locator
+
+    @property
+    def evidence_xml(self) -> str:
+        return self.occurrences[0].evidence_xml
+
+    @property
+    def evidence_sha256(self) -> str:
+        return self.occurrences[0].evidence_sha256
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -82,6 +114,8 @@ class ApplicationReference:
             "application_type": self.application_type,
             "evidence_sha256": self.evidence_sha256,
             "evidence_xml": self.evidence_xml,
+            "occurrence_count": len(self.occurrences),
+            "occurrences": [item.as_dict() for item in self.occurrences],
             "xml_locator": self.xml_locator,
         }
 
@@ -302,7 +336,9 @@ def extract_application_references(
     returned. Nothing is inferred from a brand name, an ingredient, or a sponsor.
     """
 
-    found: dict[str, ApplicationReference] = {}
+    found: dict[str, list[Occurrence]] = {}
+    types: dict[str, str] = {}
+    numbers: dict[str, str] = {}
     for element in root.iter():
         if _local_name(element.tag) != "approval":
             continue
@@ -315,17 +351,26 @@ def extract_application_references(
         match = _APPLICATION_ID.fullmatch(extension.upper())
         if match is None:
             continue
+        number = extension.upper()
         serialized = ElementTree.tostring(identifier, encoding="unicode").strip()
-        reference = ApplicationReference(
-            application_number=extension.upper(),
-            application_type=match.group("type"),
-            numeric_key=str(int(match.group("number"))),
-            xml_locator=locators[identifier],
-            evidence_xml=serialized,
-            evidence_sha256=sha256_bytes(serialized.encode("utf-8")),
+        found.setdefault(number, []).append(
+            Occurrence(
+                xml_locator=locators[identifier],
+                evidence_xml=serialized,
+                evidence_sha256=sha256_bytes(serialized.encode("utf-8")),
+            )
         )
-        found.setdefault(reference.application_number, reference)
-    return tuple(found[key] for key in sorted(found))
+        types.setdefault(number, match.group("type"))
+        numbers.setdefault(number, str(int(match.group("number"))))
+    return tuple(
+        ApplicationReference(
+            application_number=number,
+            application_type=types[number],
+            numeric_key=numbers[number],
+            occurrences=tuple(found[number]),
+        )
+        for number in sorted(found)
+    )
 
 
 def read_member_row(archive_path: Path, member: str, row_number: int) -> str:

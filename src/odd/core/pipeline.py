@@ -30,6 +30,7 @@ from odd.constants import CORE_NO_SELECTION_RULE_VERSION
 from odd.core.drugsfda import (
     ApplicationReference,
     DrugsFdaStore,
+    Occurrence,
     extract_application_references,
     find_application,
     read_member_row,
@@ -659,24 +660,46 @@ class CorePipeline:
                 str(label.get("raw_path", "")) if isinstance(label, dict) else ""
             ).read_bytes()
             root = parse_document_root(raw_bytes)
-            element = resolve_locator(root, str(spl.get("xml_locator", "")))
         except (ProvenanceValidationFailure, OSError, ODDError) as exc:
-            return {"index": index, "reason": f"SPL application locator did not resolve: {exc}"}
-        serialized = ElementTree.tostring(element, encoding="unicode").strip()
-        if serialized != spl.get("evidence_xml") or sha256_bytes(
-            serialized.encode("utf-8")
-        ) != spl.get("evidence_sha256"):
+            return {"index": index, "reason": f"the preserved SPL could not be reopened: {exc}"}
+        # Every recorded position is re-resolved, not just the first one.
+        occurrences: list[Occurrence] = []
+        for recorded in _occurrences_of(spl):
+            locator = str(recorded.get("xml_locator", ""))
+            try:
+                element = resolve_locator(root, locator)
+            except (ProvenanceValidationFailure, ODDError) as exc:
+                return {
+                    "index": index,
+                    "reason": f"SPL application locator did not resolve: {exc}",
+                    "xml_locator": locator,
+                }
+            serialized = ElementTree.tostring(element, encoding="unicode").strip()
+            digest = sha256_bytes(serialized.encode("utf-8"))
+            if serialized != recorded.get("evidence_xml") or digest != recorded.get(
+                "evidence_sha256"
+            ):
+                return {
+                    "index": index,
+                    "reason": "the SPL element at this locator differs from the bundle",
+                    "xml_locator": locator,
+                }
+            occurrences.append(
+                Occurrence(
+                    xml_locator=locator, evidence_xml=serialized, evidence_sha256=digest
+                )
+            )
+        declared = spl.get("occurrence_count")
+        if isinstance(declared, int) and declared != len(occurrences):
             return {
                 "index": index,
-                "reason": "the SPL element at this locator differs from the bundle",
+                "reason": "the bundle declares more SPL evidence positions than it carries",
             }
         reference = ApplicationReference(
             application_number=str(spl["application_number"]),
             application_type=str(spl.get("application_type", "")),
             numeric_key=_numeric_key(str(spl["application_number"])),
-            xml_locator=str(spl.get("xml_locator", "")),
-            evidence_xml=serialized,
-            evidence_sha256=sha256_bytes(serialized.encode("utf-8")),
+            occurrences=tuple(occurrences),
         )
         recomputed = find_application(
             archive_path,
@@ -885,6 +908,15 @@ def _rows_of(source: dict[str, Any]) -> list[dict[str, Any]]:
         return []
     rows = evidence.get("rows")
     return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+
+
+def _occurrences_of(spl_evidence: dict[str, Any]) -> list[dict[str, Any]]:
+    """Every recorded SPL position for one application number."""
+
+    recorded = spl_evidence.get("occurrences")
+    if isinstance(recorded, list):
+        return [item for item in recorded if isinstance(item, dict)]
+    return [spl_evidence]
 
 
 def _numeric_key(application_number: str) -> str:

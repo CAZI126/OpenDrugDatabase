@@ -114,6 +114,31 @@ def install_fixture_archive(monkeypatch: pytest.MonkeyPatch, body: bytes) -> Non
     )
 
 
+def test_every_position_stating_the_same_application_number_is_kept() -> None:
+    """A label states its application number once per product; none may be dropped."""
+
+    text = ELIQUIS_XML.read_text(encoding="utf-8")
+    approval = (
+        "<subjectOf><approval>"
+        '<id extension="ANDA213853" root="2.16.840.1.113883.3.150"/>'
+        "</approval></subjectOf>"
+    )
+    # The same value stated at two separate positions in the document.
+    body = text.replace(
+        "</manufacturedProduct>", approval + "</manufacturedProduct>", 2
+    ).encode("utf-8")
+    root = parse_document_root(body)
+
+    references = extract_application_references(root, build_locator_map(root))
+
+    assert len(references) == 1, "one value stated twice is still one application number"
+    reference = references[0]
+    assert len(reference.occurrences) == 2
+    assert len({item.xml_locator for item in reference.occurrences}) == 2
+    assert reference.as_dict()["occurrence_count"] == 2
+    assert len(reference.as_dict()["occurrences"]) == 2
+
+
 def test_the_application_number_is_read_from_the_spl_with_its_position() -> None:
     reference = eliquis_reference()
 
