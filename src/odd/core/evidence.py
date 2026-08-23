@@ -46,6 +46,7 @@ __all__ = [
     "UNKNOWN",
     "build_evidence_payload",
     "relative_to_root",
+    "section_payload",
     "select_sections",
 ]
 
@@ -191,14 +192,14 @@ def build_evidence_payload(
         # records never rewrite the label, and the label never answers for FDA.
         "regulatory_sources": list(regulatory_sources or []),
         "sections": [
-            _section_payload(section, raw_path=raw_path, raw_sha256=identity.raw_sha256)
+            section_payload(section, raw_path=raw_path, raw_sha256=identity.raw_sha256)
             for section in selected
         ],
         "evidence_retrieval": _LOCATOR_INSTRUCTIONS,
     }
 
 
-def _section_payload(
+def section_payload(
     section: SourceSection,
     *,
     raw_path: str,

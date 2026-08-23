@@ -49,6 +49,7 @@ def build_parser() -> argparse.ArgumentParser:
     extract.add_argument("--drug", help="record the term the caller asked for")
     _add_section_filters(extract)
     _add_drugsfda_option(extract)
+    _add_selective_options(extract)
 
     verify = commands.add_parser(
         "verify", help="walk a written bundle back to the preserved raw source"
@@ -62,6 +63,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--source-version")
     _add_section_filters(run)
     _add_drugsfda_option(run)
+    _add_selective_options(run)
 
     # Accept the shared options on either side of the subcommand.
     for subcommand in (fetch, extract, verify, run):
@@ -85,6 +87,33 @@ def _add_shared_options(
         action="store_true",
         default=argparse.SUPPRESS if subcommand_copy else False,
         help="print the whole evidence bundle instead of a summary",
+    )
+
+
+def _add_selective_options(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--index-only",
+        action="store_true",
+        help=(
+            "return a text-free index of what the document contains, so a caller can "
+            "name the sections it wants instead of receiving the whole document"
+        ),
+    )
+    parser.add_argument(
+        "--slice",
+        dest="slice_only",
+        action="store_true",
+        help=(
+            "return only the named --section-code sections, matched exactly, without "
+            "widening a section to its subsections"
+        ),
+    )
+    parser.add_argument(
+        "--application-number",
+        action="append",
+        default=[],
+        metavar="NUMBER",
+        help="return only FDA rows for this application number (repeatable, exact match)",
     )
 
 
@@ -147,6 +176,9 @@ def _dispatch(
             section_codes=tuple(arguments.section_code),
             section_name_contains=tuple(arguments.section_name),
             include_drugsfda=arguments.include_drugsfda,
+            index_only=arguments.index_only,
+            slice_only=arguments.slice_only,
+            application_numbers=tuple(arguments.application_number),
         )
         return (
             {
@@ -177,6 +209,9 @@ def _dispatch(
         section_codes=tuple(arguments.section_code),
         section_name_contains=tuple(arguments.section_name),
         include_drugsfda=arguments.include_drugsfda,
+        index_only=arguments.index_only,
+        slice_only=arguments.slice_only,
+        application_numbers=tuple(arguments.application_number),
     )
     if run["status"] in {"ambiguous", "unknown"}:
         return run, _UNRESOLVED_EXIT

@@ -37,9 +37,19 @@ from odd.core.drugsfda import (
     resolve_download,
     retrieve_archive,
 )
-from odd.core.evidence import UNKNOWN, build_evidence_payload, relative_to_root
+from odd.core.evidence import (
+    UNKNOWN,
+    build_evidence_payload,
+    relative_to_root,
+    section_payload,
+)
 from odd.core.locator import resolve_locator
 from odd.core.lookup import paged_lookup
+from odd.core.selective import (
+    build_index_payload,
+    build_slice_payload,
+    slice_fingerprint,
+)
 from odd.errors import ODDError, ProvenanceValidationFailure, SourceNotFound
 from odd.models import (
     CandidateLookup,
@@ -288,8 +298,11 @@ class CorePipeline:
         candidate_listing_completeness: str | None = None,
         lookup_url: str | None = None,
         include_drugsfda: bool = False,
+        index_only: bool = False,
+        slice_only: bool = False,
+        application_numbers: tuple[str, ...] = (),
     ) -> EvidenceResult:
-        """Extract sections from the preserved bytes and emit the evidence bundle."""
+        """Extract from the preserved bytes: the whole document, an index, or a slice."""
 
         raw = self.raw_store.resolve(set_id, source_version)
         xml_bytes = raw.label_path.read_bytes()
@@ -299,6 +312,30 @@ class CorePipeline:
             if include_drugsfda
             else None
         )
+        if index_only:
+            index = build_index_payload(
+                normalized,
+                raw,
+                data_root=self.data_root,
+                requested_term=requested_term,
+                regulatory_sources=regulatory,
+            )
+            path, status = self._write_derived(raw, index, "index.json")
+            return EvidenceResult(payload=index, path=path, status=status)
+        if slice_only:
+            piece = build_slice_payload(
+                normalized,
+                raw,
+                data_root=self.data_root,
+                requested_section_codes=section_codes,
+                requested_application_numbers=application_numbers,
+                include_drugsfda=include_drugsfda,
+                regulatory_sources=regulatory,
+                section_payload=section_payload,
+            )
+            name = f"slice-{slice_fingerprint(piece)}.json"
+            path, status = self._write_derived(raw, piece, name)
+            return EvidenceResult(payload=piece, path=path, status=status)
         payload = build_evidence_payload(
             normalized,
             raw,
@@ -325,7 +362,10 @@ class CorePipeline:
         checks: list[Check] = []
         failures: list[dict[str, Any]] = []
         source = payload.get("label_source")
+        # A slice names its passages label_evidence; the whole bundle calls them sections.
         sections = payload.get("sections")
+        if sections is None:
+            sections = payload.get("label_evidence")
         if not isinstance(source, dict) or not isinstance(sections, list):
             return VerificationReport(
                 ok=False,
@@ -393,7 +433,7 @@ class CorePipeline:
             )
         )
 
-        extraction = payload.get("extraction")
+        extraction = payload.get("extraction") or payload.get("completeness")
         declared = (
             extraction.get("returned_section_count") if isinstance(extraction, dict) else None
         )
@@ -425,6 +465,9 @@ class CorePipeline:
         section_codes: tuple[str, ...] = (),
         section_name_contains: tuple[str, ...] = (),
         include_drugsfda: bool = False,
+        index_only: bool = False,
+        slice_only: bool = False,
+        application_numbers: tuple[str, ...] = (),
     ) -> dict[str, Any]:
         """Run the whole path for one drug and return every step's result."""
 
@@ -456,6 +499,9 @@ class CorePipeline:
             candidate_listing_completeness=acquisition.listing_completeness,
             lookup_url=acquisition.lookup_url,
             include_drugsfda=include_drugsfda,
+            index_only=index_only,
+            slice_only=slice_only,
+            application_numbers=application_numbers,
         )
         verification = self.verify(evidence.payload)
         return {
@@ -546,6 +592,8 @@ class CorePipeline:
         """Walk every FDA fact back to the row it came from in the preserved archive."""
 
         sources = payload.get("regulatory_sources")
+        if sources is None:
+            sources = payload.get("regulatory_evidence")
         if not isinstance(sources, list) or not sources:
             return [], []
         checks: list[Check] = []
@@ -842,10 +890,19 @@ class CorePipeline:
             / name
         )
 
+    def _write_derived(
+        self, raw: RawDocument, payload: dict[str, Any], file_name: str
+    ) -> tuple[Path, str]:
+        """Write a derived artifact beside the bundle, never over the raw source."""
+
+        return self._write_at(self._evidence_path(raw).with_name(file_name), payload)
+
     def _write_evidence(
         self, raw: RawDocument, payload: dict[str, Any]
     ) -> tuple[Path, str]:
-        path = self._evidence_path(raw, payload)
+        return self._write_at(self._evidence_path(raw, payload), payload)
+
+    def _write_at(self, path: Path, payload: dict[str, Any]) -> tuple[Path, str]:
         encoded = canonical_json_bytes(payload) + b"\n"
         if path.is_file():
             if sha256_file(path) == sha256_bytes(encoded):
