@@ -84,6 +84,17 @@ def build_parser() -> argparse.ArgumentParser:
             "without it, batch works only from already-preserved sources"
         ),
     )
+    batch.add_argument(
+        "--fetch-missing-by-set-id",
+        action="store_true",
+        help=(
+            "retrieve identities that are not preserved yet by asking the official "
+            "source for that set id alone, with no search and no drug name"
+        ),
+    )
+    batch.add_argument(
+        "--output", type=Path, metavar="PATH", help="write the batch report here as well"
+    )
     _add_drugsfda_option(batch)
 
     # Accept the shared options on either side of the subcommand.
@@ -218,7 +229,11 @@ def _dispatch(
             set_ids,
             drug=arguments.drug,
             include_drugsfda=arguments.include_drugsfda,
+            fetch_missing_by_set_id=arguments.fetch_missing_by_set_id,
         )
+        if arguments.output is not None:
+            arguments.output.parent.mkdir(parents=True, exist_ok=True)
+            arguments.output.write_bytes(canonical_json_bytes(batch_report) + b"\n")
         # A batch that ran is a batch that succeeded; per-item outcomes are inside.
         return batch_report, 0 if batch_report["error"] == 0 else 1
 

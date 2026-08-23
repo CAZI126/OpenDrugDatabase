@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from odd.core.direct import fetch_by_set_id
 from odd.core.selective import COMPLETE
 from odd.errors import AmbiguousSourceSelection, ODDError, SourceNotFound
 from odd.provenance.hashing import sha256_file
@@ -96,6 +97,7 @@ def run_batch(
     *,
     drug: str | None = None,
     include_drugsfda: bool = False,
+    fetch_missing_by_set_id: bool = False,
 ) -> dict[str, Any]:
     """Put every supplied identity through the single-document path, in order."""
 
@@ -119,6 +121,7 @@ def run_batch(
                 raw_set_id.strip(),
                 drug=drug,
                 include_drugsfda=include_drugsfda,
+                fetch_missing_by_set_id=fetch_missing_by_set_id,
             )
         )
     counts = {name: 0 for name in (VERIFIED, AMBIGUOUS, UNKNOWN, ERROR)}
@@ -138,6 +141,7 @@ def _run_one(
     *,
     drug: str | None,
     include_drugsfda: bool,
+    fetch_missing_by_set_id: bool = False,
 ) -> BatchItem:
     """One identity through the same calls a single-document run makes."""
 
@@ -148,15 +152,21 @@ def _run_one(
             set_id=set_id, status=AMBIGUOUS, error_code=AMBIGUOUS_STORED_VERSION
         )
     except SourceNotFound:
-        if drug is None:
+        if fetch_missing_by_set_id:
+            try:
+                raw = fetch_by_set_id(pipeline.connector, pipeline.raw_store, set_id)
+            except ODDError as error:
+                return BatchItem(set_id=set_id, status=ERROR, error_code=_code(error))
+        elif drug is None:
             # Not held locally is not the same as not existing officially.
             return BatchItem(
                 set_id=set_id, status=UNKNOWN, error_code=NOT_PRESERVED_LOCALLY
             )
-        outcome = _retrieve(pipeline, set_id, drug=drug)
-        if isinstance(outcome, BatchItem):
-            return outcome
-        raw = outcome
+        else:
+            outcome = _retrieve(pipeline, set_id, drug=drug)
+            if isinstance(outcome, BatchItem):
+                return outcome
+            raw = outcome
     except ODDError as error:
         return BatchItem(set_id=set_id, status=ERROR, error_code=_code(error))
 
