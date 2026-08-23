@@ -54,6 +54,100 @@ _BLOCK_ELEMENTS = {
 }
 
 
+@dataclass(frozen=True, slots=True)
+class SectionEvidence:
+    """Source-derived section content read from one ``section`` element."""
+
+    source_section_code: str | None
+    original_heading: str | None
+    original_text: str
+    structured_content: StructuredNode | None
+    content_status: SectionContentStatus
+    section_sha256: str
+    source_locator: str
+
+
+def parse_document_root(
+    xml_bytes: bytes,
+    *,
+    expected_raw_sha256: str | None = None,
+) -> ElementTree.Element:
+    """Apply the ODD-001 input guards and return the HL7 v3 document root."""
+
+    if not xml_bytes:
+        raise MalformedXML("SPL XML is empty")
+    if len(xml_bytes) > MAX_XML_BYTES:
+        raise UnsupportedDocumentStructure(
+            f"SPL XML exceeds the supported {MAX_XML_BYTES}-byte limit"
+        )
+    if _FORBIDDEN_DECLARATION.search(xml_bytes):
+        raise UnsupportedDocumentStructure(
+            "SPL XML with a DOCTYPE or entity declaration is unsupported"
+        )
+    if expected_raw_sha256 is not None and sha256_bytes(xml_bytes) != expected_raw_sha256:
+        raise ProvenanceValidationFailure(
+            "parser input bytes do not match SourceIdentity.raw_sha256"
+        )
+    try:
+        root = ElementTree.fromstring(xml_bytes)
+    except ElementTree.ParseError as exc:
+        raise MalformedXML(f"malformed SPL XML: {exc}") from exc
+    if root.tag != f"{Q}document":
+        raise UnsupportedDocumentStructure(
+            "root element must be an HL7 v3 document",
+            details={"root_tag": root.tag},
+        )
+    return root
+
+
+def build_locator_map(root: ElementTree.Element) -> dict[ElementTree.Element, str]:
+    """Map every element to its stable local-name/position locator."""
+
+    return _locator_map(root)
+
+
+def read_section_evidence(
+    section_element: ElementTree.Element,
+    locators: dict[ElementTree.Element, str],
+) -> SectionEvidence:
+    """Read one section's source-derived content and its content hash.
+
+    This is the single definition used both when extracting a document and when
+    re-reading the same passage from preserved raw bytes, so a locator always
+    resolves to the content its hash was taken over.
+    """
+
+    code_element = _direct_child(section_element, "code")
+    title_element = _direct_child(section_element, "title")
+    text_element = _direct_child(section_element, "text")
+    source_code = _attribute(code_element, "code")
+    heading = _element_text(title_element)
+    original_text = _element_text(text_element) or ""
+    if text_element is None:
+        content_status = SectionContentStatus.TEXT_ELEMENT_ABSENT
+        structured = None
+    elif original_text:
+        content_status = SectionContentStatus.PRESENT
+        structured = _structured_node(text_element, locators)
+    else:
+        content_status = SectionContentStatus.PRESENT_EMPTY
+        structured = _structured_node(text_element, locators)
+    return SectionEvidence(
+        source_section_code=source_code,
+        original_heading=heading,
+        original_text=original_text,
+        structured_content=structured,
+        content_status=content_status,
+        section_sha256=section_sha256(
+            source_section_code=source_code,
+            original_heading=heading,
+            original_text=original_text,
+            structured_content=structured,
+        ),
+        source_locator=locators[section_element],
+    )
+
+
 class SPLParser:
     """Extract only explicit SPL content and preserve section hierarchy."""
 
@@ -70,29 +164,7 @@ class SPLParser:
             raise ParserFailure(f"unexpected SPL parser failure: {exc}") from exc
 
     def _parse(self, xml_bytes: bytes, identity: SourceIdentity) -> NormalizedDocument:
-        if not xml_bytes:
-            raise MalformedXML("SPL XML is empty")
-        if len(xml_bytes) > MAX_XML_BYTES:
-            raise UnsupportedDocumentStructure(
-                f"SPL XML exceeds the supported {MAX_XML_BYTES}-byte limit"
-            )
-        if _FORBIDDEN_DECLARATION.search(xml_bytes):
-            raise UnsupportedDocumentStructure(
-                "SPL XML with a DOCTYPE or entity declaration is unsupported"
-            )
-        if sha256_bytes(xml_bytes) != identity.raw_sha256:
-            raise ProvenanceValidationFailure(
-                "parser input bytes do not match SourceIdentity.raw_sha256"
-            )
-        try:
-            root = ElementTree.fromstring(xml_bytes)
-        except ElementTree.ParseError as exc:
-            raise MalformedXML(f"malformed SPL XML: {exc}") from exc
-        if root.tag != f"{Q}document":
-            raise UnsupportedDocumentStructure(
-                "root element must be an HL7 v3 document",
-                details={"root_tag": root.tag},
-            )
+        root = parse_document_root(xml_bytes, expected_raw_sha256=identity.raw_sha256)
 
         source_instance_id = _required_attribute(root, "id", "root")
         set_id = _required_attribute(root, "setId", "root")
@@ -205,42 +277,23 @@ class SPLParser:
 
         def visit(section_element: ElementTree.Element, parent_id: str | None, depth: int) -> None:
             sequence = len(sections)
-            code_element = _direct_child(section_element, "code")
-            title_element = _direct_child(section_element, "title")
-            text_element = _direct_child(section_element, "text")
-            source_code = _attribute(code_element, "code")
-            heading = _element_text(title_element)
-            original_text = _element_text(text_element) or ""
-            if text_element is None:
-                content_status = SectionContentStatus.TEXT_ELEMENT_ABSENT
-                structured = None
-            elif original_text:
-                content_status = SectionContentStatus.PRESENT
-                structured = _structured_node(text_element, locators)
-            else:
-                content_status = SectionContentStatus.PRESENT_EMPTY
-                structured = _structured_node(text_element, locators)
-            digest = section_sha256(
-                source_section_code=source_code,
-                original_heading=heading,
-                original_text=original_text,
-                structured_content=structured,
+            evidence = read_section_evidence(section_element, locators)
+            identifier = section_id(
+                document_id, evidence.source_locator, evidence.section_sha256
             )
-            locator = locators[section_element]
-            identifier = section_id(document_id, locator, digest)
             section = SourceSection(
                 section_id=identifier,
                 document_id=document_id,
-                source_section_code=source_code,
-                original_heading=heading,
-                original_text=original_text,
+                source_section_code=evidence.source_section_code,
+                original_heading=evidence.original_heading,
+                original_text=evidence.original_text,
                 sequence_index=sequence,
-                section_sha256=digest,
-                source_locator=locator,
+                section_sha256=evidence.section_sha256,
+                source_locator=evidence.source_locator,
                 parent_section_id=parent_id,
                 depth=depth,
-                content_status=content_status,
-                structured_content=structured,
+                content_status=evidence.content_status,
+                structured_content=evidence.structured_content,
             )
             sections.append(section)
             for component in _direct_children(section_element, "component"):

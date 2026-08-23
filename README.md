@@ -4,6 +4,21 @@ OpenDrugDatabase (ODD) is an open-source version-control foundation for global r
 knowledge. Regulatory source documents are primary data. Normalized mappings and temporal diffs
 are reproducible derivative data that retain traceability to exact source bytes.
 
+## Start here: the core path
+
+The mainline is one way in and one way back — official primary source, preserved
+raw bytes and SHA-256, extracted sections, structured output with evidence
+locators, then re-verification against those bytes:
+
+```
+odd-core run --drug Eliquis --set-id e9481622-7cc6-418a-acb6-c5450daae9b0
+```
+
+The core never selects a drug, ranks a product, adjudicates a claim, or guesses.
+`odd-core fetch --drug Eliquis` returns every official candidate and stops.
+See [docs/core_boundary.md](docs/core_boundary.md) for what is on the mainline
+and what is held aside.
+
 ## Implemented scope: ODD-001 through ODD-005
 
 ODD currently implements one production-oriented United States DailyMed SPL vertical slice for

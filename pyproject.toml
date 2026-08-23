@@ -21,6 +21,7 @@ dev = [
 
 [project.scripts]
 odd = "odd.cli.main:main"
+odd-core = "odd.core.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
