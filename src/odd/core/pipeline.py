@@ -306,7 +306,7 @@ class CorePipeline:
 
         checks: list[Check] = []
         failures: list[dict[str, Any]] = []
-        source = payload.get("source")
+        source = payload.get("label_source")
         sections = payload.get("sections")
         if not isinstance(source, dict) or not isinstance(sections, list):
             return VerificationReport(
@@ -470,10 +470,13 @@ class CorePipeline:
             return Check("raw_metadata", False, f"raw metadata is unreadable: {exc}")
         official_id = source.get("official_document_id")
         version = source.get("document_version")
+        # The stored manifest names these roles as authority/provider; the bundle
+        # now names what each one actually is. Same facts, stated without the
+        # implication that FDA published or verified the document.
         expected = {
-            "authority": source.get("authority"),
+            "authority": source.get("regulatory_recipient"),
             "jurisdiction": source.get("jurisdiction"),
-            "provider": source.get("provider"),
+            "provider": source.get("repository"),
             "raw_sha256": source.get("raw_sha256"),
             "source_document_id": (
                 official_id.get("value") if isinstance(official_id, dict) else None

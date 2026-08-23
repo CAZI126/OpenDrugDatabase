@@ -20,6 +20,20 @@ from odd.provenance.hashing import sha256_bytes
 
 UNKNOWN = "UNKNOWN"
 
+# DailyMed is a National Library of Medicine repository of labeling that firms
+# submitted to FDA. Publishing there is not FDA authorship, not FDA content
+# verification, and not evidence of an approved application. Those are separate
+# facts from a separate FDA source, so the three roles are stated separately and
+# the approval question is left open rather than answered from labeling alone.
+LABEL_PUBLISHER = "National Library of Medicine"
+LABEL_REPOSITORY = "DailyMed"
+LABEL_DOCUMENT_STATUS = "in_use_labeling_submitted_to_fda"
+LABEL_PROVENANCE_NOTE = (
+    "DailyMed is an NLM repository of in-use labeling submitted to FDA. Its presence "
+    "here does not mean FDA authored this document, verified its content, or approved "
+    "the product. Approval status must come from an FDA regulatory source."
+)
+
 _LOCATOR_INSTRUCTIONS = (
     "Open source.raw_path relative to the ODD data root, confirm its SHA-256 equals "
     "source.raw_sha256, resolve evidence.xml_locator as a sequence of name[index] XML "
@@ -117,10 +131,15 @@ def build_evidence_payload(
             "generic_names": [document.generic_name] if document.generic_name else UNKNOWN,
             "active_ingredients": list(document.active_ingredients) or UNKNOWN,
         },
-        "source": {
-            "authority": identity.authority,
-            "provider": identity.provider,
+        "label_source": {
+            "publisher": LABEL_PUBLISHER,
+            "repository": LABEL_REPOSITORY,
+            "regulatory_recipient": identity.authority,
             "jurisdiction": identity.jurisdiction,
+            "document_status": LABEL_DOCUMENT_STATUS,
+            "fda_content_verification": "NOT_VERIFIED",
+            "fda_approval_status": UNKNOWN,
+            "provenance_note": LABEL_PROVENANCE_NOTE,
             "official_document_id": {
                 "scheme": "dailymed_set_id",
                 "value": identity.source_document_id,

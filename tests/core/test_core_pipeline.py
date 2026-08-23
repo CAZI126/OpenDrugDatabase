@@ -206,7 +206,7 @@ def test_whole_path_reaches_a_verified_bundle(tmp_path: Path) -> None:
     assert result["verification"]["failures"] == []
 
     evidence = result["evidence"]
-    source = evidence["source"]
+    source = evidence["label_source"]
     assert evidence["drug"]["requested_term"] == "Eliquis"
     assert source["official_document_id"] == {
         "scheme": "dailymed_set_id",
@@ -235,12 +235,41 @@ def test_whole_path_reaches_a_verified_bundle(tmp_path: Path) -> None:
     }
 
 
+def test_dailymed_alone_never_asserts_fda_approval_or_verification(
+    tmp_path: Path,
+) -> None:
+    """A label in an NLM repository is not an FDA approval, and must not read as one."""
+
+    payload = pipeline(tmp_path).run("Eliquis", set_id=ELIQUIS_SET_ID)["evidence"]
+    label = payload["label_source"]
+
+    assert label["publisher"] == "National Library of Medicine"
+    assert label["repository"] == "DailyMed"
+    assert label["regulatory_recipient"] == "FDA"
+    assert label["document_status"] == "in_use_labeling_submitted_to_fda"
+    assert label["fda_content_verification"] == "NOT_VERIFIED"
+    assert label["fda_approval_status"] == UNKNOWN
+
+    # The three roles must stay distinct: no bare "authority" collapsing NLM's
+    # repository into an FDA assertion.
+    assert "authority" not in label
+    assert "provider" not in label
+
+    rendered = json.dumps(payload)
+    assert "FDA_APPROVED" not in rendered
+    assert "APPROVED" not in rendered.replace("fda_approval_status", "")
+
+    # A breaking rename of the source block requires a major schema bump.
+    assert payload["schema_version"].endswith("/2.0.0")
+    assert "source" not in payload
+
+
 def test_evidence_locator_re_retrieves_the_same_passage_from_raw(tmp_path: Path) -> None:
     core = pipeline(tmp_path)
     result = core.run("Eliquis", set_id=ELIQUIS_SET_ID)
     evidence = result["evidence"]
 
-    raw_bytes = (core.data_root / evidence["source"]["raw_path"]).read_bytes()
+    raw_bytes = (core.data_root / evidence["label_source"]["raw_path"]).read_bytes()
     root = parse_document_root(raw_bytes)
     locators = build_locator_map(root)
 
@@ -278,7 +307,7 @@ def test_a_bundle_that_no_longer_matches_its_raw_source_fails_verification(
 ) -> None:
     core = pipeline(tmp_path)
     result = core.run("Eliquis", set_id=ELIQUIS_SET_ID)
-    raw_path = core.data_root / result["evidence"]["source"]["raw_path"]
+    raw_path = core.data_root / result["evidence"]["label_source"]["raw_path"]
     raw_path.write_bytes(raw_path.read_bytes().replace(b"ELIQUIS", b"PLACEBO", 1))
 
     report = core.verify(result["evidence"])
@@ -315,7 +344,7 @@ def test_a_bundle_may_not_point_outside_the_data_root(tmp_path: Path) -> None:
     core = pipeline(tmp_path)
     result = core.run("Eliquis", set_id=ELIQUIS_SET_ID)
     payload = result["evidence"]
-    payload["source"]["raw_path"] = "../../etc/passwd"
+    payload["label_source"]["raw_path"] = "../../etc/passwd"
 
     report = core.verify(payload)
 
@@ -368,9 +397,10 @@ def test_missing_official_facts_stay_unknown(tmp_path: Path) -> None:
     untitled = [
         item for item in payload["sections"] if item["section_name"] == UNKNOWN
     ]
+    raw_bytes = (core.data_root / payload["label_source"]["raw_path"]).read_bytes()
     for section in untitled:
         element = resolve_locator(
-            parse_document_root((core.data_root / payload["source"]["raw_path"]).read_bytes()),
+            parse_document_root(raw_bytes),
             section["evidence"]["xml_locator"],
         )
         assert element.find("{urn:hl7-org:v3}title") is None
