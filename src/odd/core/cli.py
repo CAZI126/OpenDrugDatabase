@@ -8,7 +8,6 @@ runnable and reviewable on its own.
 from __future__ import annotations
 
 import argparse
-import io
 import os
 import sys
 from collections.abc import Sequence
@@ -19,10 +18,14 @@ from odd.core.pipeline import CorePipeline
 from odd.errors import ODDError
 from odd.provenance.canonical import canonical_json_bytes
 
+# Neither success nor absence: the caller must narrow the identity, or the
+# official listing was not observed completely enough to answer.
+_UNRESOLVED_EXIT = 2
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="odd-core",
+        prog="odd",
         description=(
             "Deliver official primary-source drug labeling to an AI with provenance and "
             "evidence locators, and verify it back against the preserved raw source."
@@ -101,15 +104,14 @@ def _add_section_filters(parser: argparse.ArgumentParser) -> None:
 
 
 def main(argv: Sequence[str] | None = None, stream: TextIO | None = None) -> int:
-    out = stream if stream is not None else _utf8_stdout()
     arguments = build_parser().parse_args(argv)
     pipeline = CorePipeline(data_root=arguments.data_dir)
     try:
         payload, code = _dispatch(pipeline, arguments)
     except ODDError as error:
-        _emit({"error": error.as_dict(), "status": "error"}, out)
+        _emit({"error": error.as_dict(), "status": "error"}, stream)
         return 1
-    _emit(payload if arguments.print_evidence else _summarize(payload), out)
+    _emit(payload if arguments.print_evidence else _summarize(payload), stream)
     return code
 
 
@@ -122,7 +124,7 @@ def _dispatch(
             set_id=arguments.set_id,
             source_version=arguments.source_version,
         )
-        return result.as_dict(), 2 if result.ambiguous else 0
+        return result.as_dict(), _UNRESOLVED_EXIT if result.raw is None else 0
 
     if arguments.command == "extract":
         evidence = pipeline.extract(
@@ -161,14 +163,29 @@ def _dispatch(
         section_codes=tuple(arguments.section_code),
         section_name_contains=tuple(arguments.section_name),
     )
-    if run["status"] == "ambiguous":
-        return run, 2
+    if run["status"] in {"ambiguous", "unknown"}:
+        return run, _UNRESOLVED_EXIT
     return run, 0 if run["status"] == "verified" else 1
 
 
-def _emit(payload: dict[str, Any], out: TextIO) -> None:
-    out.write(canonical_json_bytes(payload).decode("utf-8"))
-    out.write("\n")
+def _emit(payload: dict[str, Any], stream: TextIO | None) -> None:
+    """Write UTF-8 JSON without wrapping the stdout buffer.
+
+    Building a second TextIOWrapper over ``sys.stdout.buffer`` lets whichever
+    wrapper is finalized first close the shared buffer, which silently discarded
+    anything the other had written -- ``--help`` printed nothing at all.
+    """
+
+    text = canonical_json_bytes(payload).decode("utf-8") + "\n"
+    if stream is not None:
+        stream.write(text)
+        return
+    buffer = getattr(sys.stdout, "buffer", None)
+    if buffer is None:
+        sys.stdout.write(text)
+        return
+    buffer.write(text.encode("utf-8"))
+    buffer.flush()
 
 
 def _summarize(payload: dict[str, Any]) -> dict[str, Any]:
@@ -188,13 +205,6 @@ def _summarize(payload: dict[str, Any]) -> dict[str, Any]:
         for section in sections
     ]
     return {**payload, "evidence": trimmed}
-
-
-def _utf8_stdout() -> TextIO:
-    buffer = getattr(sys.stdout, "buffer", None)
-    if buffer is None:
-        return sys.stdout
-    return io.TextIOWrapper(buffer, encoding="utf-8", newline="\n", write_through=True)
 
 
 if __name__ == "__main__":  # pragma: no cover - module entry point

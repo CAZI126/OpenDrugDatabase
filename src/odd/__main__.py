@@ -1,5 +1,11 @@
-"""Allow ``python -m odd`` to behave like the installed ``odd`` command."""
+"""Allow ``python -m odd`` to behave like the installed ``odd`` command.
 
-from odd.cli.main import main
+``odd`` is the ODD core: the minimal path from an official primary source to
+provenance-carrying output an AI can consume, and back. The earlier batch,
+enrichment, lineage, and diff commands are retained unchanged under
+``odd-legacy`` (``python -m odd.cli.main``).
+"""
 
-main()
+from odd.core.cli import main
+
+raise SystemExit(main())

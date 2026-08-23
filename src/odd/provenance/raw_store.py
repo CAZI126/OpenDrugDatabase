@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
-from odd.connectors.dailymed.selection import candidate_payload
+from odd.connectors.dailymed.candidates import candidate_payload
 from odd.constants import RAW_MANIFEST_VERSION
 from odd.errors import (
     AmbiguousSourceSelection,

@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from odd.models.discovery import (
     CandidateDiscoveryPage,
@@ -214,26 +214,63 @@ class VerificationResult:
     checks: tuple[VerificationCheck, ...]
 
 
-from odd.models.batch import (  # noqa: E402
-    BatchArtifactResult,
-    BatchItem,
-    BatchReport,
-    BatchRun,
-    BatchStatus,
-    CandidateClassification,
-    CandidateEvidence,
-    CandidateSelection,
-    DiscoveryStatus,
-    IngestionStatus,
-    IngredientIdentity,
-    IngredientIdentityStatus,
-    ParserCompatibilityResult,
-    ParserCompatibilityStatus,
-    SelectionStatus,
-    UtilizationEntry,
-    UtilizationList,
-    VerificationStatus,
+# Batch models stay reachable as ``odd.models.<name>`` but are resolved on first
+# use. Importing the shared model namespace must not pull batch definitions into
+# callers that never touch a batch, which is what keeps the ODD core path narrow.
+_BATCH_EXPORTS = frozenset(
+    {
+        "BatchArtifactResult",
+        "BatchItem",
+        "BatchReport",
+        "BatchRun",
+        "BatchStatus",
+        "CandidateClassification",
+        "CandidateEvidence",
+        "CandidateSelection",
+        "DiscoveryStatus",
+        "IngestionStatus",
+        "IngredientIdentity",
+        "IngredientIdentityStatus",
+        "ParserCompatibilityResult",
+        "ParserCompatibilityStatus",
+        "SelectionStatus",
+        "UtilizationEntry",
+        "UtilizationList",
+        "VerificationStatus",
+    }
 )
+
+if TYPE_CHECKING:  # give type checkers the real definitions
+    from odd.models.batch import (
+        BatchArtifactResult,
+        BatchItem,
+        BatchReport,
+        BatchRun,
+        BatchStatus,
+        CandidateClassification,
+        CandidateEvidence,
+        CandidateSelection,
+        DiscoveryStatus,
+        IngestionStatus,
+        IngredientIdentity,
+        IngredientIdentityStatus,
+        ParserCompatibilityResult,
+        ParserCompatibilityStatus,
+        SelectionStatus,
+        UtilizationEntry,
+        UtilizationList,
+        VerificationStatus,
+    )
+
+
+def __getattr__(name: str) -> Any:
+    if name in _BATCH_EXPORTS:
+        from odd.models import batch
+
+        return getattr(batch, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
 from odd.models.diff import (  # noqa: E402  (base models must exist before re-export)
     ChangeCause,
     DailyMedHistory,

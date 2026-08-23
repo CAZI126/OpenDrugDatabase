@@ -18,11 +18,16 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # a database, or an audit obligation.
 HELD_ASIDE = (
     "odd.batch",
+    "odd.cli.main",
     "odd.cohort",
     "odd.cohort_runner",
+    "odd.connectors.dailymed.batch_selection",
+    "odd.connectors.dailymed.selection",
     "odd.diffs",
     "odd.enrichment",
     "odd.governance",
+    "odd.models.batch",
+    "odd.models.enrichment",
     "odd.odd007_verification",
     "odd.scope_guard",
     "odd.service",
@@ -30,14 +35,6 @@ HELD_ASIDE = (
     "odd.utilization",
     "odd.validation",
     "odd.versioning",
-)
-
-# Dataclass-only modules and one candidate serializer that the preserved raw
-# store already depended on. They carry no rule and make no decision.
-ALLOWED_RESIDUE = (
-    "odd.connectors.dailymed.selection",
-    "odd.models.batch",
-    "odd.models.enrichment",
 )
 
 _PROBE = """
@@ -79,18 +76,11 @@ def test_the_core_runs_without_the_application_service_or_a_database() -> None:
     assert "sqlite3" not in closure
 
 
-def test_the_declared_residue_is_still_only_data_and_serialization() -> None:
-    """The core touches these three, and they must stay rule-free.
+def test_the_held_aside_modules_still_work_when_asked_for_directly() -> None:
+    """Detached is not deleted: the legacy names must still resolve."""
 
-    ``odd.connectors.dailymed.selection`` is reached only for
-    ``candidate_payload``; the moment the core reaches its selection rule, this
-    test is the thing that should have caught it.
-    """
+    from odd.connectors.dailymed import select_apixaban_candidate
+    from odd.models import BatchRun
 
-    closure = _mainline_import_closure()
-
-    assert set(ALLOWED_RESIDUE) <= closure
-    from odd.core import pipeline
-
-    source = Path(pipeline.__file__).read_text(encoding="utf-8")
-    assert "select_apixaban_candidate" not in source
+    assert callable(select_apixaban_candidate)
+    assert BatchRun.__name__ == "BatchRun"

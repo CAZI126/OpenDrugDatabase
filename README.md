@@ -4,20 +4,49 @@ OpenDrugDatabase (ODD) is an open-source version-control foundation for global r
 knowledge. Regulatory source documents are primary data. Normalized mappings and temporal diffs
 are reproducible derivative data that retain traceability to exact source bytes.
 
-## Start here: the core path
+## Usage
 
-The mainline is one way in and one way back — official primary source, preserved
-raw bytes and SHA-256, extracted sections, structured output with evidence
-locators, then re-verification against those bytes:
+`odd` is the whole of ODD: one way in, one way back.
 
 ```
-odd-core run --drug Eliquis --set-id e9481622-7cc6-418a-acb6-c5450daae9b0
+official primary source
+  -> preserved raw bytes + SHA-256
+  -> sections extracted from those bytes
+  -> structured output with source, version, and an evidence locator per passage
+  -> re-verification of that output against the preserved bytes
 ```
 
-The core never selects a drug, ranks a product, adjudicates a claim, or guesses.
-`odd-core fetch --drug Eliquis` returns every official candidate and stops.
-See [docs/core_boundary.md](docs/core_boundary.md) for what is on the mainline
-and what is held aside.
+Ask for a drug. ODD returns every official candidate and stops, because choosing
+between them is not its job:
+
+```
+odd fetch --drug Eliquis
+```
+
+Name the official identity you want, and ODD carries it the whole way:
+
+```
+odd run --drug Eliquis --set-id e9481622-7cc6-418a-acb6-c5450daae9b0
+```
+
+That writes the preserved raw label, its SHA-256, and an evidence bundle in which
+every extracted passage carries the official document ID, URL, version, retrieval
+time, and an XML locator. Walk any of it back to the source at any time:
+
+```
+odd verify --set-id e9481622-7cc6-418a-acb6-c5450daae9b0 --source-version 30
+```
+
+ODD does not select a drug, rank a manufacturer, adjudicate a medical claim, or
+guess a missing fact. What it has not confirmed it reports as `UNKNOWN`, and it
+never reports "not found" for a range it did not fully observe.
+
+See [docs/core_boundary.md](docs/core_boundary.md) for the exact boundary.
+
+## Retained: ODD-001 through ODD-005
+
+Everything below is retained and unchanged, but is no longer part of ODD's
+mainline. The `odd ...` commands in these sections now run as `odd-legacy ...`.
 
 ## Implemented scope: ODD-001 through ODD-005
 

@@ -7,10 +7,13 @@ from dataclasses import fields, is_dataclass
 from datetime import UTC, date, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
-from odd.models import BatchReport, DocumentDiff, NormalizedDocument, SourceIdentity
-from odd.models.enrichment import EnrichmentReport
+from odd.models import DocumentDiff, NormalizedDocument, SourceIdentity
+
+if TYPE_CHECKING:  # These are annotations only; _primitive is structural.
+    from odd.models import BatchReport
+    from odd.models.enrichment import EnrichmentReport
 
 
 def canonical_json_bytes(value: Any) -> bytes:

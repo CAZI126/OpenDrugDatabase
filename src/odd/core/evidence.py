@@ -90,6 +90,7 @@ def build_evidence_payload(
     section_codes: tuple[str, ...] = (),
     section_name_contains: tuple[str, ...] = (),
     candidate_count: int | None = None,
+    candidate_listing_completeness: str | None = None,
     lookup_url: str | None = None,
 ) -> dict[str, Any]:
     """Build the deterministic AI-facing bundle for one preserved raw document.
@@ -144,6 +145,7 @@ def build_evidence_payload(
         "selection": {
             "performed": False,
             "candidate_count": candidate_count if candidate_count is not None else UNKNOWN,
+            "candidate_listing_completeness": candidate_listing_completeness or UNKNOWN,
             "note": (
                 "ODD core does not select among candidates. This source identity was "
                 "supplied by the caller and matched exactly against the official lookup "

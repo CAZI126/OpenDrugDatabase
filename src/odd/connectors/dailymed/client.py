@@ -13,7 +13,7 @@ from email.utils import parsedate_to_datetime
 from http.client import HTTPMessage
 from io import BytesIO
 from pathlib import PurePosixPath
-from typing import IO, Any, Protocol, cast
+from typing import IO, TYPE_CHECKING, Any, Protocol, cast
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -31,10 +31,15 @@ from odd.models import (
     DownloadedSource,
     HTTPAttemptEvidence,
 )
-from odd.models.enrichment import CandidateDetailPage
 from odd.provenance.canonical import canonical_json_bytes
 from odd.provenance.hashing import sha256_bytes
 from odd.provenance.identifiers import live_candidate_snapshot_id
+
+if TYPE_CHECKING:
+    # Packaging detail belongs to ODD-005 enrichment. Retrieving and preserving an
+    # official document must not require importing enrichment definitions, so the
+    # model is resolved inside the one method that builds it.
+    from odd.models.enrichment import CandidateDetailPage
 
 DEFAULT_BASE_URL = "https://dailymed.nlm.nih.gov/dailymed/services/v2"
 DEFAULT_ARCHIVE_BASE_URL = "https://dailymed.nlm.nih.gov/dailymed"
@@ -223,12 +228,14 @@ class DailyMedConnector:
             inter_request_delay_seconds=inter_request_delay_seconds,
         )
 
-    def lookup(self, drug: str) -> CandidateLookup:
+    def lookup(self, drug: str, *, page: int = 1) -> CandidateLookup:
         normalized_drug = drug.strip()
         if not normalized_drug:
             raise MalformedMetadata("drug lookup term must not be blank")
+        if page <= 0:
+            raise ValueError("lookup page must be positive")
         query = urlencode(
-            [("drug_name", normalized_drug), ("page", "1"), ("pagesize", "100")]
+            [("drug_name", normalized_drug), ("page", str(page)), ("pagesize", "100")]
         )
         url = f"{self.base_url}/spls.json?{query}"
         response = self._get(
@@ -1022,6 +1029,8 @@ def _parse_packaging_page(
     request_url: str,
     retrieved_at: datetime,
 ) -> CandidateDetailPage:
+    from odd.models.enrichment import CandidateDetailPage
+
     payload = _decode_json_object(response.body, response.url)
     data_value = payload.get("data")
     if not isinstance(data_value, dict):

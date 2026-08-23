@@ -19,7 +19,8 @@ from odd.connectors.dailymed.client import DailyMedConnector, HTTPResponse
 from odd.core.evidence import UNKNOWN
 from odd.core.locator import resolve_locator
 from odd.core.pipeline import CorePipeline
-from odd.errors import ProvenanceValidationFailure, SourceNotFound
+from odd.errors import NetworkFailure, ProvenanceValidationFailure, SourceNotFound
+from odd.models import DiscoveryCompleteness
 from odd.parsers.spl.parser import build_locator_map, parse_document_root, read_section_evidence
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "dailymed"
@@ -35,13 +36,22 @@ class _Transport:
     def __init__(self, *, xml_body: bytes | None = None) -> None:
         self.search_body = APIXABAN_SEARCH.read_bytes()
         self.xml_body = xml_body if xml_body is not None else ELIQUIS_XML.read_bytes()
+        self.search_urls: list[str] = []
+
+    def search_page(self, url: str) -> bytes:
+        del url
+        return self.search_body
 
     def get(
         self, url: str, *, headers: Mapping[str, str], timeout: float, max_bytes: int
     ) -> HTTPResponse:
         del headers, timeout, max_bytes
         is_search = "/spls.json?" in url
-        body = self.search_body if is_search else self.xml_body
+        if is_search:
+            self.search_urls.append(url)
+            body = self.search_page(url)
+        else:
+            body = self.xml_body
         return HTTPResponse(
             status_code=200,
             url=url,
@@ -53,14 +63,59 @@ class _Transport:
         )
 
 
-def pipeline(tmp_path: Path, *, xml_body: bytes | None = None) -> CorePipeline:
+class _PagedTransport(_Transport):
+    """Serve a two-page official listing; the wanted set_id is only on page two."""
+
+    PAGE_TWO_SET_ID = "b0000000-0000-4000-8000-00000000000b"
+
+    def search_page(self, url: str) -> bytes:
+        page_one = json.loads(APIXABAN_SEARCH.read_bytes())
+        first = page_one["data"][0]
+        page_two_record = {
+            **first,
+            "setid": self.PAGE_TWO_SET_ID,
+            "spl_version": "7",
+            "title": "ATORVASTATIN CALCIUM TABLET [ONLY ON PAGE TWO]",
+        }
+        metadata = {
+            "total_elements": len(page_one["data"]) + 1,
+            "total_pages": 2,
+            "elements_per_page": len(page_one["data"]),
+            "current_page": 2 if "page=2" in url else 1,
+        }
+        data = [page_two_record] if "page=2" in url else page_one["data"]
+        return json.dumps({"data": data, "metadata": metadata}).encode("utf-8")
+
+
+class _TruncatedTransport(_PagedTransport):
+    """Serve page one, then fail page two the way a real outage would."""
+
+    def get(
+        self, url: str, *, headers: Mapping[str, str], timeout: float, max_bytes: int
+    ) -> HTTPResponse:
+        if "page=2" in url:
+            self.search_urls.append(url)
+            raise NetworkFailure(
+                "DailyMed request failed: connection reset",
+                details={"url": url},
+            )
+        return super().get(url, headers=headers, timeout=timeout, max_bytes=max_bytes)
+
+
+def pipeline(
+    tmp_path: Path,
+    *,
+    xml_body: bytes | None = None,
+    transport: _Transport | None = None,
+) -> CorePipeline:
     return CorePipeline(
         data_root=tmp_path / "data",
         connector=DailyMedConnector(
             base_url=BASE_URL,
             user_agent="odd-core-test/1",
-            transport=_Transport(xml_body=xml_body),
+            transport=transport or _Transport(xml_body=xml_body),
             clock=lambda: NOW,
+            inter_request_delay_seconds=0,
         ),
         clock=lambda: NOW,
     )
@@ -96,7 +151,51 @@ def test_unknown_identity_is_reported_with_the_candidates_that_were_seen(
     with pytest.raises(SourceNotFound) as error:
         pipeline(tmp_path).acquire("apixaban", set_id="00000000-0000-4000-8000-000000000000")
 
-    assert len(error.value.details["candidates"]) == 2
+    details = error.value.details
+    assert len(details["candidates"]) == 2
+    # "no match" must never be reported without saying how much was examined.
+    assert details["candidates_examined"] == 2
+    assert details["listing_completeness"] in {v.value for v in DiscoveryCompleteness}
+
+
+def test_an_identity_beyond_the_first_listing_page_is_still_found(tmp_path: Path) -> None:
+    """The official listing is paginated; reading page one only is not reading it."""
+
+    transport = _PagedTransport()
+    core = pipeline(tmp_path, transport=transport)
+
+    result = core.acquire("atorvastatin", set_id=_PagedTransport.PAGE_TWO_SET_ID)
+
+    assert result.status == "fetched"
+    assert result.raw is not None
+    assert len(result.candidates) == 3, "every page of the official listing must be kept"
+    assert sum("page=2" in url for url in transport.search_urls) == 1
+
+
+def test_a_page_that_could_not_be_read_is_never_reported_as_absence(
+    tmp_path: Path,
+) -> None:
+    """An unread page is a hole in the observed range, not an empty result."""
+
+    core = pipeline(tmp_path, transport=_TruncatedTransport())
+
+    result = core.acquire("atorvastatin", set_id=_PagedTransport.PAGE_TWO_SET_ID)
+
+    assert result.status == "unknown", "an unobserved range must not resolve"
+    assert result.raw is None
+    assert result.listing_completeness == DiscoveryCompleteness.INCOMPLETE.value
+    assert "page 2" in (result.listing_diagnostic or "")
+    # The part that was read is still reported, and reported as partial.
+    assert result.listing_declared_total == 3
+    assert len(result.candidates) == 2
+
+
+def test_an_ambiguous_term_exposes_candidates_from_every_page(tmp_path: Path) -> None:
+    result = pipeline(tmp_path, transport=_PagedTransport()).acquire("atorvastatin")
+
+    assert result.status == "ambiguous"
+    assert result.listing_completeness == DiscoveryCompleteness.COMPLETE.value
+    assert _PagedTransport.PAGE_TWO_SET_ID in {item.set_id for item in result.candidates}
 
 
 def test_whole_path_reaches_a_verified_bundle(tmp_path: Path) -> None:

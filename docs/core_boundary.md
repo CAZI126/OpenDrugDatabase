@@ -10,7 +10,8 @@ official primary source
   -> re-verification of that output against the preserved bytes
 ```
 
-Run it with `odd-core` (or `python -m odd.core`).
+Run it with `odd` (or `python -m odd`). That is the official and only ODD entry
+point. The ODD-001..005 commands are retained under `odd-legacy`.
 
 ## What the core is responsible for
 
@@ -24,7 +25,7 @@ It does not pick the correct drug, rank manufacturers or products, adjudicate
 medical claims, guess missing facts, discard candidates, or run audits. When it
 cannot know, it returns every candidate it saw, or `UNKNOWN`.
 
-`odd-core fetch --drug Eliquis` returns all ten official candidates and stops.
+`odd fetch --drug Eliquis` returns all ten official candidates and stops.
 Narrowing is the caller's decision, expressed as `--set-id` and
 `--source-version`, and ODD only checks that the identity matches the official
 response exactly.
@@ -40,6 +41,7 @@ response exactly.
 | AI-facing output | `odd.core.evidence` |
 | evidence locator | `odd.core.locator` |
 | re-verification | `odd.core.pipeline.CorePipeline.verify` |
+| complete listing retrieval | `odd.core.lookup` |
 | entry point | `odd.core.cli` |
 
 ## Held aside
@@ -66,11 +68,22 @@ These modules keep their current paths on purpose:
 invalidate those existing records, so the separation is enforced at the import
 boundary instead of by moving files.
 
-The core reaches three off-core modules, none of which carries a rule:
-`odd.models.batch` and `odd.models.enrichment` are dataclass definitions
-re-exported by `odd.models`, and `odd.connectors.dailymed.selection` is reached
-only for its `candidate_payload` serializer, which `odd.provenance.raw_store`
-already depended on.
+The core's import closure contains no selection, adjudication, enrichment,
+cohort, batch, database, or research module, and no `sqlite3`. Three couplings
+were removed to get there, none by deleting or moving anything:
+
+- `odd.connectors.dailymed.__init__` re-exported `select_apixaban_candidate`
+  eagerly; it now resolves on first attribute access.
+- `odd.provenance.raw_store` imported `candidate_payload` from the selection
+  module; that serializer now lives in `odd.connectors.dailymed.candidates`, and
+  `selection` re-exports it.
+- `odd.connectors.dailymed.client` imported the ODD-005 `CandidateDetailPage`
+  model at module scope; it is now resolved inside the one method that builds it.
+
+`odd.models` likewise resolves its batch re-exports on first use. Every legacy
+name still imports exactly as before, which
+`tests/core/test_core_boundary.py::test_the_held_aside_modules_still_work_when_asked_for_directly`
+holds in place.
 
 ## Evidence locator
 

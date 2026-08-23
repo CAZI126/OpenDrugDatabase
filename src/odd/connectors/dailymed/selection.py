@@ -6,6 +6,9 @@ import re
 from datetime import datetime
 from typing import Any
 
+from odd.connectors.dailymed.candidates import (
+    candidate_payload as candidate_payload,  # re-exported for existing importers
+)
 from odd.constants import SELECTION_RULE_VERSION
 from odd.errors import AmbiguousSourceSelection, SourceNotFound
 from odd.models import CandidateLookup, DailyMedCandidate, SelectionDecision
@@ -84,8 +87,8 @@ def select_apixaban_candidate(
     )
 
 
-def candidate_payload(candidate: DailyMedCandidate) -> dict[str, Any]:
-    return _candidate_payload(candidate)
+def _candidate_payload(candidate: DailyMedCandidate) -> dict[str, Any]:
+    return candidate_payload(candidate)
 
 
 def _contains_term(value: str, term: str) -> bool:
@@ -106,13 +109,3 @@ def _published_ordinal(value: str) -> int:
         except ValueError:
             continue
     return -1
-
-
-def _candidate_payload(candidate: DailyMedCandidate) -> dict[str, Any]:
-    return {
-        "metadata": candidate.metadata,
-        "published_date": candidate.published_date,
-        "set_id": candidate.set_id,
-        "source_version": candidate.source_version,
-        "title": candidate.title,
-    }

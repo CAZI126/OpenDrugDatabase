@@ -29,10 +29,12 @@ from odd.connectors.dailymed.client import DailyMedConnector
 from odd.constants import CORE_NO_SELECTION_RULE_VERSION
 from odd.core.evidence import UNKNOWN, build_evidence_payload
 from odd.core.locator import resolve_locator
+from odd.core.lookup import paged_lookup
 from odd.errors import ProvenanceValidationFailure, SourceNotFound
 from odd.models import (
     CandidateLookup,
     DailyMedCandidate,
+    DiscoveryCompleteness,
     RawDocument,
     SelectionDecision,
 )
@@ -83,6 +85,9 @@ class AcquisitionResult:
     lookup_url: str
     lookup_sha256: str
     raw: RawDocument | None = None
+    listing_completeness: str = UNKNOWN
+    listing_diagnostic: str | None = None
+    listing_declared_total: int | None = None
 
     @property
     def ambiguous(self) -> bool:
@@ -90,8 +95,11 @@ class AcquisitionResult:
 
     def as_dict(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
-            "candidate_count": len(self.candidates),
+            "candidate_listing_completeness": self.listing_completeness,
+            "candidate_listing_declared_total": self.listing_declared_total,
+            "candidate_listing_diagnostic": self.listing_diagnostic,
             "candidates": [item.as_dict() for item in self.candidates],
+            "candidates_examined": len(self.candidates),
             "lookup_sha256": self.lookup_sha256,
             "lookup_url": self.lookup_url,
             "status": self.status,
@@ -168,7 +176,7 @@ class CorePipeline:
     ) -> AcquisitionResult:
         """Retrieve the official primary source and preserve its exact bytes."""
 
-        lookup = self.connector.lookup(drug)
+        lookup = paged_lookup(self.connector, drug)
         observed = tuple(
             Candidate(
                 set_id=item.set_id,
@@ -179,11 +187,7 @@ class CorePipeline:
             for item in lookup.candidates
         )
         lookup_sha256 = sha256_bytes(lookup.raw_body)
-        if not observed:
-            raise SourceNotFound(
-                "the official source returned no candidates for this term",
-                details={"drug": drug, "lookup_url": lookup.source_url},
-            )
+        complete = lookup.completeness is DiscoveryCompleteness.COMPLETE
 
         matches = tuple(lookup.candidates)
         if set_id is not None:
@@ -192,11 +196,30 @@ class CorePipeline:
         if source_version is not None:
             wanted_version = source_version.strip()
             matches = tuple(item for item in matches if item.source_version == wanted_version)
+
         if not matches:
+            # "Not present in a range I fully observed" and "not present in the part
+            # I managed to observe" are different answers. Only the first is absence.
+            if not complete:
+                return AcquisitionResult(
+                    status="unknown",
+                    candidates=observed,
+                    lookup_url=lookup.source_url,
+                    lookup_sha256=lookup_sha256,
+                    listing_completeness=lookup.completeness.value,
+                    listing_diagnostic=lookup.diagnostic_message,
+                    listing_declared_total=lookup.metadata_total_elements,
+                )
             raise SourceNotFound(
-                "no official candidate matched the requested identity",
+                "no official candidate matched the requested identity"
+                if observed
+                else "the official source returned no candidates for this term",
                 details={
                     "candidates": [item.as_dict() for item in observed],
+                    "candidates_examined": len(observed),
+                    "listing_completeness": lookup.completeness.value,
+                    "listing_declared_total": lookup.metadata_total_elements,
+                    "listing_diagnostic": lookup.diagnostic_message,
                     "requested_set_id": set_id,
                     "requested_source_version": source_version,
                 },
@@ -218,6 +241,9 @@ class CorePipeline:
                 ),
                 lookup_url=lookup.source_url,
                 lookup_sha256=lookup_sha256,
+                listing_completeness=lookup.completeness.value,
+                listing_diagnostic=lookup.diagnostic_message,
+                listing_declared_total=lookup.metadata_total_elements,
             )
 
         candidate = matches[0]
@@ -233,6 +259,9 @@ class CorePipeline:
             lookup_url=lookup.source_url,
             lookup_sha256=lookup_sha256,
             raw=raw,
+            listing_completeness=lookup.completeness.value,
+            listing_diagnostic=lookup.diagnostic_message,
+            listing_declared_total=lookup.metadata_total_elements,
         )
 
     # 5. extract sections  6. return structured data an AI can consume
@@ -245,6 +274,7 @@ class CorePipeline:
         section_codes: tuple[str, ...] = (),
         section_name_contains: tuple[str, ...] = (),
         candidate_count: int | None = None,
+        candidate_listing_completeness: str | None = None,
         lookup_url: str | None = None,
     ) -> EvidenceResult:
         """Extract sections from the preserved bytes and emit the evidence bundle."""
@@ -260,6 +290,7 @@ class CorePipeline:
             section_codes=section_codes,
             section_name_contains=section_name_contains,
             candidate_count=candidate_count,
+            candidate_listing_completeness=candidate_listing_completeness,
             lookup_url=lookup_url,
         )
         path, status = self._write_evidence(raw, payload)
@@ -377,13 +408,20 @@ class CorePipeline:
 
         acquisition = self.acquire(drug, set_id=set_id, source_version=source_version)
         if acquisition.raw is None:
+            note = (
+                "More than one official document matched. ODD core does not choose "
+                "between them; re-run with --set-id (and --source-version if needed)."
+                if acquisition.status == "ambiguous"
+                else (
+                    "The requested identity was not among the candidates retrieved, but "
+                    "the official listing was not observed completely. This is not an "
+                    "absence; the identity may exist in the part that was not read."
+                )
+            )
             return {
                 "acquisition": acquisition.as_dict(),
                 "status": acquisition.status,
-                "note": (
-                    "More than one official document matched. ODD core does not choose "
-                    "between them; re-run with --set-id (and --source-version if needed)."
-                ),
+                "note": note,
             }
         identity = acquisition.raw.identity
         evidence = self.extract(
@@ -393,6 +431,7 @@ class CorePipeline:
             section_codes=section_codes,
             section_name_contains=section_name_contains,
             candidate_count=len(acquisition.candidates),
+            candidate_listing_completeness=acquisition.listing_completeness,
             lookup_url=acquisition.lookup_url,
         )
         verification = self.verify(evidence.payload)
