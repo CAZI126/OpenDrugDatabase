@@ -190,10 +190,23 @@ class RawStore:
             )
         manifest = self._read_manifest(metadata_path)
         identity = self._identity_from_manifest(manifest)
-        if (identity.source_document_id, identity.source_version) != (set_id, source_version):
+        # A DailyMed set_id is a case-insensitive identifier, and the rest of the
+        # core already matches it that way. A document that declares its own setId
+        # in a different case than the caller typed is the same document, not a
+        # provenance failure. The version is compared exactly.
+        if (
+            identity.source_document_id.casefold() != set_id.casefold()
+            or identity.source_version != source_version
+        ):
             raise ProvenanceValidationFailure(
                 "raw metadata identity does not match its storage path",
-                details={"metadata_path": str(metadata_path)},
+                details={
+                    "metadata_path": str(metadata_path),
+                    "requested_set_id": set_id,
+                    "requested_source_version": source_version,
+                    "stored_set_id": identity.source_document_id,
+                    "stored_source_version": identity.source_version,
+                },
             )
         calculated = sha256_file(label_path)
         if calculated != identity.raw_sha256:

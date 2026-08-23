@@ -15,7 +15,7 @@ import pytest
 
 from odd.connectors.dailymed.client import DailyMedConnector
 from odd.core.direct import fetch_by_set_id
-from odd.errors import ProvenanceValidationFailure
+from odd.errors import ProvenanceValidationFailure, SourceNotFound
 from odd.provenance.hashing import sha256_bytes
 from odd.provenance.raw_store import RawStore
 from tests.core.test_core_pipeline import BASE_URL, ELIQUIS_SET_ID, ELIQUIS_XML, _Transport
@@ -285,3 +285,28 @@ def test_a_document_declaring_another_identity_is_not_stored(tmp_path: Path) -> 
     assert error.value.details["requested_set_id"] == other
     assert error.value.details["declared_set_id"] == ELIQUIS_SET_ID
     assert not list((tmp_path / "raw").rglob("label.xml")), "nothing may be preserved"
+
+
+def test_a_document_declaring_its_set_id_in_another_case_still_resolves(
+    tmp_path: Path,
+) -> None:
+    """A set id is case-insensitive; the same document must not read as a mismatch.
+
+    Retrieval by identity takes the set id from the document itself, so a label
+    that spells its own setId in upper case is stored that way while the caller
+    asks in the case the listing used. That is one document, not two.
+    """
+
+    connector = DailyMedConnector(
+        base_url=BASE_URL, user_agent="t/1", transport=_Transport(), clock=None
+    )
+    store = RawStore(tmp_path / "raw")
+    fetch_by_set_id(connector, store, ELIQUIS_SET_ID)
+
+    resolved = store.resolve(ELIQUIS_SET_ID.upper(), "30")
+
+    assert resolved.identity.source_document_id.casefold() == ELIQUIS_SET_ID.casefold()
+    assert resolved.identity.source_version == "30"
+    # The version is still compared exactly.
+    with pytest.raises(SourceNotFound):
+        store.resolve(ELIQUIS_SET_ID, "29")
