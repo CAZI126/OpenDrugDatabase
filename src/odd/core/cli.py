@@ -14,6 +14,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, TextIO
 
+from odd.core.batch import read_set_id_file, run_batch
 from odd.core.pipeline import CorePipeline
 from odd.errors import ODDError
 from odd.provenance.canonical import canonical_json_bytes
@@ -65,8 +66,28 @@ def build_parser() -> argparse.ArgumentParser:
     _add_drugsfda_option(run)
     _add_selective_options(run)
 
+    batch = commands.add_parser(
+        "batch",
+        help="put a caller-supplied list of official identities through the same path",
+    )
+    batch.add_argument(
+        "--set-id-file",
+        required=True,
+        type=Path,
+        metavar="PATH",
+        help="UTF-8 file with one official set id per line, in the order to process them",
+    )
+    batch.add_argument(
+        "--drug",
+        help=(
+            "official lookup term to retrieve identities that are not preserved yet; "
+            "without it, batch works only from already-preserved sources"
+        ),
+    )
+    _add_drugsfda_option(batch)
+
     # Accept the shared options on either side of the subcommand.
-    for subcommand in (fetch, extract, verify, run):
+    for subcommand in (fetch, extract, verify, run, batch):
         _add_shared_options(subcommand, subcommand_copy=True)
     return parser
 
@@ -189,6 +210,17 @@ def _dispatch(
             },
             0,
         )
+
+    if arguments.command == "batch":
+        set_ids = read_set_id_file(arguments.set_id_file)
+        batch_report = run_batch(
+            pipeline,
+            set_ids,
+            drug=arguments.drug,
+            include_drugsfda=arguments.include_drugsfda,
+        )
+        # A batch that ran is a batch that succeeded; per-item outcomes are inside.
+        return batch_report, 0 if batch_report["error"] == 0 else 1
 
     if arguments.command == "verify":
         evidence = pipeline.load_evidence(arguments.set_id, arguments.source_version)
