@@ -199,6 +199,18 @@ def test_a_tampered_slice_still_fails_verification(tmp_path: Path) -> None:
     assert report.ok is False
 
 
+def test_an_index_run_reports_indexed_not_a_verification_failure(tmp_path: Path) -> None:
+    """Returning no evidence is not the same as returning evidence that failed."""
+
+    core = prepared(tmp_path)
+
+    result = core.run("Eliquis", set_id=ELIQUIS_SET_ID, index_only=True)
+
+    assert result["status"] == "indexed"
+    assert result["verification"] is None
+    assert result["evidence"]["schema_version"] == CORE_INDEX_SCHEMA_VERSION
+
+
 def test_the_whole_bundle_path_is_unchanged(tmp_path: Path) -> None:
     """Index and slice are additions; the existing full bundle must be untouched."""
 

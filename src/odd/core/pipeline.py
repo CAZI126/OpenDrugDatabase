@@ -503,6 +503,18 @@ class CorePipeline:
             slice_only=slice_only,
             application_numbers=application_numbers,
         )
+        if index_only:
+            # An index carries no passages and no rows, so there is nothing to walk
+            # back to the source. Reporting a verification failure here would say the
+            # evidence did not hold up, when no evidence was returned at all.
+            return {
+                "acquisition": acquisition.as_dict(),
+                "evidence": evidence.payload,
+                "evidence_path": str(evidence.path),
+                "evidence_status": evidence.status,
+                "status": "indexed",
+                "verification": None,
+            }
         verification = self.verify(evidence.payload)
         return {
             "acquisition": acquisition.as_dict(),

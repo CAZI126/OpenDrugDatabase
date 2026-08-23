@@ -215,7 +215,7 @@ def _dispatch(
     )
     if run["status"] in {"ambiguous", "unknown"}:
         return run, _UNRESOLVED_EXIT
-    return run, 0 if run["status"] == "verified" else 1
+    return run, 0 if run["status"] in {"verified", "indexed"} else 1
 
 
 def _emit(payload: dict[str, Any], stream: TextIO | None) -> None:
