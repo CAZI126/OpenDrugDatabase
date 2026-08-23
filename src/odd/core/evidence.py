@@ -106,6 +106,7 @@ def build_evidence_payload(
     candidate_count: int | None = None,
     candidate_listing_completeness: str | None = None,
     lookup_url: str | None = None,
+    regulatory_sources: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Build the deterministic AI-facing bundle for one preserved raw document.
 
@@ -186,6 +187,9 @@ def build_evidence_payload(
                 ),
             },
         },
+        # A separate authority, preserved separately and cited separately. FDA
+        # records never rewrite the label, and the label never answers for FDA.
+        "regulatory_sources": list(regulatory_sources or []),
         "sections": [
             _section_payload(section, raw_path=raw_path, raw_sha256=identity.raw_sha256)
             for section in selected

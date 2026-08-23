@@ -48,6 +48,7 @@ def build_parser() -> argparse.ArgumentParser:
     extract.add_argument("--source-version")
     extract.add_argument("--drug", help="record the term the caller asked for")
     _add_section_filters(extract)
+    _add_drugsfda_option(extract)
 
     verify = commands.add_parser(
         "verify", help="walk a written bundle back to the preserved raw source"
@@ -60,6 +61,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--set-id")
     run.add_argument("--source-version")
     _add_section_filters(run)
+    _add_drugsfda_option(run)
 
     # Accept the shared options on either side of the subcommand.
     for subcommand in (fetch, extract, verify, run):
@@ -83,6 +85,17 @@ def _add_shared_options(
         action="store_true",
         default=argparse.SUPPRESS if subcommand_copy else False,
         help="print the whole evidence bundle instead of a summary",
+    )
+
+
+def _add_drugsfda_option(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--include-drugsfda",
+        action="store_true",
+        help=(
+            "also preserve the official Drugs@FDA archive and cite what it states "
+            "about this label's FDA application (off by default)"
+        ),
     )
 
 
@@ -133,6 +146,7 @@ def _dispatch(
             requested_term=arguments.drug,
             section_codes=tuple(arguments.section_code),
             section_name_contains=tuple(arguments.section_name),
+            include_drugsfda=arguments.include_drugsfda,
         )
         return (
             {
@@ -162,6 +176,7 @@ def _dispatch(
         source_version=arguments.source_version,
         section_codes=tuple(arguments.section_code),
         section_name_contains=tuple(arguments.section_name),
+        include_drugsfda=arguments.include_drugsfda,
     )
     if run["status"] in {"ambiguous", "unknown"}:
         return run, _UNRESOLVED_EXIT

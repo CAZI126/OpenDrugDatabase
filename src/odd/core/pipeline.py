@@ -27,10 +27,19 @@ from xml.etree import ElementTree
 
 from odd.connectors.dailymed.client import DailyMedConnector
 from odd.constants import CORE_NO_SELECTION_RULE_VERSION
-from odd.core.evidence import UNKNOWN, build_evidence_payload
+from odd.core.drugsfda import (
+    ApplicationReference,
+    DrugsFdaStore,
+    extract_application_references,
+    find_application,
+    read_member_row,
+    resolve_download,
+    retrieve_archive,
+)
+from odd.core.evidence import UNKNOWN, build_evidence_payload, relative_to_root
 from odd.core.locator import resolve_locator
 from odd.core.lookup import paged_lookup
-from odd.errors import ProvenanceValidationFailure, SourceNotFound
+from odd.errors import ODDError, ProvenanceValidationFailure, SourceNotFound
 from odd.models import (
     CandidateLookup,
     DailyMedCandidate,
@@ -161,6 +170,7 @@ class CorePipeline:
     ) -> None:
         self.data_root = Path(data_root).resolve()
         self.raw_store = RawStore(self.data_root / "raw")
+        self.drugsfda_store = DrugsFdaStore(self.data_root / "raw")
         self.evidence_root = self.data_root / "evidence" / "core"
         self.clock = clock or (lambda: datetime.now(UTC))
         self.connector = connector or DailyMedConnector(clock=self.clock)
@@ -276,12 +286,18 @@ class CorePipeline:
         candidate_count: int | None = None,
         candidate_listing_completeness: str | None = None,
         lookup_url: str | None = None,
+        include_drugsfda: bool = False,
     ) -> EvidenceResult:
         """Extract sections from the preserved bytes and emit the evidence bundle."""
 
         raw = self.raw_store.resolve(set_id, source_version)
         xml_bytes = raw.label_path.read_bytes()
         normalized = self.parser.parse(xml_bytes, raw.identity)
+        regulatory = (
+            self._regulatory_sources(xml_bytes, raw.identity.raw_sha256)
+            if include_drugsfda
+            else None
+        )
         payload = build_evidence_payload(
             normalized,
             raw,
@@ -292,6 +308,7 @@ class CorePipeline:
             candidate_count=candidate_count,
             candidate_listing_completeness=candidate_listing_completeness,
             lookup_url=lookup_url,
+            regulatory_sources=regulatory,
         )
         path, status = self._write_evidence(raw, payload)
         return EvidenceResult(payload=payload, path=path, status=status)
@@ -389,8 +406,11 @@ class CorePipeline:
                 else f"bundle declares {declared} section(s) but carries {len(sections)}",
             )
         )
+        regulatory_checks, regulatory_failures = self._check_regulatory_sources(payload)
+        checks.extend(regulatory_checks)
+        failures.extend(regulatory_failures)
         return VerificationReport(
-            ok=all(item.ok for item in checks),
+            ok=all(item.ok for item in checks) and not failures,
             checks=tuple(checks),
             failures=tuple(failures),
         )
@@ -403,6 +423,7 @@ class CorePipeline:
         source_version: str | None = None,
         section_codes: tuple[str, ...] = (),
         section_name_contains: tuple[str, ...] = (),
+        include_drugsfda: bool = False,
     ) -> dict[str, Any]:
         """Run the whole path for one drug and return every step's result."""
 
@@ -433,6 +454,7 @@ class CorePipeline:
             candidate_count=len(acquisition.candidates),
             candidate_listing_completeness=acquisition.listing_completeness,
             lookup_url=acquisition.lookup_url,
+            include_drugsfda=include_drugsfda,
         )
         verification = self.verify(evidence.payload)
         return {
@@ -459,6 +481,219 @@ class CorePipeline:
         if not isinstance(payload, dict):
             raise ProvenanceValidationFailure("evidence bundle must be a JSON object")
         return EvidenceResult(payload=payload, path=path, status="loaded")
+
+    def _regulatory_sources(
+        self, xml_bytes: bytes, spl_raw_sha256: str
+    ) -> list[dict[str, Any]]:
+        """Preserve the FDA archive and cite what it states about this label's application."""
+
+        plan = resolve_download()
+        body, retrieval = retrieve_archive(plan)
+        snapshot = self.drugsfda_store.store(body, retrieval)
+        # Take retrieval time from the immutable stored manifest, not the wall
+        # clock, so the same archive bytes always produce the same bundle bytes.
+        stored_retrieval = snapshot.metadata["retrieval"]
+        archive_raw_path = relative_to_root(snapshot.archive_path, self.data_root)
+        archive = {
+            **stored_retrieval,
+            "raw_metadata_path": relative_to_root(snapshot.metadata_path, self.data_root),
+            "raw_path": archive_raw_path,
+            "raw_sha256": snapshot.sha256,
+        }
+
+        root = parse_document_root(xml_bytes)
+        references = extract_application_references(root, build_locator_map(root))
+        if not references:
+            return [
+                _regulatory_payload(
+                    archive,
+                    application_number=UNKNOWN,
+                    status=UNKNOWN,
+                    spl_evidence={"spl_raw_sha256": spl_raw_sha256},
+                    fda_rows=(),
+                    facts={},
+                    diagnostic=(
+                        "the preserved SPL states no FDA application identifier, so no "
+                        "exact-match key exists; nothing was inferred from names."
+                    ),
+                )
+            ]
+        sources: list[dict[str, Any]] = []
+        for reference in references:
+            link = find_application(
+                snapshot.archive_path,
+                reference,
+                archive_sha256=snapshot.sha256,
+                archive_raw_path=archive_raw_path,
+            )
+            sources.append(
+                _regulatory_payload(
+                    archive,
+                    application_number=reference.application_number,
+                    status=link.status,
+                    spl_evidence={**reference.as_dict(), "spl_raw_sha256": spl_raw_sha256},
+                    fda_rows=link.rows,
+                    facts=link.facts,
+                    diagnostic=link.diagnostic,
+                )
+            )
+        return sources
+
+    def _check_regulatory_sources(self, payload: dict[str, Any]) -> tuple[
+        list[Check], list[dict[str, Any]]
+    ]:
+        """Walk every FDA fact back to the row it came from in the preserved archive."""
+
+        sources = payload.get("regulatory_sources")
+        if not isinstance(sources, list) or not sources:
+            return [], []
+        checks: list[Check] = []
+        failures: list[dict[str, Any]] = []
+        archives_ok = rows_ok = links_ok = 0
+        for index, source in enumerate(sources):
+            if not isinstance(source, dict):
+                failures.append({"index": index, "reason": "regulatory source is not an object"})
+                continue
+            archive = source.get("archive")
+            if not isinstance(archive, dict):
+                failures.append({"index": index, "reason": "regulatory source carries no archive"})
+                continue
+            try:
+                archive_path = self._resolve_inside_root(str(archive.get("raw_path", "")))
+                actual = sha256_file(archive_path)
+            except (ProvenanceValidationFailure, OSError) as exc:
+                failures.append({"index": index, "reason": f"preserved archive unreadable: {exc}"})
+                continue
+            if actual != archive.get("raw_sha256"):
+                failures.append(
+                    {
+                        "index": index,
+                        "reason": "preserved archive SHA-256 differs from the bundle",
+                        "recomputed_archive_sha256": actual,
+                    }
+                )
+                continue
+            archives_ok += 1
+            failures.extend(self._reread_rows(source, archive_path, index))
+            rows_ok += len(_rows_of(source))
+            link_failure = self._recheck_link(payload, source, archive_path, actual, index)
+            if link_failure is None:
+                links_ok += 1
+            else:
+                failures.append(link_failure)
+        checks.append(
+            Check(
+                "regulatory_archive_sha256",
+                archives_ok == len(sources),
+                f"re-verified {archives_ok} of {len(sources)} preserved FDA archive(s)",
+            )
+        )
+        checks.append(
+            Check(
+                "regulatory_row_evidence",
+                not any("row" in str(item.get("reason", "")) for item in failures),
+                f"re-read {rows_ok} FDA row(s) from the preserved archive by member and row number",
+            )
+        )
+        checks.append(
+            Check(
+                "regulatory_link_status",
+                links_ok == len(sources),
+                f"recomputed {links_ok} of {len(sources)} link status(es) from preserved bytes",
+            )
+        )
+        return checks, failures
+
+    def _reread_rows(
+        self, source: dict[str, Any], archive_path: Path, index: int
+    ) -> list[dict[str, Any]]:
+        failures: list[dict[str, Any]] = []
+        for row in _rows_of(source):
+            member = str(row.get("zip_member", ""))
+            number = row.get("row_number")
+            if not isinstance(number, int):
+                failures.append({"index": index, "reason": "row evidence has no row number"})
+                continue
+            try:
+                text = read_member_row(archive_path, member, number)
+            except ODDError as exc:
+                failures.append(
+                    {"index": index, "reason": f"row could not be re-read: {exc.message}"}
+                )
+                continue
+            if text != row.get("row_raw_text") or sha256_bytes(
+                text.encode("utf-8")
+            ) != row.get("row_sha256"):
+                failures.append(
+                    {
+                        "index": index,
+                        "reason": "the row at this locator differs from the bundle",
+                        "row_number": number,
+                        "zip_member": member,
+                    }
+                )
+        return failures
+
+    def _recheck_link(
+        self,
+        payload: dict[str, Any],
+        source: dict[str, Any],
+        archive_path: Path,
+        archive_sha256: str,
+        index: int,
+    ) -> dict[str, Any] | None:
+        link = source.get("link")
+        if not isinstance(link, dict):
+            return {"index": index, "reason": "regulatory source carries no link"}
+        spl = link.get("spl_evidence")
+        if not isinstance(spl, dict) or not spl.get("application_number"):
+            return None if link.get("status") == UNKNOWN else {
+                "index": index,
+                "reason": "link claims a status without SPL evidence",
+            }
+        label = payload.get("label_source")
+        if isinstance(label, dict) and spl.get("spl_raw_sha256") != label.get("raw_sha256"):
+            return {"index": index, "reason": "link cites a different SPL than this bundle"}
+        try:
+            raw_bytes = self._resolve_inside_root(
+                str(label.get("raw_path", "")) if isinstance(label, dict) else ""
+            ).read_bytes()
+            root = parse_document_root(raw_bytes)
+            element = resolve_locator(root, str(spl.get("xml_locator", "")))
+        except (ProvenanceValidationFailure, OSError, ODDError) as exc:
+            return {"index": index, "reason": f"SPL application locator did not resolve: {exc}"}
+        serialized = ElementTree.tostring(element, encoding="unicode").strip()
+        if serialized != spl.get("evidence_xml") or sha256_bytes(
+            serialized.encode("utf-8")
+        ) != spl.get("evidence_sha256"):
+            return {
+                "index": index,
+                "reason": "the SPL element at this locator differs from the bundle",
+            }
+        reference = ApplicationReference(
+            application_number=str(spl["application_number"]),
+            application_type=str(spl.get("application_type", "")),
+            numeric_key=_numeric_key(str(spl["application_number"])),
+            xml_locator=str(spl.get("xml_locator", "")),
+            evidence_xml=serialized,
+            evidence_sha256=sha256_bytes(serialized.encode("utf-8")),
+        )
+        recomputed = find_application(
+            archive_path,
+            reference,
+            archive_sha256=archive_sha256,
+            archive_raw_path=str(source.get("archive", {}).get("raw_path", "")),
+        )
+        if recomputed.status != link.get("status"):
+            return {
+                "index": index,
+                "reason": "recomputed link status differs from the bundle",
+                "recomputed_status": recomputed.status,
+                "recorded_status": link.get("status"),
+            }
+        if source.get("application_number") != spl.get("application_number"):
+            return {"index": index, "reason": "application number differs from its SPL evidence"}
+        return None
 
     def _check_metadata(self, source: dict[str, Any]) -> Check:
         try:
@@ -612,6 +847,49 @@ class CorePipeline:
             except FileNotFoundError:
                 pass
         return path, status
+
+
+def _regulatory_payload(
+    archive: dict[str, Any],
+    *,
+    application_number: str,
+    status: str,
+    spl_evidence: dict[str, Any],
+    fda_rows: tuple[dict[str, Any], ...],
+    facts: dict[str, Any],
+    diagnostic: str | None,
+) -> dict[str, Any]:
+    return {
+        "application_number": application_number,
+        "archive": archive,
+        "authority": "FDA",
+        "fda_record": facts,
+        "link": {
+            "diagnostic": diagnostic,
+            "fda_evidence": {"rows": list(fda_rows)},
+            "key": "application_number",
+            "spl_evidence": spl_evidence,
+            "status": status,
+        },
+        "publisher": "U.S. Food and Drug Administration",
+        "repository": "Drugs@FDA",
+    }
+
+
+def _rows_of(source: dict[str, Any]) -> list[dict[str, Any]]:
+    link = source.get("link")
+    if not isinstance(link, dict):
+        return []
+    evidence = link.get("fda_evidence")
+    if not isinstance(evidence, dict):
+        return []
+    rows = evidence.get("rows")
+    return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+
+
+def _numeric_key(application_number: str) -> str:
+    digits = "".join(character for character in application_number if character.isdecimal())
+    return str(int(digits)) if digits else ""
 
 
 def _reverify_section(
