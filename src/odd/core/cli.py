@@ -14,7 +14,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, TextIO
 
-from odd.core.batch import read_set_id_file, run_batch
+from odd.core.batch import read_manifest, read_set_id_file, run_batch
 from odd.core.pipeline import CorePipeline
 from odd.errors import ODDError
 from odd.provenance.canonical import canonical_json_bytes
@@ -57,6 +57,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     verify.add_argument("--set-id", required=True)
     verify.add_argument("--source-version")
+    verify.add_argument(
+        "--artifact",
+        default="evidence.json",
+        metavar="NAME",
+        help=(
+            "which written artifact to walk back: evidence.json (default), index.json, "
+            "or a slice-<fingerprint>.json written by --slice"
+        ),
+    )
 
     run = commands.add_parser("run", help="fetch, extract, and verify in one pass")
     run.add_argument("--drug", required=True)
@@ -70,9 +79,18 @@ def build_parser() -> argparse.ArgumentParser:
         "batch",
         help="put a caller-supplied list of official identities through the same path",
     )
-    batch.add_argument(
+    source = batch.add_mutually_exclusive_group(required=True)
+    source.add_argument(
+        "--manifest",
+        type=Path,
+        metavar="PATH",
+        help=(
+            "caller-written JSON manifest naming each document as drug, set_id, and "
+            "source_version, in the order to convey them"
+        ),
+    )
+    source.add_argument(
         "--set-id-file",
-        required=True,
         type=Path,
         metavar="PATH",
         help="UTF-8 file with one official set id per line, in the order to process them",
@@ -81,7 +99,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--drug",
         help=(
             "official lookup term to retrieve identities that are not preserved yet; "
-            "without it, batch works only from already-preserved sources"
+            "without it, batch works only from already-preserved sources. A manifest "
+            "row that names its own drug uses that instead"
+        ),
+    )
+    batch.add_argument(
+        "--verify-only",
+        action="store_true",
+        help=(
+            "re-check already-preserved documents with no network access at all; "
+            "identities that are not preserved are reported, never retrieved"
         ),
     )
     batch.add_argument(
@@ -223,22 +250,29 @@ def _dispatch(
         )
 
     if arguments.command == "batch":
-        set_ids = read_set_id_file(arguments.set_id_file)
+        identities = (
+            read_manifest(arguments.manifest)
+            if arguments.manifest is not None
+            else read_set_id_file(arguments.set_id_file)
+        )
         batch_report = run_batch(
             pipeline,
-            set_ids,
+            identities,
             drug=arguments.drug,
             include_drugsfda=arguments.include_drugsfda,
             fetch_missing_by_set_id=arguments.fetch_missing_by_set_id,
+            verify_only=arguments.verify_only,
         )
         if arguments.output is not None:
             arguments.output.parent.mkdir(parents=True, exist_ok=True)
             arguments.output.write_bytes(canonical_json_bytes(batch_report) + b"\n")
         # A batch that ran is a batch that succeeded; per-item outcomes are inside.
-        return batch_report, 0 if batch_report["error"] == 0 else 1
+        return batch_report, 0 if batch_report["status_counts"]["error"] == 0 else 1
 
     if arguments.command == "verify":
-        evidence = pipeline.load_evidence(arguments.set_id, arguments.source_version)
+        evidence = pipeline.load_evidence(
+            arguments.set_id, arguments.source_version, file_name=arguments.artifact
+        )
         report = pipeline.verify(evidence.payload)
         return (
             {

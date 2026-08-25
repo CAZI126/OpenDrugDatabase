@@ -21,7 +21,7 @@ import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 from xml.etree import ElementTree
 
@@ -46,8 +46,10 @@ from odd.core.evidence import (
 from odd.core.locator import resolve_locator
 from odd.core.lookup import paged_lookup
 from odd.core.selective import (
+    CORE_INDEX_SCHEMA_VERSION,
     build_index_payload,
     build_slice_payload,
+    index_view,
     slice_fingerprint,
 )
 from odd.errors import ODDError, ProvenanceValidationFailure, SourceNotFound
@@ -361,12 +363,16 @@ class CorePipeline:
 
         checks: list[Check] = []
         failures: list[dict[str, Any]] = []
-        source = payload.get("label_source")
+        # An index describes the same preserved bytes without carrying any of the
+        # text, so it is walked back entry by entry rather than passage by passage.
+        is_index = payload.get("schema_version") == CORE_INDEX_SCHEMA_VERSION
+        reverify = _reverify_index_entry if is_index else _reverify_section
+        source = index_view(payload) if is_index else payload.get("label_source")
         # A slice names its passages label_evidence; the whole bundle calls them sections.
         sections = payload.get("sections")
         if sections is None:
             sections = payload.get("label_evidence")
-        if not isinstance(source, dict) or not isinstance(sections, list):
+        if not isinstance(source, dict) or not source or not isinstance(sections, list):
             return VerificationReport(
                 ok=False,
                 checks=(Check("bundle_shape", False, "evidence bundle is malformed"),),
@@ -418,7 +424,7 @@ class CorePipeline:
 
         locators = build_locator_map(root)
         for index, section in enumerate(sections):
-            failure = _reverify_section(root, locators, section, index)
+            failure = reverify(root, locators, section, index)
             if failure is not None:
                 failures.append(failure)
         section_ok = not failures
@@ -432,10 +438,18 @@ class CorePipeline:
                 else f"{len(failures)} of {len(sections)} section(s) failed re-verification",
             )
         )
+        if is_index:
+            checks.append(_check_index_carries_no_text(sections))
 
         extraction = payload.get("extraction") or payload.get("completeness")
         declared = (
-            extraction.get("returned_section_count") if isinstance(extraction, dict) else None
+            (
+                extraction.get("section_count")
+                if is_index
+                else extraction.get("returned_section_count")
+            )
+            if isinstance(extraction, dict)
+            else None
         )
         count_ok = declared == len(sections)
         checks.append(
@@ -525,11 +539,22 @@ class CorePipeline:
             "verification": verification.as_dict(),
         }
 
-    def load_evidence(self, set_id: str, source_version: str | None = None) -> EvidenceResult:
-        """Load a previously written bundle, so verification can start from the file."""
+    def load_evidence(
+        self,
+        set_id: str,
+        source_version: str | None = None,
+        *,
+        file_name: str = "evidence.json",
+    ) -> EvidenceResult:
+        """Load a previously written artifact, so verification can start from the file.
+
+        The full bundle, the index, and a slice all sit beside one another under
+        the same identity, and all three are walked back to the same preserved
+        bytes, so which one to re-verify is just a file name.
+        """
 
         raw = self.raw_store.resolve(set_id, source_version)
-        path = self._evidence_path(raw)
+        path = self._evidence_path(raw).with_name(_artifact_name(file_name))
         try:
             payload = json.loads(path.read_bytes())
         except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -941,6 +966,18 @@ class CorePipeline:
         return path, status
 
 
+def _artifact_name(file_name: str) -> str:
+    """Accept a file name and only a file name, so no path can be traversed."""
+
+    name = file_name.strip()
+    if not name or name != PurePosixPath(name).name or name in {".", ".."}:
+        raise ProvenanceValidationFailure(
+            "an evidence artifact is named by file name, not by path",
+            details={"artifact": file_name},
+        )
+    return name
+
+
 def _regulatory_payload(
     archive: dict[str, Any],
     *,
@@ -991,6 +1028,78 @@ def _occurrences_of(spl_evidence: dict[str, Any]) -> list[dict[str, Any]]:
 def _numeric_key(application_number: str) -> str:
     digits = "".join(character for character in application_number if character.isdecimal())
     return str(int(digits)) if digits else ""
+
+
+def _check_index_carries_no_text(sections: list[Any]) -> Check:
+    """An index that carries a passage has stopped being an index.
+
+    The whole point of delivering an index first is that the caller spends no
+    attention on text it did not ask for, so text leaking into one is a
+    contract failure and not merely untidy.
+    """
+
+    carrying = [
+        index
+        for index, entry in enumerate(sections)
+        if isinstance(entry, dict) and ("text" in entry or "original_text" in entry)
+    ]
+    return Check(
+        "index_carries_no_text",
+        not carrying,
+        f"index describes {len(sections)} section(s) and carries none of their text"
+        if not carrying
+        else f"{len(carrying)} index entr(ies) carry section text",
+    )
+
+
+def _reverify_index_entry(
+    root: ElementTree.Element,
+    locators: dict[ElementTree.Element, str],
+    entry: Any,
+    index: int,
+) -> dict[str, Any] | None:
+    """Re-retrieve the passage an index entry points at without returning it.
+
+    The entry states where a passage is, what it is called, how long it is, and
+    what it hashes to. Every one of those is recomputed from the preserved bytes;
+    the text itself is read and discarded, never carried back into the report.
+    """
+
+    if not isinstance(entry, dict):
+        return {"index": index, "reason": "index entry is not an object"}
+    locator = str(entry.get("evidence_locator", ""))
+    try:
+        element = resolve_locator(root, locator)
+    except ProvenanceValidationFailure as exc:
+        return {
+            "index": index,
+            "reason": exc.message,
+            "section_code": entry.get("section_code"),
+            "xml_locator": locator,
+            **exc.details,
+        }
+    reread = read_section_evidence(element, locators)
+    differences = []
+    if reread.section_sha256 != entry.get("section_sha256"):
+        differences.append("section_sha256")
+    if sha256_bytes(reread.original_text.encode("utf-8")) != entry.get("text_sha256"):
+        differences.append("text_sha256")
+    if len(reread.original_text) != entry.get("text_length"):
+        differences.append("text_length")
+    if (reread.original_heading or UNKNOWN) != entry.get("section_name"):
+        differences.append("section_name")
+    if (reread.source_section_code or UNKNOWN) != entry.get("section_code"):
+        differences.append("section_code")
+    if not differences:
+        return None
+    return {
+        "differing_fields": differences,
+        "index": index,
+        "reason": "the passage at this locator differs from the index entry",
+        "recomputed_section_sha256": reread.section_sha256,
+        "section_code": entry.get("section_code"),
+        "xml_locator": locator,
+    }
 
 
 def _reverify_section(

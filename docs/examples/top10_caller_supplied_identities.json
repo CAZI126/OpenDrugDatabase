@@ -1,0 +1,18 @@
+{
+  "schema_version": "odd-core-batch-manifest/1.0.0",
+  "identity_source": "caller_supplied",
+  "note": "The caller wrote this file and named every identity in it for a demonstration run. ODD did not choose, rank, score, or endorse these documents, and their presence here is not a statement that they are the right label for the named drug. The drug field is the caller's own label for the row; ODD retrieves the set_id and source_version and nothing else. Each row is checked for an exact match against the official DailyMed listing, and a row that does not match exactly is reported as unresolved rather than replaced with a nearer document.",
+  "drug_order_reference": "src/odd/resources/us_top10_2023.json (rank 1..10)",
+  "items": [
+    {"drug": "atorvastatin",  "set_id": "a60cc18b-0631-4cf0-b021-9f52224ece65", "source_version": "8"},
+    {"drug": "metformin",     "set_id": "c82a10fa-1e8e-46b6-890a-737de3f34ee1", "source_version": "17"},
+    {"drug": "levothyroxine", "set_id": "1e11ad30-1041-4520-10b0-8f9d30d30fcc", "source_version": "1537"},
+    {"drug": "lisinopril",    "set_id": "838c2d78-d2d8-4981-9ec9-e50ef9e1a5d8", "source_version": "2"},
+    {"drug": "amlodipine",    "set_id": "7367289c-b0b0-466a-83e2-558e2985c29f", "source_version": "10"},
+    {"drug": "metoprolol",    "set_id": "b5f4fed2-369c-4808-a682-8a5b8cfdbb4f", "source_version": "3"},
+    {"drug": "albuterol",     "set_id": "d92c5d6b-ff10-4087-36a2-1cfc464cb967", "source_version": "30"},
+    {"drug": "losartan",      "set_id": "9949448f-c3b9-44ee-94ed-c1aca8c90f39", "source_version": "9"},
+    {"drug": "gabapentin",    "set_id": "97935fd9-1d4a-43b6-a5d9-de994591187b", "source_version": "48"},
+    {"drug": "omeprazole",    "set_id": "b6761f84-53ac-4745-a8c8-1e5427d7e179", "source_version": "8"}
+  ]
+}

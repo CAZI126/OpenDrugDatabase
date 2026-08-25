@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import io
+import json
 from pathlib import Path
 
 import pytest
@@ -10,17 +12,29 @@ from odd.core.batch import (
     AMBIGUOUS,
     BLANK_SET_ID,
     ERROR,
+    INDEX_VERIFICATION_FAILED,
+    NOT_IN_OFFICIAL_LISTING,
     NOT_PRESERVED_LOCALLY,
+    STORED_VERSION_DIFFERS,
     UNKNOWN,
     VERIFIED,
+    ManifestEntry,
+    read_manifest,
     read_set_id_file,
     run_batch,
 )
-from odd.errors import MalformedXML
+from odd.core.cli import main as cli_main
+from odd.errors import MalformedMetadata, MalformedXML
 from tests.core.test_core_pipeline import ELIQUIS_SET_ID, ELIQUIS_VERSION, pipeline
 
 ABSENT_SET_ID = "00000000-0000-4000-8000-000000000000"
 MALFORMED_SET_ID = "not a valid segment/../etc"
+
+
+def manifest_file(tmp_path: Path, items: list[dict[str, object]]) -> Path:
+    path = tmp_path / "manifest.json"
+    path.write_text(json.dumps({"items": items}), encoding="utf-8")
+    return path
 
 
 def prepared(tmp_path: Path):
@@ -182,6 +196,287 @@ def test_batch_drives_the_existing_single_document_path(
     run_batch(core, [ELIQUIS_SET_ID])
 
     assert seen == [{"set_id": ELIQUIS_SET_ID, "index_only": True}]
+
+
+def test_a_manifest_states_drug_set_id_and_source_version(tmp_path: Path) -> None:
+    path = manifest_file(
+        tmp_path,
+        [
+            {"drug": "apixaban", "set_id": ELIQUIS_SET_ID, "source_version": "30"},
+            {"drug": "nothing preserved", "set_id": ABSENT_SET_ID, "source_version": "1"},
+        ],
+    )
+
+    assert read_manifest(path) == [
+        ManifestEntry(set_id=ELIQUIS_SET_ID, drug="apixaban", source_version="30"),
+        ManifestEntry(
+            set_id=ABSENT_SET_ID, drug="nothing preserved", source_version="1"
+        ),
+    ]
+
+
+def test_a_manifest_row_without_a_set_id_is_rejected_before_anything_runs(
+    tmp_path: Path,
+) -> None:
+    path = manifest_file(tmp_path, [{"drug": "apixaban", "source_version": "30"}])
+
+    with pytest.raises(MalformedMetadata):
+        read_manifest(path)
+
+
+def test_a_manifest_run_reports_a_path_and_a_status_for_every_row(
+    tmp_path: Path,
+) -> None:
+    core = prepared(tmp_path)
+
+    report = run_batch(
+        core,
+        [
+            ManifestEntry(set_id=ELIQUIS_SET_ID, drug="apixaban", source_version="30"),
+            ManifestEntry(set_id=ABSENT_SET_ID, drug="absent", source_version="1"),
+        ],
+    )
+
+    first, second = report["items"]
+    assert first["status"] == VERIFIED
+    assert first["drug"] == "apixaban"
+    assert first["source_version"] == ELIQUIS_VERSION
+    assert Path(first["evidence_path"]).is_file()
+    assert first["error"] is None
+    assert second["status"] == UNKNOWN
+    assert second["evidence_path"] is None
+    assert second["error"]
+    assert report["status_counts"] == {
+        VERIFIED: 1,
+        AMBIGUOUS: 0,
+        UNKNOWN: 1,
+        ERROR: 0,
+    }
+
+
+def test_the_conveyed_path_holds_the_index_for_that_identity(tmp_path: Path) -> None:
+    core = prepared(tmp_path)
+
+    report = run_batch(
+        core, [ManifestEntry(set_id=ELIQUIS_SET_ID, source_version=ELIQUIS_VERSION)]
+    )
+
+    written = json.loads(Path(report["items"][0]["evidence_path"]).read_bytes())
+    assert written["document"]["set_id"] == ELIQUIS_SET_ID
+    assert written["document"]["source_version"] == ELIQUIS_VERSION
+    assert core.verify(written).ok is True
+
+
+def test_a_version_absent_from_the_official_listing_is_reported_not_substituted(
+    tmp_path: Path,
+) -> None:
+    """The listing offers version 30. Asking for 29 must not hand back 30."""
+
+    core = prepared(tmp_path)
+
+    report = run_batch(
+        core, [ManifestEntry(set_id=ELIQUIS_SET_ID, drug="apixaban", source_version="29")]
+    )
+
+    item = report["items"][0]
+    assert item["status"] == UNKNOWN
+    assert item["error_code"] == NOT_IN_OFFICIAL_LISTING
+    assert item["requested_source_version"] == "29"
+    assert item["evidence_path"] is None
+
+
+def test_retrieval_by_set_id_alone_reports_a_version_the_caller_did_not_name(
+    tmp_path: Path,
+) -> None:
+    """Retrieving by identity returns whatever version the document declares.
+
+    That version is a fact about the document, not a correction to the manifest,
+    so a manifest naming a different one gets a mismatch and not a substitution.
+    """
+
+    core = pipeline(tmp_path)
+
+    report = run_batch(
+        core,
+        [ManifestEntry(set_id=ELIQUIS_SET_ID, drug="apixaban", source_version="29")],
+        fetch_missing_by_set_id=True,
+    )
+
+    item = report["items"][0]
+    assert item["status"] == UNKNOWN
+    assert item["error_code"] == STORED_VERSION_DIFFERS
+    assert item["requested_source_version"] == "29"
+    assert item["source_version"] == ELIQUIS_VERSION
+    assert item["evidence_path"] is None
+
+
+def test_a_manifest_row_failing_does_not_cost_the_rows_behind_it(
+    tmp_path: Path,
+) -> None:
+    core = prepared(tmp_path)
+
+    report = run_batch(
+        core,
+        [
+            ManifestEntry(set_id=MALFORMED_SET_ID, drug="malformed"),
+            ManifestEntry(set_id=ABSENT_SET_ID, drug="absent"),
+            ManifestEntry(set_id=ELIQUIS_SET_ID, drug="apixaban", source_version="30"),
+        ],
+    )
+
+    assert [item["status"] for item in report["items"]] == [ERROR, UNKNOWN, VERIFIED]
+    assert [item["drug"] for item in report["items"]] == [
+        "malformed",
+        "absent",
+        "apixaban",
+    ]
+    assert report["status_counts"][VERIFIED] == 1
+
+
+def test_a_corrupted_preserved_source_is_reported_not_passed_as_verified(
+    tmp_path: Path,
+) -> None:
+    """Custody is recomputed, so bytes that changed under the index cannot pass."""
+
+    core = prepared(tmp_path)
+    entry = ManifestEntry(set_id=ELIQUIS_SET_ID, source_version=ELIQUIS_VERSION)
+    assert run_batch(core, [entry], verify_only=True)["items"][0]["status"] == VERIFIED
+
+    index_path = Path(run_batch(core, [entry])["items"][0]["evidence_path"])
+    payload = json.loads(index_path.read_bytes())
+    payload["sections"][0]["section_sha256"] = "0" * 64
+    index_path.write_bytes(json.dumps(payload).encode("utf-8"))
+
+    report = run_batch(core, [entry], verify_only=True)
+
+    # Rebuilt from the preserved bytes, so a tampered file on disk is simply
+    # replaced -- what must never happen is a tampered index being believed.
+    assert report["items"][0]["status"] == VERIFIED
+    assert core.verify(payload).ok is False
+
+
+def test_verify_only_reaches_nothing_off_this_machine(tmp_path: Path) -> None:
+    """The stored run must be re-checkable with the network unplugged."""
+
+    core = prepared(tmp_path)
+
+    def refuse(*args: object, **kwargs: object):
+        raise AssertionError("verify_only must not retrieve anything")
+
+    core.connector.download = refuse  # type: ignore[method-assign]
+    core.connector.search = refuse  # type: ignore[method-assign]
+
+    report = run_batch(
+        core,
+        [
+            ManifestEntry(set_id=ELIQUIS_SET_ID, drug="apixaban", source_version="30"),
+            ManifestEntry(set_id=ABSENT_SET_ID, drug="absent", source_version="1"),
+        ],
+        verify_only=True,
+    )
+
+    assert report["verify_only"] is True
+    assert [item["status"] for item in report["items"]] == [VERIFIED, UNKNOWN]
+    assert report["items"][1]["error_code"] == NOT_PRESERVED_LOCALLY
+
+
+def test_an_index_that_does_not_reverify_is_an_error_not_a_pass(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    core = prepared(tmp_path)
+    original = core.verify
+    monkeypatch.setattr(
+        core, "verify", lambda payload: original({**payload, "sections": [{}]})
+    )
+
+    report = run_batch(
+        core, [ManifestEntry(set_id=ELIQUIS_SET_ID, source_version=ELIQUIS_VERSION)]
+    )
+
+    assert report["items"][0]["status"] == ERROR
+    assert report["items"][0]["error_code"] == INDEX_VERIFICATION_FAILED
+    assert report["items"][0]["error"]
+
+
+def run_cli(tmp_path: Path, *arguments: str) -> tuple[dict, int]:
+    stream = io.StringIO()
+    code = cli_main(
+        [*arguments, "--data-dir", str(tmp_path / "data"), "--print-evidence"],
+        stream=stream,
+    )
+    return json.loads(stream.getvalue()), code
+
+
+def test_the_offline_entry_reverifies_a_stored_run_from_a_manifest(
+    tmp_path: Path,
+) -> None:
+    """The whole point of the offline entry: no network, real re-verification."""
+
+    prepared(tmp_path)
+    path = manifest_file(
+        tmp_path,
+        [
+            {"drug": "apixaban", "set_id": ELIQUIS_SET_ID, "source_version": "30"},
+            {"drug": "absent", "set_id": ABSENT_SET_ID, "source_version": "1"},
+        ],
+    )
+
+    report, code = run_cli(
+        tmp_path, "batch", "--manifest", str(path), "--verify-only"
+    )
+
+    assert code == 0, "unresolved rows are reported inside, not as a failed batch"
+    assert report["verify_only"] is True
+    assert report["status_counts"] == {VERIFIED: 1, AMBIGUOUS: 0, UNKNOWN: 1, ERROR: 0}
+    assert [item["drug"] for item in report["items"]] == ["apixaban", "absent"]
+    assert Path(report["items"][0]["evidence_path"]).is_file()
+
+
+def test_the_offline_entry_writes_the_report_where_it_was_asked_to(
+    tmp_path: Path,
+) -> None:
+    prepared(tmp_path)
+    path = manifest_file(
+        tmp_path, [{"drug": "apixaban", "set_id": ELIQUIS_SET_ID, "source_version": "30"}]
+    )
+    output = tmp_path / "reports" / "batch.json"
+
+    report, _ = run_cli(
+        tmp_path,
+        "batch",
+        "--manifest",
+        str(path),
+        "--verify-only",
+        "--output",
+        str(output),
+    )
+
+    assert json.loads(output.read_bytes()) == report
+
+
+def test_the_cli_verifies_a_written_index_by_name(tmp_path: Path) -> None:
+    core = prepared(tmp_path)
+    core.extract(ELIQUIS_SET_ID, ELIQUIS_VERSION, index_only=True)
+
+    report, code = run_cli(
+        tmp_path,
+        "verify",
+        "--set-id",
+        ELIQUIS_SET_ID,
+        "--source-version",
+        ELIQUIS_VERSION,
+        "--artifact",
+        "index.json",
+    )
+
+    assert code == 0
+    assert report["status"] == "verified"
+    assert report["verification"]["ok"] is True
+
+
+def test_a_batch_must_be_given_exactly_one_input(tmp_path: Path) -> None:
+    with pytest.raises(SystemExit):
+        run_cli(tmp_path, "batch")
 
 
 def test_batch_adds_no_drug_specific_branch() -> None:

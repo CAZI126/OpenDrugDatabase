@@ -45,9 +45,40 @@ __all__ = [
     "CORE_SLICE_SCHEMA_VERSION",
     "build_index_payload",
     "build_slice_payload",
+    "index_view",
     "regulatory_index",
     "select_exact_sections",
 ]
+
+
+def index_view(payload: dict[str, Any]) -> dict[str, Any]:
+    """Read an index's ``document`` block through the ``label_source`` shape.
+
+    An index names the same preserved bytes the full bundle names, only under
+    shorter keys. Restating them here lets verification re-use the existing
+    provenance and document-identity checks unchanged instead of growing a
+    second, subtly different copy of them.
+    """
+
+    document = payload.get("document")
+    if not isinstance(document, dict):
+        return {}
+    return {
+        "raw_path": document.get("raw_path"),
+        "raw_sha256": document.get("raw_sha256"),
+        "raw_metadata_path": document.get("raw_metadata_path"),
+        "regulatory_recipient": document.get("regulatory_recipient"),
+        "jurisdiction": document.get("jurisdiction"),
+        "repository": document.get("repository"),
+        "official_document_id": {
+            "scheme": "dailymed_set_id",
+            "value": document.get("set_id"),
+        },
+        "document_version": {
+            "scheme": "dailymed_spl_version",
+            "value": document.get("source_version"),
+        },
+    }
 
 
 def select_exact_sections(
@@ -86,6 +117,9 @@ def build_index_payload(
             "official_url": identity.source_url or UNKNOWN,
             "raw_sha256": identity.raw_sha256,
             "raw_path": relative_to_root(raw.label_path, data_root),
+            "raw_metadata_path": relative_to_root(raw.metadata_path, data_root),
+            "regulatory_recipient": identity.authority,
+            "jurisdiction": identity.jurisdiction,
             "document_title": document.title or UNKNOWN,
             "requested_term": requested_term or UNKNOWN,
             "publisher": "National Library of Medicine",
@@ -93,6 +127,10 @@ def build_index_payload(
             "fda_approval_status": UNKNOWN,
             "parser_version": PARSER_VERSION,
         },
+        # A digest is not content: it cannot be read back into the passage it
+        # covers, but it does let the index be walked back to the preserved bytes
+        # and lets a caller confirm that a slice it receives later carries the
+        # very passage the index described.
         "sections": [
             {
                 "section_code": section.source_section_code or UNKNOWN,
@@ -102,6 +140,8 @@ def build_index_payload(
                 "depth": section.depth,
                 "sequence_index": section.sequence_index,
                 "evidence_locator": section.source_locator,
+                "section_sha256": section.section_sha256,
+                "text_sha256": sha256_bytes(section.original_text.encode("utf-8")),
             }
             for section in normalized.sections
         ],
