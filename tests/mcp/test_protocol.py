@@ -12,13 +12,16 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-import pytest
 from mcp.shared.memory import create_connected_server_and_client_session
 
 from odd.mcp.server import TOOL_DEFINITIONS, create_server
 from odd.mcp.tools import OddTools
 from tests.core.test_core_pipeline import ELIQUIS_SET_ID, ELIQUIS_VERSION, pipeline
-from tests.core.test_drugsfda import archive_bytes, install_fixture_archive, spl_with_application
+from tests.core.test_drugsfda import (
+    archive_bytes,
+    preserve_fixture_archive,
+    spl_with_application,
+)
 
 APPLICATION = "NDA202155"
 EXPECTED_TOOLS = [
@@ -29,11 +32,15 @@ EXPECTED_TOOLS = [
 ]
 
 
-def surface(tmp_path: Path, *, with_application: bool = False) -> OddTools:
+def surface(
+    tmp_path: Path, *, with_application: bool = False, archive: bytes | None = None
+) -> OddTools:
     core = pipeline(
         tmp_path, xml_body=spl_with_application() if with_application else None
     )
     core.acquire("Eliquis", set_id=ELIQUIS_SET_ID)
+    if archive is not None:
+        preserve_fixture_archive(core, archive)
     return OddTools(core)
 
 
@@ -79,12 +86,11 @@ def test_every_advertised_tool_declares_its_required_arguments() -> None:
 
 
 def test_the_whole_eliquis_question_runs_end_to_end_over_the_protocol(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     """Find the document, read its index, take two sections, link FDA, verify."""
 
-    install_fixture_archive(monkeypatch, archive_bytes())
-    tools = surface(tmp_path, with_application=True)
+    tools = surface(tmp_path, with_application=True, archive=archive_bytes())
     expected_sha = tools.pipeline.raw_store.resolve(
         ELIQUIS_SET_ID, ELIQUIS_VERSION
     ).identity.raw_sha256

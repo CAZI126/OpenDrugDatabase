@@ -325,6 +325,43 @@ class DrugsFdaStore:
             metadata=json.loads(metadata_path.read_bytes()),
         )
 
+    def preserved(self) -> tuple[ArchiveSnapshot, ...]:
+        """Every archive already preserved here. Reads; never retrieves.
+
+        The SHA-256 reported is the one the archive was stored under and recorded
+        in its own manifest: the claim, not a fresh measurement. Measuring the
+        bytes here instead would let an altered archive re-describe itself and
+        then pass the verification that exists to catch exactly that.
+        """
+
+        container = (self.root / "drugsfda").resolve()
+        if not container.is_relative_to(self.root) or not container.is_dir():
+            return ()
+        found: list[ArchiveSnapshot] = []
+        for directory in sorted(container.iterdir()):
+            archive_path = directory / ARCHIVE_FILE_NAME
+            metadata_path = directory / "metadata.json"
+            if not archive_path.is_file() or not metadata_path.is_file():
+                continue
+            try:
+                metadata = json.loads(metadata_path.read_bytes())
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+                # An unreadable manifest is not an archive that can be cited, and
+                # is not a reason to hide the ones that can.
+                continue
+            if not isinstance(metadata, dict):
+                continue
+            found.append(
+                ArchiveSnapshot(
+                    archive_path=archive_path,
+                    metadata_path=metadata_path,
+                    sha256=str(metadata.get("raw_sha256") or directory.name),
+                    already_stored=True,
+                    metadata=metadata,
+                )
+            )
+        return tuple(found)
+
 
 def extract_application_references(
     root: ElementTree.Element,

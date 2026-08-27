@@ -14,7 +14,12 @@ from odd.core.direct import fetch_by_set_id
 from odd.core.evidence import UNKNOWN
 from odd.mcp.tools import OddTools, ToolError
 from tests.core.test_core_pipeline import ELIQUIS_SET_ID, ELIQUIS_VERSION, pipeline
-from tests.core.test_drugsfda import archive_bytes, install_fixture_archive, spl_with_application
+from tests.core.test_drugsfda import (
+    archive_bytes,
+    install_fixture_archive,
+    preserve_fixture_archive,
+    spl_with_application,
+)
 
 INDICATIONS = "34067-9"
 ABSENT_CODE = "00000-0"
@@ -191,11 +196,9 @@ def test_not_asking_drugs_fda_is_not_the_same_as_finding_nothing(tmp_path: Path)
 
 
 # -- Drugs@FDA, exact identity only ----------------------------------------
-def test_the_named_application_number_links_by_exact_identity(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    install_fixture_archive(monkeypatch, archive_bytes())
+def test_the_named_application_number_links_by_exact_identity(tmp_path: Path) -> None:
     surface = tools(tmp_path, with_application=True)
+    preserve_fixture_archive(surface.pipeline, archive_bytes())
 
     result = surface.get_evidence_slice(
         ELIQUIS_SET_ID, [code_present(surface)], APPLICATION
@@ -210,12 +213,12 @@ def test_the_named_application_number_links_by_exact_identity(
 
 
 def test_an_application_number_that_is_not_an_exact_match_returns_nothing(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     """A prefix of the real number must not connect to it."""
 
-    install_fixture_archive(monkeypatch, archive_bytes())
     surface = tools(tmp_path, with_application=True)
+    preserve_fixture_archive(surface.pipeline, archive_bytes())
 
     for requested in ("202155", "NDA2021", "NDA999999"):
         result = surface.get_evidence_slice(
