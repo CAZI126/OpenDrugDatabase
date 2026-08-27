@@ -29,6 +29,7 @@ from odd.connectors.dailymed.client import DailyMedConnector
 from odd.constants import CORE_NO_SELECTION_RULE_VERSION
 from odd.core.drugsfda import (
     ApplicationReference,
+    ArchiveSnapshot,
     DrugsFdaStore,
     Occurrence,
     extract_application_references,
@@ -72,6 +73,8 @@ from odd.provenance.hashing import sha256_bytes, sha256_file
 from odd.provenance.raw_store import RawStore
 
 DEFAULT_DATA_ROOT = Path("data")
+# The status of a bundle that was built and returned but deliberately not kept.
+NOT_WRITTEN = "not_written"
 
 _NO_SELECTION_DESCRIPTION = (
     "ODD core performs no candidate selection. The caller supplies the official "
@@ -303,14 +306,27 @@ class CorePipeline:
         index_only: bool = False,
         slice_only: bool = False,
         application_numbers: tuple[str, ...] = (),
+        offline: bool = False,
+        write: bool = True,
     ) -> EvidenceResult:
-        """Extract from the preserved bytes: the whole document, an index, or a slice."""
+        """Extract from the preserved bytes: the whole document, an index, or a slice.
+
+        ``offline`` reaches nothing off this machine: the preserved label is read
+        as always, and the FDA archive is read only if one is already preserved
+        here. ``write`` off returns the same bundle without leaving anything
+        behind, for a caller that wants to read the evidence rather than keep it.
+        """
 
         raw = self.raw_store.resolve(set_id, source_version)
         xml_bytes = raw.label_path.read_bytes()
         normalized = self.parser.parse(xml_bytes, raw.identity)
         regulatory = (
-            self._regulatory_sources(xml_bytes, raw.identity.raw_sha256)
+            self._regulatory_sources(
+                xml_bytes,
+                raw.identity.raw_sha256,
+                application_numbers=application_numbers,
+                offline=offline,
+            )
             if include_drugsfda
             else None
         )
@@ -322,7 +338,7 @@ class CorePipeline:
                 requested_term=requested_term,
                 regulatory_sources=regulatory,
             )
-            path, status = self._write_derived(raw, index, "index.json")
+            path, status = self._keep(raw, index, "index.json", write=write)
             return EvidenceResult(payload=index, path=path, status=status)
         if slice_only:
             piece = build_slice_payload(
@@ -336,7 +352,7 @@ class CorePipeline:
                 section_payload=section_payload,
             )
             name = f"slice-{slice_fingerprint(piece)}.json"
-            path, status = self._write_derived(raw, piece, name)
+            path, status = self._keep(raw, piece, name, write=write)
             return EvidenceResult(payload=piece, path=path, status=status)
         payload = build_evidence_payload(
             normalized,
@@ -350,7 +366,10 @@ class CorePipeline:
             lookup_url=lookup_url,
             regulatory_sources=regulatory,
         )
-        path, status = self._write_evidence(raw, payload)
+        if write:
+            path, status = self._write_evidence(raw, payload)
+        else:
+            path, status = self._evidence_path(raw, payload), NOT_WRITTEN
         return EvidenceResult(payload=payload, path=path, status=status)
 
     # 7. walk the structured data back to the preserved bytes and re-verify
@@ -567,13 +586,25 @@ class CorePipeline:
         return EvidenceResult(payload=payload, path=path, status="loaded")
 
     def _regulatory_sources(
-        self, xml_bytes: bytes, spl_raw_sha256: str
+        self,
+        xml_bytes: bytes,
+        spl_raw_sha256: str,
+        *,
+        application_numbers: tuple[str, ...] = (),
+        offline: bool = False,
     ) -> list[dict[str, Any]]:
-        """Preserve the FDA archive and cite what it states about this label's application."""
+        """Cite what the FDA archive states about this label's application.
 
-        plan = resolve_download()
-        body, retrieval = retrieve_archive(plan)
-        snapshot = self.drugsfda_store.store(body, retrieval)
+        ``offline`` reads an archive already preserved under this data root and
+        retrieves nothing. With none preserved there is nothing to cite, and
+        having nothing to read is not the archive saying this application does
+        not exist, so the caller gets no sources rather than an absence dressed
+        up as an answer.
+        """
+
+        snapshot = self._preserved_archive() if offline else self._retrieved_archive()
+        if snapshot is None:
+            return []
         # Take retrieval time from the immutable stored manifest, not the wall
         # clock, so the same archive bytes always produce the same bundle bytes.
         stored_retrieval = snapshot.metadata["retrieval"]
@@ -588,6 +619,7 @@ class CorePipeline:
         root = parse_document_root(xml_bytes)
         references = extract_application_references(root, build_locator_map(root))
         if not references:
+            # Nothing to filter and nothing to match: the SPL names no application.
             return [
                 _regulatory_payload(
                     archive,
@@ -602,6 +634,15 @@ class CorePipeline:
                     ),
                 )
             ]
+        if application_numbers:
+            # Exact identity only. A prefix, a bare number, or a different
+            # application type is a different application, so it matches nothing.
+            wanted = {value.strip().casefold() for value in application_numbers if value.strip()}
+            references = tuple(
+                reference
+                for reference in references
+                if reference.application_number.casefold() in wanted
+            )
         sources: list[dict[str, Any]] = []
         for reference in references:
             link = find_application(
@@ -622,6 +663,28 @@ class CorePipeline:
                 )
             )
         return sources
+
+    def _retrieved_archive(self) -> ArchiveSnapshot:
+        """Retrieve the official archive and preserve its exact bytes."""
+
+        plan = resolve_download()
+        body, retrieval = retrieve_archive(plan)
+        return self.drugsfda_store.store(body, retrieval)
+
+    def _preserved_archive(self) -> ArchiveSnapshot | None:
+        """The archive already preserved here, or nothing. Retrieves nothing.
+
+        An archive is a dated snapshot of one continuously published dataset, not
+        a document competing with another document, so the most recently
+        retrieved one is the current one. Which snapshot was read is recorded in
+        the bundle by path and digest and re-verified from its own bytes, so the
+        choice is never something the reader has to take on trust.
+        """
+
+        preserved = self.drugsfda_store.preserved()
+        if not preserved:
+            return None
+        return max(preserved, key=_retrieved_at)
 
     def _check_regulatory_sources(self, payload: dict[str, Any]) -> tuple[
         list[Check], list[dict[str, Any]]
@@ -927,6 +990,15 @@ class CorePipeline:
             / name
         )
 
+    def _keep(
+        self, raw: RawDocument, payload: dict[str, Any], file_name: str, *, write: bool
+    ) -> tuple[Path, str]:
+        """Write the derived artifact, or name where it would have gone."""
+
+        if write:
+            return self._write_derived(raw, payload, file_name)
+        return self._evidence_path(raw).with_name(file_name), NOT_WRITTEN
+
     def _write_derived(
         self, raw: RawDocument, payload: dict[str, Any], file_name: str
     ) -> tuple[Path, str]:
@@ -1003,6 +1075,14 @@ def _regulatory_payload(
         "publisher": "U.S. Food and Drug Administration",
         "repository": "Drugs@FDA",
     }
+
+
+def _retrieved_at(snapshot: ArchiveSnapshot) -> tuple[str, str]:
+    """Order archives by when they were retrieved, with the digest breaking ties."""
+
+    retrieval = snapshot.metadata.get("retrieval")
+    stamp = retrieval.get("retrieved_at") if isinstance(retrieval, dict) else None
+    return (str(stamp or ""), snapshot.sha256)
 
 
 def _rows_of(source: dict[str, Any]) -> list[dict[str, Any]]:

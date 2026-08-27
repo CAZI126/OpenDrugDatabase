@@ -11,11 +11,18 @@ The rules the core enforces are the rules here:
 * anything the sources do not state comes back as ``UNKNOWN``, and anything that
   cannot be established at all comes back as a structured error.
 
+Every tool here reads and only reads. No call retrieves anything over the network
+and no call writes into the data root, so the FDA archive is consulted only where
+one is already preserved. Having no archive to read is reported as
+``NOT_PRESERVED``, which is not the same answer as the archive being read and not
+naming this application, which is ``NOT_FOUND``.
+
 No tool contains a branch for a particular drug, application, or manufacturer.
 """
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -24,17 +31,32 @@ from odd.core.evidence import UNKNOWN
 from odd.core.pipeline import CorePipeline
 from odd.errors import AmbiguousSourceSelection, ODDError, SourceNotFound
 from odd.models import NormalizedDocument, RawDocument
+from odd.provenance.hashing import sha256_file
 
 VERIFIED = "VERIFIED"
 FAILED = "FAILED"
 UNRESOLVED = "UNKNOWN"
+EXACT = "EXACT"
 
 # Stable machine-readable reasons. They describe what was observed, never what
 # ODD concluded about a product.
 BLANK_QUERY = "BLANK_QUERY"
 NO_SECTION_CODES = "NO_SECTION_CODES"
 NOT_PRESERVED = "NOT_PRESERVED"
+NOT_FOUND = "NOT_FOUND"
 AMBIGUOUS_VERSION = "AMBIGUOUS_STORED_VERSION"
+
+_NOT_PRESERVED_NOTE = (
+    "No Drugs@FDA archive is preserved under this data root, so there was "
+    "nothing to read and nothing was retrieved. This is not the archive saying "
+    "this application does not exist. Preserve one with the CLI first: "
+    "odd extract --set-id <id> --include-drugsfda."
+)
+_NOT_FOUND_NOTE = (
+    "The preserved archive was read and states no application with this exact "
+    "identity for this label. Brand name, ingredient, and sponsor never create "
+    "a link, and a prefix or a bare number is a different application."
+)
 
 _NO_SELECTION_NOTE = (
     "ODD does not choose between documents. Every preserved document whose own "
@@ -207,17 +229,64 @@ class OddTools:
             "evidence_retrieval": _EVIDENCE_NOTE,
         }
 
+    def _drugs_fda_block(
+        self, payload: dict[str, Any], requested: tuple[str, ...]
+    ) -> dict[str, Any]:
+        """What the preserved FDA archive states, or why it states nothing."""
+
+        if not requested:
+            return {
+                "requested_application_number": None,
+                "status": UNRESOLVED,
+                "network_attempted": False,
+                "note": (
+                    "Drugs@FDA was not consulted. Not asking is not the same as "
+                    "asking and finding nothing."
+                ),
+                "sources": [],
+            }
+        sources = payload.get("regulatory_evidence") or []
+        if sources:
+            status = str(sources[0].get("link", {}).get("status", UNRESOLVED))
+            note = _NOT_FOUND_NOTE if status == NOT_FOUND else (
+                "Linked by exact application-number identity, read from the "
+                "preserved archive. Brand name, ingredient, and sponsor never "
+                "create a link."
+            )
+        elif self._archive_preserved():
+            status, note = NOT_FOUND, _NOT_FOUND_NOTE
+        else:
+            status, note = NOT_PRESERVED, _NOT_PRESERVED_NOTE
+        return {
+            "requested_application_number": requested[0],
+            "status": status,
+            "match_rule": "exact application number identity only",
+            "network_attempted": False,
+            "sources": sources,
+            "note": note,
+        }
+
     # -- 4. does any of it still hold up against the preserved bytes? ------
     def verify_document(
-        self, set_id: str, source_version: str | None = None
+        self,
+        set_id: str,
+        application_number: str | None = None,
+        source_version: str | None = None,
     ) -> dict[str, Any]:
-        """Walk a written bundle back to the preserved raw source and report.
+        """Walk a bundle back to the preserved raw source and report.
 
         Bytes that no longer agree with their own immutable manifest are the
         answer this tool exists to give, so they are reported as ``FAILED``
         rather than raised. Only having nothing to verify is an error.
+
+        Naming an ``application_number`` carries the same re-verification through
+        to the FDA link: the preserved archive is re-hashed, the cited rows are
+        re-read from it by member and row number, and the exact-identity match is
+        recomputed. With no archive preserved, the FDA half is reported as
+        ``NOT_PRESERVED`` and the label's own verification stands on its own.
         """
 
+        wanted = (application_number or "").strip()
         try:
             stored = self._resolve(set_id, source_version)
         except ToolError as error:
@@ -233,14 +302,21 @@ class OddTools:
                 "failures": [{"reason": error.message, **error.details}],
             }
         identity = stored.raw.identity
-        try:
-            evidence = self.pipeline.load_evidence(
-                identity.source_document_id, identity.source_version
+        if wanted:
+            # The FDA link is only verifiable against a bundle that carries one,
+            # so build that bundle here from the preserved bytes on both sides.
+            evidence = self._extract(
+                stored, include_drugsfda=True, application_numbers=(wanted,)
             )
-        except (SourceNotFound, ODDError):
-            # Nothing written yet is not a verification failure; build the
-            # bundle from the preserved bytes and verify that.
-            evidence = self._extract(stored)
+        else:
+            try:
+                evidence = self.pipeline.load_evidence(
+                    identity.source_document_id, identity.source_version
+                )
+            except (SourceNotFound, ODDError):
+                # Nothing written yet is not a verification failure; build the
+                # bundle from the preserved bytes and verify that.
+                evidence = self._extract(stored)
         report = self.pipeline.verify(evidence.payload)
         checks = {check.name: check for check in report.checks}
 
@@ -260,11 +336,7 @@ class OddTools:
                 "document_identity": state("document_identity"),
                 "raw_metadata": state("raw_metadata"),
             },
-            "drugs_fda_linkage": {
-                "archive_sha256": state("regulatory_archive_sha256"),
-                "row_evidence": state("regulatory_row_evidence"),
-                "link_status": state("regulatory_link_status"),
-            },
+            "drugs_fda_linkage": self._linkage_block(evidence.payload, wanted, state),
             "checks": [check.as_dict() for check in report.checks],
             "failures": list(report.failures),
             "result": VERIFIED if report.ok else FAILED,
@@ -272,6 +344,79 @@ class OddTools:
                 check.message for check in report.checks if not check.ok
             ],
         }
+
+    def _linkage_block(
+        self,
+        payload: dict[str, Any],
+        requested: str,
+        state: Callable[[str], dict[str, Any]],
+    ) -> dict[str, Any]:
+        """The FDA half of the verification, re-read from the preserved archive."""
+
+        sources = payload.get("regulatory_sources") or payload.get("regulatory_evidence") or []
+        block: dict[str, Any] = {
+            "requested_application_number": requested or None,
+            "network_attempted": False,
+            "archive_sha256": state("regulatory_archive_sha256"),
+            "row_evidence": state("regulatory_row_evidence"),
+            "link_status": state("regulatory_link_status"),
+        }
+        if not requested:
+            block["result"] = UNRESOLVED
+            block["note"] = "no application number was named, so no link was checked"
+            return block
+        if not sources:
+            preserved = self._archive_preserved()
+            block["result"] = NOT_FOUND if preserved else NOT_PRESERVED
+            block["exact_match_status"] = block["result"]
+            block["matched_application_number"] = None
+            block["rows"] = []
+            block["note"] = _NOT_FOUND_NOTE if preserved else _NOT_PRESERVED_NOTE
+            return block
+        source = sources[0]
+        archive = source.get("archive") or {}
+        link = source.get("link") or {}
+        rows = (link.get("fda_evidence") or {}).get("rows") or []
+        expected = str(archive.get("raw_sha256", UNKNOWN))
+        block.update(
+            {
+                "archive_path": archive.get("raw_path", UNKNOWN),
+                "archive_sha256_expected": expected,
+                "archive_sha256_actual": self._archive_digest(archive.get("raw_path")),
+                "exact_match_status": str(link.get("status", UNRESOLVED)),
+                "matched_application_number": source.get("application_number", UNKNOWN),
+                "match_rule": "exact application number identity only",
+                "rows": [
+                    {
+                        "zip_member": row.get("zip_member"),
+                        "row_number": row.get("row_number"),
+                        "row_sha256": row.get("row_sha256"),
+                    }
+                    for row in rows
+                    if isinstance(row, dict)
+                ],
+            }
+        )
+        checked = (
+            block["archive_sha256"],
+            block["row_evidence"],
+            block["link_status"],
+        )
+        block["result"] = (
+            VERIFIED
+            if all(item["observed"] == VERIFIED for item in checked)
+            and block["exact_match_status"] == EXACT
+            else FAILED
+        )
+        return block
+
+    def _archive_digest(self, raw_path: Any) -> str:
+        """Re-hash the preserved archive the bundle names, without retrieving it."""
+
+        try:
+            return sha256_file(self.pipeline.data_root / str(raw_path))
+        except OSError:
+            return UNKNOWN
 
     # -- shared helpers -----------------------------------------------------
     def _resolve(self, set_id: str, source_version: str | None) -> _Stored:
@@ -306,10 +451,21 @@ class OddTools:
         return self.pipeline.parser.parse(raw.label_path.read_bytes(), raw.identity)
 
     def _extract(self, stored: _Stored, **kwargs: Any) -> Any:
+        """Build a bundle from preserved bytes only, and leave nothing behind.
+
+        ``offline`` and ``write`` are fixed here rather than passed in: an MCP
+        call is a question about what is already preserved, so no tool may make
+        this server retrieve anything or change the data root under it.
+        """
+
         identity = stored.raw.identity
         try:
             return self.pipeline.extract(
-                identity.source_document_id, identity.source_version, **kwargs
+                identity.source_document_id,
+                identity.source_version,
+                offline=True,
+                write=False,
+                **kwargs,
             )
         except ODDError as error:
             raise ToolError(
@@ -366,35 +522,10 @@ class OddTools:
             "raw_path": _relative(stored.raw.label_path, self.pipeline.data_root),
         }
 
-    @staticmethod
-    def _drugs_fda_block(
-        payload: dict[str, Any], requested: tuple[str, ...]
-    ) -> dict[str, Any]:
-        if not requested:
-            return {
-                "requested_application_number": None,
-                "status": UNRESOLVED,
-                "note": (
-                    "Drugs@FDA was not consulted. Not asking is not the same as "
-                    "asking and finding nothing."
-                ),
-                "sources": [],
-            }
-        sources = payload.get("regulatory_evidence") or []
-        return {
-            "requested_application_number": requested[0],
-            "status": (
-                str(sources[0].get("link", {}).get("status", UNRESOLVED))
-                if sources
-                else "NOT_FOUND"
-            ),
-            "match_rule": "exact application number identity only",
-            "sources": sources,
-            "note": (
-                "Linked by exact application-number identity. Brand name, "
-                "ingredient, and sponsor never create a link."
-            ),
-        }
+    def _archive_preserved(self) -> bool:
+        """Is there an FDA archive here at all? Reads the store; retrieves nothing."""
+
+        return bool(self.pipeline.drugsfda_store.preserved())
 
 
 def _parents(entries: list[dict[str, Any]]) -> list[int | None]:

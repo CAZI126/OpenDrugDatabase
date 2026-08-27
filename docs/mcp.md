@@ -26,6 +26,17 @@ The server is a caller of `odd.core`, not a second implementation. Every answer
 comes from the same pipeline the `odd` command line drives, so the two cannot
 drift into disagreeing about what a document says.
 
+**Every tool reads, and only reads.** No tool call retrieves anything over the
+network, and none writes into the data root. That includes Drugs@FDA: the archive
+is consulted only where one is already preserved, and having none to read is
+reported as `NOT_PRESERVED`, which is a different answer from the archive being
+read and not naming the application, which is `NOT_FOUND`. Retrieval stays where
+it was always explicit — the CLI:
+
+```console
+odd extract --set-id <id> --include-drugsfda
+```
+
 ## Installation
 
 The MCP SDK is an optional extra, so a normal install stays dependency-free:
@@ -124,9 +135,16 @@ date, publisher, jurisdiction, and raw digest.
 
 Supplying `application_number` also returns the Drugs@FDA record under
 `drugs_fda`, linked by **exact application-number identity only** — brand name,
-ingredient, and sponsor never create a link. Omitting it leaves
-`drugs_fda.status` as `UNKNOWN`, because not asking FDA is not the same as
-asking and finding nothing.
+ingredient, and sponsor never create a link, and a prefix or a bare number is a
+different application. `drugs_fda.status` distinguishes three things, and
+`network_attempted` is always `false`:
+
+| status | what it means |
+| --- | --- |
+| `EXACT` | the preserved archive names this application under this identity |
+| `NOT_FOUND` | the archive was read and names no such application |
+| `NOT_PRESERVED` | no archive is preserved here, so there was nothing to read |
+| `UNKNOWN` | no `application_number` was supplied, so FDA was not consulted |
 
 ### `odd_verify_document`
 
@@ -135,12 +153,20 @@ Does any of it still hold up against the preserved bytes?
 | input | type | required |
 | --- | --- | --- |
 | `set_id` | string | yes |
+| `application_number` | string | no |
 | `source_version` | string | only when several versions are preserved |
 
 Re-hashes the preserved raw source, re-resolves every section anchor against it,
-re-checks source and version consistency, and re-verifies the Drugs@FDA linkage
-when the bundle carries one. Returns `result` as `VERIFIED` or `FAILED`, the
-individual `checks`, and `failure_reasons`.
+and re-checks source and version consistency. Returns `result` as `VERIFIED` or
+`FAILED`, the individual `checks`, and `failure_reasons`.
+
+Naming an `application_number` carries the same re-verification through to the
+FDA link, so a slice and a verification cannot disagree about it. `drugs_fda_linkage`
+then reports `archive_path`, `archive_sha256_expected` against
+`archive_sha256_actual`, `exact_match_status`, `matched_application_number`, each
+cited row's `zip_member`, `row_number` and `row_sha256`, and its own `result`.
+With no archive preserved, that half is `NOT_PRESERVED` and the label's own
+verification stands on its own rather than being dragged down with it.
 
 Bytes that no longer agree with their own immutable manifest are reported as
 `FAILED` — that is the answer this tool exists to give. Only having nothing to
@@ -196,8 +222,13 @@ Preserve the document once with the CLI, then drive the four tools in order.
 
 ```json
 {"name": "odd_verify_document",
- "arguments": {"set_id": "e9481622-7cc6-418a-acb6-c5450daae9b0"}}
+ "arguments": {"set_id": "e9481622-7cc6-418a-acb6-c5450daae9b0",
+               "application_number": "NDA202155"}}
 ```
+
+The preserved label is re-hashed, all 88 anchors are re-resolved from it, the
+preserved FDA archive is re-hashed, and the cited rows are re-read from it by
+member and row number — all without a single retrieval.
 
 ## Tests
 
@@ -206,7 +237,9 @@ python -m pytest tests/mcp -q
 ```
 
 `tests/mcp/test_tools.py` covers the tool surface, `tests/mcp/test_protocol.py`
-drives the whole Eliquis question through a real MCP client session, and
+drives the whole Eliquis question through a real MCP client session,
 `tests/mcp/test_stdio_entry.py` starts `python -m odd.mcp` as a process and
-speaks JSON-RPC to it. All of them run from committed fixtures with no network
-access.
+speaks JSON-RPC to it, and `tests/mcp/test_offline.py` runs the whole surface
+with connections off this machine refused at the socket, comparing the data root
+file by file and digest by digest before and after every call. All of them run
+from committed fixtures with no network access.

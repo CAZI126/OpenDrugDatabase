@@ -114,6 +114,26 @@ def install_fixture_archive(monkeypatch: pytest.MonkeyPatch, body: bytes) -> Non
     )
 
 
+def preserve_fixture_archive(
+    pipeline: Any, body: bytes, *, retrieved_at: str = "2026-01-01T00:00:01Z"
+) -> Any:
+    """Preserve a fixture archive under the data root, as an explicit fetch would.
+
+    A reader that only reads needs the archive to be there already, so tests for
+    that path put it there rather than standing in for the download.
+    """
+
+    return pipeline.drugsfda_store.store(
+        body,
+        {
+            "data_last_updated": "January 1st, 2026",
+            "final_url": "https://www.fda.gov/media/0/download",
+            "landing_page_url": "https://www.fda.gov/drugs/x",
+            "retrieved_at": retrieved_at,
+        },
+    )
+
+
 def test_every_position_stating_the_same_application_number_is_kept() -> None:
     """A label states its application number once per product; none may be dropped."""
 

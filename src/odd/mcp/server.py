@@ -27,10 +27,12 @@ SERVER_INSTRUCTIONS = (
     "preserved documents a name matches, odd_get_section_index to see what a "
     "document contains without reading it, odd_get_evidence_slice to read only "
     "the sections you name, and odd_verify_document to re-check any of it "
-    "against the preserved bytes. ODD never chooses between matching documents "
-    "and never states anything the sources do not; it transports primary "
-    "sources and the positions the text was taken from, and it does not make "
-    "medical judgements."
+    "against the preserved bytes. Every tool reads what is already preserved "
+    "under the data root and retrieves nothing, so an FDA archive that was "
+    "never preserved reads as NOT_PRESERVED rather than being fetched. ODD "
+    "never chooses between matching documents and never states anything the "
+    "sources do not; it transports primary sources and the positions the text "
+    "was taken from, and it does not make medical judgements."
 )
 
 _SET_ID = {"type": "string", "description": "official DailyMed set id"}
@@ -38,6 +40,22 @@ _SOURCE_VERSION = {
     "type": "string",
     "description": "official SPL version; required only when several are preserved",
 }
+_APPLICATION_NUMBER = {
+    "type": "string",
+    "description": (
+        "FDA application number, e.g. NDA123456. Matched by exact identity "
+        "against an already-preserved Drugs@FDA archive; nothing is retrieved."
+    ),
+}
+# Every tool reads preserved bytes and returns what they state. None of them
+# retrieves anything, and none of them writes into the data root, so the hints
+# below describe what the code does rather than asking for easier approval.
+_READ_ONLY = types.ToolAnnotations(
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False,
+)
 
 TOOL_DEFINITIONS: list[types.Tool] = [
     types.Tool(
@@ -54,6 +72,7 @@ TOOL_DEFINITIONS: list[types.Tool] = [
             },
             "required": ["query"],
         },
+        annotations=_READ_ONLY,
     ),
     types.Tool(
         name="odd_get_section_index",
@@ -67,6 +86,7 @@ TOOL_DEFINITIONS: list[types.Tool] = [
             "properties": {"set_id": _SET_ID, "source_version": _SOURCE_VERSION},
             "required": ["set_id"],
         },
+        annotations=_READ_ONLY,
     ),
     types.Tool(
         name="odd_get_evidence_slice",
@@ -74,7 +94,9 @@ TOOL_DEFINITIONS: list[types.Tool] = [
             "Return only the sections whose code exactly matches one you name, "
             "with the evidence locator and digests for each. A parent section is "
             "never widened to its subsections. Supply application_number to also "
-            "return the Drugs@FDA record linked by exact application identity."
+            "return what an already-preserved Drugs@FDA archive states about that "
+            "exact application; with no archive preserved the FDA half comes back "
+            "as NOT_PRESERVED, which is not the same as NOT_FOUND."
         ),
         inputSchema={
             "type": "object",
@@ -85,28 +107,33 @@ TOOL_DEFINITIONS: list[types.Tool] = [
                     "items": {"type": "string"},
                     "description": "official section codes, matched exactly",
                 },
-                "application_number": {
-                    "type": "string",
-                    "description": "FDA application number, e.g. NDA123456, matched exactly",
-                },
+                "application_number": _APPLICATION_NUMBER,
                 "source_version": _SOURCE_VERSION,
             },
             "required": ["set_id", "section_codes"],
         },
+        annotations=_READ_ONLY,
     ),
     types.Tool(
         name="odd_verify_document",
         description=(
-            "Re-verify a written bundle against the preserved raw source: raw "
-            "SHA-256, every section anchor re-resolved, source and version "
-            "consistency, and Drugs@FDA linkage. Returns VERIFIED or FAILED with "
-            "the reasons."
+            "Re-verify a bundle against the preserved raw source: raw SHA-256, "
+            "every section anchor re-resolved, and source and version "
+            "consistency. Name an application_number to carry the same "
+            "re-verification through the FDA link -- the preserved archive is "
+            "re-hashed, its cited rows re-read, and the exact-identity match "
+            "recomputed. Returns VERIFIED or FAILED with the reasons."
         ),
         inputSchema={
             "type": "object",
-            "properties": {"set_id": _SET_ID, "source_version": _SOURCE_VERSION},
+            "properties": {
+                "set_id": _SET_ID,
+                "application_number": _APPLICATION_NUMBER,
+                "source_version": _SOURCE_VERSION,
+            },
             "required": ["set_id"],
         },
+        annotations=_READ_ONLY,
     ),
 ]
 
@@ -133,7 +160,9 @@ def dispatch(tools: OddTools, name: str, arguments: dict[str, Any]) -> dict[str,
             )
         if name == "odd_verify_document":
             return tools.verify_document(
-                str(arguments.get("set_id", "")), arguments.get("source_version")
+                str(arguments.get("set_id", "")),
+                arguments.get("application_number"),
+                arguments.get("source_version"),
             )
     except ToolError as error:
         return error.as_dict()
