@@ -76,6 +76,19 @@ def test_the_core_runs_without_the_application_service_or_a_database() -> None:
     assert "sqlite3" not in closure
 
 
+def test_the_core_does_not_reach_the_mcp_server_or_its_sdk() -> None:
+    """MCP is a caller of the core, never a dependency of it.
+
+    The core installs with no third-party packages at all. If the mainline ever
+    imported the MCP server, the SDK would come with it and that would stop
+    being true for everyone who only wants the CLI.
+    """
+
+    closure = _mainline_import_closure()
+
+    assert not [module for module in closure if module.startswith("odd.mcp")]
+
+
 def test_the_held_aside_modules_still_work_when_asked_for_directly() -> None:
     """Detached is not deleted: the legacy names must still resolve."""
 

@@ -128,6 +128,40 @@ def test_a_blank_identity_passed_directly_is_an_error(tmp_path: Path) -> None:
     assert report["items"][0]["error_code"] == BLANK_SET_ID
 
 
+def test_every_row_carries_the_same_field_types_whichever_path_built_it(
+    tmp_path: Path,
+) -> None:
+    """A row grows from the caller's claim, to a resolved identity, to an index.
+
+    A reader parses one shape, so a row that stopped at the caller's claim must
+    still carry the same fields, with the same types, as one that ran the whole
+    way. Only a value that was never observed is absent, and absent is ``None``.
+    """
+
+    report = run_batch(prepared(tmp_path), [ELIQUIS_SET_ID, ABSENT_SET_ID, "   "])
+    rows = report["items"]
+
+    assert [row["status"] for row in rows] == [VERIFIED, UNKNOWN, ERROR]
+    for row in rows:
+        assert isinstance(row["set_id"], str)
+        assert isinstance(row["status"], str)
+        assert isinstance(row["section_count"], int)
+        for optional in (
+            "drug",
+            "error",
+            "error_code",
+            "evidence_path",
+            "index_status",
+            "raw_sha256",
+            "requested_source_version",
+            "source_url",
+            "source_version",
+        ):
+            assert row[optional] is None or isinstance(row[optional], str)
+    assert rows[0]["section_count"] > 0
+    assert [row["section_count"] for row in rows[1:]] == [0, 0]
+
+
 def test_duplicates_collapse_deterministically_to_the_first_occurrence(
     tmp_path: Path,
 ) -> None:

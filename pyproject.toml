@@ -13,7 +13,13 @@ authors = [{ name = "OpenDrugDatabase contributors" }]
 dependencies = []
 
 [project.optional-dependencies]
+# The MCP server is an optional entry point. Core install stays dependency-free.
+mcp = [
+    "mcp>=1.0,<2",
+]
 dev = [
+    # Contributors get the MCP SDK too, so tests/mcp runs rather than skipping.
+    "mcp>=1.0,<2",
     "mypy>=1.11,<2",
     "pytest>=8.3,<10",
     "ruff>=0.9,<1",
@@ -24,6 +30,8 @@ dev = [
 odd = "odd.core.cli:main"
 # Retained, not removed: the ODD-001..005 batch, enrichment, lineage, and diff commands.
 odd-legacy = "odd.cli.main:main"
+# The MCP server over that same core path; needs the optional [mcp] extra.
+odd-mcp = "odd.mcp.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -59,3 +67,16 @@ strict = true
 pretty = true
 show_error_codes = true
 warn_unreachable = true
+
+[[tool.mypy.overrides]]
+# The MCP SDK is an optional extra; a core-only install still type-checks.
+module = ["mcp.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# The SDK registers handlers through its own untyped decorators. Strict mode
+# cannot see through them, and this module is transport wiring only -- every
+# fact it returns is produced and checked in odd.mcp.tools.
+module = ["odd.mcp.server"]
+disallow_untyped_calls = false
+disallow_untyped_decorators = false

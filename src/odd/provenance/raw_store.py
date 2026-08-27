@@ -154,12 +154,7 @@ class RawStore:
 
     def resolve(self, set_id: str, source_version: str | None = None) -> RawDocument:
         self._validate_segment(set_id, "set_id")
-        set_directory = (self.root / "dailymed" / set_id).resolve()
-        if not set_directory.is_relative_to(self.root) or not set_directory.is_dir():
-            raise SourceNotFound(
-                "no stored raw DailyMed document exists for this set_id",
-                details={"set_id": set_id},
-            )
+        set_directory = self._stored_set_directory(set_id)
         if source_version is None:
             versions = sorted(
                 (
@@ -180,7 +175,7 @@ class RawStore:
                     details={"set_id": set_id, "source_versions": versions},
                 )
             source_version = versions[0]
-        directory = self._identity_directory(set_id, source_version)
+        directory = self._identity_directory(set_directory.name, source_version)
         label_path = directory / "label.xml"
         metadata_path = directory / "metadata.json"
         if not label_path.is_file() or not metadata_path.is_file():
@@ -228,6 +223,45 @@ class RawStore:
             if (directory / "source.zip").is_file()
             else None,
         )
+
+    def _stored_set_directory(self, set_id: str) -> Path:
+        """The stored directory for this identity, read the way a set id is read.
+
+        A DailyMed set id is case-insensitive, so the spelling the caller typed
+        need not be the spelling the document declared when it was stored. The
+        exact name wins; failing that, the one stored name differing only in case
+        is the same document. Matching is done over the stored names themselves
+        rather than by asking the filesystem, so the answer does not depend on
+        whether the filesystem happens to fold case.
+        """
+
+        container = (self.root / "dailymed").resolve()
+        stored = (
+            {
+                item.name: item
+                for item in container.iterdir()
+                if item.is_dir() and _SAFE_SEGMENT.fullmatch(item.name)
+            }
+            if container.is_relative_to(self.root) and container.is_dir()
+            else {}
+        )
+        if set_id in stored:
+            return stored[set_id]
+        wanted = set_id.casefold()
+        matches = sorted(name for name in stored if name.casefold() == wanted)
+        if len(matches) > 1:
+            # Two stored spellings of one identity are two documents, and ODD
+            # does not choose between documents.
+            raise AmbiguousSourceSelection(
+                "several stored set_id spellings differ only in case; name one exactly",
+                details={"set_id": set_id, "stored_set_ids": matches},
+            )
+        if not matches:
+            raise SourceNotFound(
+                "no stored raw DailyMed document exists for this set_id",
+                details={"set_id": set_id},
+            )
+        return stored[matches[0]]
 
     def _identity_directory(self, set_id: str, source_version: str) -> Path:
         self._validate_segment(set_id, "set_id")

@@ -43,6 +43,26 @@ never reports "not found" for a range it did not fully observe.
 
 See [docs/core_boundary.md](docs/core_boundary.md) for the exact boundary.
 
+## MCP
+
+An AI client can drive that same path over MCP: find which preserved documents a
+name matches, read the section index without the text, take only the sections it
+names, and re-verify any of it against the preserved bytes.
+
+```console
+python -m pip install -e ".[mcp]"
+python -m odd.mcp --data-dir data
+```
+
+Four tools: `odd_find_documents`, `odd_get_section_index`,
+`odd_get_evidence_slice`, `odd_verify_document`. Several matching documents are
+all returned rather than chosen between, and what the sources do not state is
+`UNKNOWN`. ODD transports primary sources and the positions passages came from;
+it does not make medical judgements.
+
+See [docs/mcp.md](docs/mcp.md) for the tool inputs and outputs and a worked
+Eliquis example.
+
 ## Retained: ODD-001 through ODD-005
 
 Everything below is retained and unchanged, but is no longer part of ODD's
@@ -129,6 +149,9 @@ python -m pip install -e ".[dev]"
 ```
 
 On POSIX systems, activate with `source .venv/bin/activate`.
+
+The MCP server is an optional extra, so a plain install pulls in no third-party
+packages: add it with `python -m pip install -e ".[mcp]"`.
 
 ## CLI
 
