@@ -13,6 +13,10 @@ authors = [{ name = "OpenDrugDatabase contributors" }]
 dependencies = []
 
 [project.optional-dependencies]
+# The MCP server is an optional entry point. Core install stays dependency-free.
+mcp = [
+    "mcp>=1.0,<2",
+]
 dev = [
     "mypy>=1.11,<2",
     "pytest>=8.3,<10",
@@ -24,6 +28,8 @@ dev = [
 odd = "odd.core.cli:main"
 # Retained, not removed: the ODD-001..005 batch, enrichment, lineage, and diff commands.
 odd-legacy = "odd.cli.main:main"
+# The MCP server over that same core path; needs the optional [mcp] extra.
+odd-mcp = "odd.mcp.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
