@@ -27,7 +27,7 @@ import json
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypedDict
 
 from odd.core.direct import fetch_by_set_id
 from odd.core.selective import COMPLETE
@@ -120,6 +120,30 @@ class BatchItem:
             "source_version": self.source_version,
             "status": self.status,
         }
+
+
+class _Stated(TypedDict):
+    """What the caller said about one row, before anything was resolved."""
+
+    set_id: str
+    drug: str | None
+    requested_source_version: str | None
+
+
+class _Observed(_Stated):
+    """The caller's row once the identity behind it has been resolved."""
+
+    source_version: str | None
+    source_url: str | None
+    raw_sha256: str | None
+
+
+class _Indexed(_Observed):
+    """A resolved identity whose section index has been built and written."""
+
+    index_status: str | None
+    section_count: int
+    evidence_path: str | None
 
 
 def read_set_id_file(path: Path) -> list[str]:
@@ -257,7 +281,7 @@ def _run_one(
 
     set_id = entry.set_id.strip()
     drug = entry.drug or fallback_drug
-    stated = {
+    stated: _Stated = {
         "set_id": set_id,
         "drug": entry.drug,
         "requested_source_version": entry.source_version,
@@ -310,7 +334,7 @@ def _run_one(
             ),
         )
 
-    observed = {
+    observed: _Observed = {
         **stated,
         "set_id": identity.source_document_id,
         "source_version": identity.source_version,
@@ -333,7 +357,7 @@ def _run_one(
     index = result.payload
     index_status = str(index["completeness"]["section_index"])
     section_count = len(index["sections"])
-    common = {
+    common: _Indexed = {
         **observed,
         "source_url": index["document"]["official_url"],
         "index_status": index_status,
@@ -375,7 +399,7 @@ def _obtain(
     entry: ManifestEntry,
     *,
     drug: str | None,
-    stated: dict[str, Any],
+    stated: _Stated,
     fetch_missing_by_set_id: bool,
 ) -> Any:
     """Retrieve an identity that is not preserved yet, or say why it was not."""
@@ -399,7 +423,7 @@ def _obtain(
 
 
 def _retrieve(
-    pipeline: CorePipeline, entry: ManifestEntry, *, drug: str, stated: dict[str, Any]
+    pipeline: CorePipeline, entry: ManifestEntry, *, drug: str, stated: _Stated
 ) -> Any:
     """Fall back to the official retrieval the caller already has, unchanged.
 
