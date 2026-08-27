@@ -10,6 +10,8 @@ import json
 import os
 import subprocess
 import sys
+import threading
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -30,39 +32,67 @@ def notification(method: str) -> str:
     return json.dumps({"jsonrpc": "2.0", "method": method, "params": {}})
 
 
-def speak(lines: list[str], data_dir: Path) -> list[dict[str, Any]]:
-    """Run the server, feed it these lines, and decode the JSON-RPC it writes."""
+def speak(
+    lines: list[str], data_dir: Path, awaiting: Sequence[int]
+) -> dict[int, dict[str, Any]]:
+    """Run the server, feed it these lines, and read until every id has answered.
 
-    completed = subprocess.run(
+    A client holds the connection open while it waits. Writing everything and
+    closing stdin immediately is a race: end-of-input is a shutdown signal, and
+    the server may take it before working through what was already written.
+    """
+
+    process = subprocess.Popen(
         [sys.executable, "-m", "odd.mcp", "--data-dir", str(data_dir)],
-        input="\n".join(lines) + "\n",
-        capture_output=True,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         cwd=REPO_ROOT,
         env={**os.environ, "PYTHONIOENCODING": "utf-8"},
         text=True,
-        timeout=TIMEOUT_SECONDS,
+        encoding="utf-8",
+        bufsize=1,
     )
-    messages = []
-    for line in completed.stdout.splitlines():
-        line = line.strip()
-        if not line:
-            continue
+    assert process.stdin and process.stdout and process.stderr
+    # A server that never answers must fail the test rather than hang it.
+    watchdog = threading.Timer(TIMEOUT_SECONDS, process.kill)
+    watchdog.start()
+    answers: dict[int, dict[str, Any]] = {}
+    try:
+        for line in lines:
+            process.stdin.write(line + "\n")
+        process.stdin.flush()
+        while set(awaiting) - set(answers):
+            written = process.stdout.readline()
+            if not written:
+                break
+            try:
+                message = json.loads(written.strip())
+            except json.JSONDecodeError:  # pragma: no cover - defensive
+                continue
+            if isinstance(message, dict) and "id" in message:
+                answers[int(message["id"])] = message
+    finally:
+        watchdog.cancel()
+        process.stdin.close()
         try:
-            messages.append(json.loads(line))
-        except json.JSONDecodeError:  # pragma: no cover - defensive
-            continue
-    if not messages:
+            process.wait(timeout=TIMEOUT_SECONDS)
+        except subprocess.TimeoutExpired:  # pragma: no cover - defensive
+            process.kill()
+        errors = process.stderr.read()
+    missing = sorted(set(awaiting) - set(answers))
+    if missing:
         pytest.fail(
-            f"server produced no JSON-RPC.\nexit={completed.returncode}\n"
-            f"stdout={completed.stdout[:2000]}\nstderr={completed.stderr[:2000]}"
+            f"server never answered {missing}.\nexit={process.returncode}\n"
+            f"answered={sorted(answers)}\nstderr={errors[:2000]}"
         )
-    return messages
+    return answers
 
 
 def test_the_documented_command_starts_and_completes_the_handshake(
     tmp_path: Path,
 ) -> None:
-    messages = speak(
+    by_id = speak(
         [
             request(
                 1,
@@ -77,15 +107,13 @@ def test_the_documented_command_starts_and_completes_the_handshake(
             request(2, "tools/list", {}),
         ],
         tmp_path / "data",
+        awaiting=(1, 2),
     )
 
-    by_id = {m.get("id"): m for m in messages if "id" in m}
-    assert 1 in by_id, f"no initialize response: {messages}"
     initialize = by_id[1]["result"]
     assert initialize["serverInfo"]["name"] == "odd"
     assert "tools" in initialize["capabilities"]
 
-    assert 2 in by_id, f"no tools/list response: {messages}"
     names = [tool["name"] for tool in by_id[2]["result"]["tools"]]
     assert names == [
         "odd_find_documents",
@@ -98,7 +126,7 @@ def test_the_documented_command_starts_and_completes_the_handshake(
 def test_the_running_server_answers_a_tool_call_over_stdio(tmp_path: Path) -> None:
     """An empty data root still answers honestly rather than failing to start."""
 
-    messages = speak(
+    by_id = speak(
         [
             request(
                 1,
@@ -115,10 +143,9 @@ def test_the_running_server_answers_a_tool_call_over_stdio(tmp_path: Path) -> No
             ),
         ],
         tmp_path / "data",
+        awaiting=(1, 2),
     )
 
-    by_id = {m.get("id"): m for m in messages if "id" in m}
-    assert 2 in by_id, f"no tools/call response: {messages}"
     payload = json.loads(by_id[2]["result"]["content"][0]["text"])
     assert payload["status"] == "ok"
     assert payload["candidate_count"] == 0
