@@ -27,6 +27,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from odd.catalog import (
+    CATALOG_CANDIDATE_FIELDS,
+    CATALOG_FRESHNESS_NOT_CHECKED,
+    CatalogError,
+    load_document_catalog,
+)
 from odd.core.evidence import UNKNOWN
 from odd.core.pipeline import CorePipeline
 from odd.errors import AmbiguousSourceSelection, ODDError, SourceNotFound
@@ -116,18 +122,22 @@ class OddTools:
         if not wanted:
             raise ToolError(BLANK_QUERY, "a query is required to find preserved documents")
 
+        try:
+            catalog = load_document_catalog(self.pipeline.data_root)
+        except CatalogError as error:
+            raise ToolError(error.code, error.message, **error.details) from error
+
         candidates = []
-        for stored in self._iter_stored():
-            document = stored.normalized.document
-            haystack = [
-                document.title or "",
-                document.generic_name or "",
-                *document.brand_names,
-                *document.active_ingredients,
-            ]
-            if not any(wanted in value.casefold() for value in haystack):
+        for record in catalog.records:
+            values = record["search_values_normalized"]
+            if not any(wanted in value for value in values):
                 continue
-            candidates.append({**self._document_block(stored), "matched_query": query})
+            candidates.append(
+                {
+                    **{field: record[field] for field in CATALOG_CANDIDATE_FIELDS},
+                    "matched_query": query,
+                }
+            )
 
         return {
             "status": "ok",
@@ -136,6 +146,12 @@ class OddTools:
             "candidates": candidates,
             "selection_performed": False,
             "note": _NO_SELECTION_NOTE,
+            "catalog_schema_version": catalog.schema_version,
+            "catalog_sha256": catalog.sha256,
+            "catalog_record_count": len(catalog.records),
+            "catalog_built_at": catalog.built_at,
+            "catalog_built_from_fingerprint": catalog.source_identity_fingerprint,
+            "catalog_freshness": CATALOG_FRESHNESS_NOT_CHECKED,
         }
 
     # -- 2. what is in the document, without reading it --------------------
@@ -471,30 +487,6 @@ class OddTools:
             raise ToolError(
                 error.category.value.upper(), error.message, **error.details
             ) from error
-
-    def _iter_stored(self) -> list[_Stored]:
-        """Every preserved DailyMed document under this data root, in path order."""
-
-        root = self.pipeline.raw_store.root / "dailymed"
-        if not root.is_dir():
-            return []
-        found: list[_Stored] = []
-        for set_directory in sorted(root.iterdir()):
-            if not set_directory.is_dir():
-                continue
-            for version_directory in sorted(set_directory.iterdir()):
-                if not (version_directory / "label.xml").is_file():
-                    continue
-                try:
-                    raw = self.pipeline.raw_store.resolve(
-                        set_directory.name, version_directory.name
-                    )
-                    found.append(_Stored(raw=raw, normalized=self._parse(raw)))
-                except ODDError:
-                    # A document that cannot be opened is not a match and is not
-                    # a reason to fail the whole lookup.
-                    continue
-        return found
 
     def _document_block(self, stored: _Stored) -> dict[str, Any]:
         identity = stored.raw.identity

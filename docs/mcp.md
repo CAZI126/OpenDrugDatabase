@@ -51,8 +51,21 @@ The server speaks MCP over stdio and retrieves nothing on its own — it reads t
 documents already preserved under the data root:
 
 ```console
+odd catalog build --data-dir data
+odd catalog verify --data-dir data
 python -m odd.mcp --data-dir data
 ```
+
+Build the catalog explicitly after preserving or adding documents.
+`odd_find_documents` reads `catalog/manifest.json` and
+`catalog/documents.jsonl` only; it never parses label XML, writes a catalog, or
+falls back to a corpus scan during an MCP call. The catalog is a deterministic,
+rebuildable derivative and is not primary evidence. `catalog_freshness` is
+therefore reported as `NOT_CHECKED_DURING_QUERY`; the explicit verify command
+performs the raw-manifest count and identity-fingerprint comparison. Missing,
+invalid, and unsupported catalogs return `CATALOG_NOT_BUILT`, `CATALOG_INVALID`,
+and `CATALOG_SCHEMA_UNSUPPORTED`, respectively, with the build command in the
+error guidance.
 
 `odd-mcp --data-dir data` is the same entry point as a console script, and
 `ODD_DATA_DIR` is used when `--data-dir` is omitted. To preserve a document for

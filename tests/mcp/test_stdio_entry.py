@@ -147,9 +147,9 @@ def test_the_running_server_answers_a_tool_call_over_stdio(tmp_path: Path) -> No
     )
 
     payload = json.loads(by_id[2]["result"]["content"][0]["text"])
-    assert payload["status"] == "ok"
-    assert payload["candidate_count"] == 0
-    assert payload["selection_performed"] is False
+    assert payload["status"] == "error"
+    assert payload["error"]["code"] == "CATALOG_NOT_BUILT"
+    assert "odd catalog build" in payload["error"]["message"]
 
 
 def test_the_entry_point_exposes_a_data_dir_option() -> None:

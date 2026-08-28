@@ -14,6 +14,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, TextIO
 
+from odd.catalog import CatalogError, build_document_catalog, verify_document_catalog
 from odd.core.batch import read_manifest, read_set_id_file, run_batch
 from odd.core.pipeline import CorePipeline
 from odd.errors import ODDError
@@ -124,9 +125,25 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_drugsfda_option(batch)
 
+    catalog = commands.add_parser(
+        "catalog",
+        help="build or verify the derived metadata index used by MCP discovery",
+    )
+    catalog_commands = catalog.add_subparsers(dest="catalog_command", required=True)
+    catalog_build = catalog_commands.add_parser(
+        "build",
+        help="build the catalog from preserved evidence or preserved raw SPL",
+    )
+    catalog_verify = catalog_commands.add_parser(
+        "verify",
+        help="verify catalog integrity and freshness without parsing SPL XML",
+    )
+
     # Accept the shared options on either side of the subcommand.
-    for subcommand in (fetch, extract, verify, run, batch):
+    for subcommand in (fetch, extract, verify, run, batch, catalog):
         _add_shared_options(subcommand, subcommand_copy=True)
+    for catalog_subcommand in (catalog_build, catalog_verify):
+        _add_shared_options(catalog_subcommand, subcommand_copy=True)
     return parser
 
 
@@ -209,6 +226,9 @@ def main(argv: Sequence[str] | None = None, stream: TextIO | None = None) -> int
     pipeline = CorePipeline(data_root=arguments.data_dir)
     try:
         payload, code = _dispatch(pipeline, arguments)
+    except CatalogError as error:
+        _emit(error.as_dict(), stream)
+        return 1
     except ODDError as error:
         _emit({"error": error.as_dict(), "status": "error"}, stream)
         return 1
@@ -219,6 +239,18 @@ def main(argv: Sequence[str] | None = None, stream: TextIO | None = None) -> int
 def _dispatch(
     pipeline: CorePipeline, arguments: argparse.Namespace
 ) -> tuple[dict[str, Any], int]:
+    if arguments.command == "catalog":
+        if arguments.catalog_command == "build":
+            return (
+                build_document_catalog(
+                    pipeline.data_root,
+                    parser=pipeline.parser,
+                    clock=pipeline.clock,
+                ),
+                0,
+            )
+        return verify_document_catalog(pipeline.data_root), 0
+
     if arguments.command == "fetch":
         result = pipeline.acquire(
             arguments.drug,

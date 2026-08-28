@@ -16,6 +16,7 @@ from typing import Any
 
 import pytest
 
+from odd.catalog import build_document_catalog
 from odd.mcp.tools import OddTools
 from odd.provenance.hashing import sha256_file
 from tests.core.test_core_pipeline import ELIQUIS_SET_ID, ELIQUIS_VERSION, pipeline
@@ -87,6 +88,7 @@ def surface(tmp_path: Path, *, archive: bytes | None = None) -> OddTools:
     core.acquire("Eliquis", set_id=ELIQUIS_SET_ID)
     if archive is not None:
         preserve_fixture_archive(core, archive)
+    build_document_catalog(core.data_root, parser=core.parser, clock=core.clock)
     return OddTools(core)
 
 

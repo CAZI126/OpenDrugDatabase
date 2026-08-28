@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from odd.catalog import build_document_catalog
 from odd.core.direct import fetch_by_set_id
 from odd.core.evidence import UNKNOWN
 from odd.mcp.tools import OddTools, ToolError
@@ -31,6 +32,7 @@ def tools(tmp_path: Path, *, with_application: bool = False) -> OddTools:
         tmp_path, xml_body=spl_with_application() if with_application else None
     )
     core.acquire("Eliquis", set_id=ELIQUIS_SET_ID)
+    build_document_catalog(core.data_root, parser=core.parser, clock=core.clock)
     return OddTools(core)
 
 
@@ -62,6 +64,7 @@ def test_the_finder_never_chooses_between_matching_documents(tmp_path: Path) -> 
     other = spl_with_application().replace(ELIQUIS_SET_ID.encode(), second_set_id.encode())
     twin = pipeline(tmp_path, xml_body=other)
     fetch_by_set_id(twin.connector, twin.raw_store, second_set_id)
+    build_document_catalog(core.data_root, parser=core.parser, clock=core.clock)
 
     result = OddTools(core).find_documents("apixaban")
 

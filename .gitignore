@@ -227,6 +227,7 @@ data/quarantine/*
 data/database/*
 !data/database/.gitkeep
 data/evidence/*
+data/catalog/*
 data/live/*
 *.db
 *.db-journal
