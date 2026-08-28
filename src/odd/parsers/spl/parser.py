@@ -67,6 +67,24 @@ class SectionEvidence:
     source_locator: str
 
 
+@dataclass(frozen=True, slots=True)
+class DocumentSearchMetadata:
+    """The source-stated document fields used by preserved-document discovery.
+
+    Reading these fields does not build section locators, structured section
+    trees, semantic mappings, or concept-presence results.  It is therefore the
+    appropriate parser boundary for the rebuildable document catalog, while the
+    full :meth:`SPLParser.parse` path remains unchanged for evidence extraction.
+    """
+
+    document_type: str
+    effective_date: date | None
+    title: str
+    generic_name: str | None
+    brand_names: tuple[str, ...]
+    active_ingredients: tuple[str, ...]
+
+
 def parse_document_root(
     xml_bytes: bytes,
     *,
@@ -154,6 +172,64 @@ class SPLParser:
     parser_version = PARSER_VERSION
     schema_version = SCHEMA_VERSION
     mapping_version = MAPPING_VERSION
+
+    def parse_document_search_metadata(
+        self, xml_bytes: bytes, identity: SourceIdentity
+    ) -> DocumentSearchMetadata:
+        """Read exactly the fields used by document discovery from preserved XML."""
+
+        try:
+            root = parse_document_root(xml_bytes, expected_raw_sha256=identity.raw_sha256)
+
+            # Keep the same document-level guards as the full parser.  In
+            # particular, a title-less SPL remains unsupported for this change.
+            _required_attribute(root, "id", "root")
+            set_id = _required_attribute(root, "setId", "root")
+            source_version = _required_attribute(root, "versionNumber", "value")
+            if (set_id.casefold(), source_version) != (
+                identity.source_document_id.casefold(),
+                identity.source_version,
+            ):
+                raise ProvenanceValidationFailure(
+                    "SPL identity differs from immutable raw metadata",
+                    details={
+                        "metadata_set_id": identity.source_document_id,
+                        "metadata_source_version": identity.source_version,
+                        "xml_set_id": set_id,
+                        "xml_source_version": source_version,
+                    },
+                )
+
+            title = _element_text(root.find(f"{Q}title"))
+            if not title:
+                raise UnsupportedDocumentStructure(
+                    "SPL document title is required for ODD-001"
+                )
+            code = root.find(f"{Q}code")
+            document_type = _attribute(code, "displayName") or _attribute(code, "code")
+            if not document_type:
+                raise UnsupportedDocumentStructure(
+                    "SPL document type code is required for ODD-001"
+                )
+
+            parent_map = {child: parent for parent in root.iter() for child in parent}
+            product_values = _extract_products(root, parent_map)
+            brand_names = _deduplicate(
+                product.brand_name for product in product_values if product.brand_name
+            )
+            generic_names = _extract_generic_names(root)
+            return DocumentSearchMetadata(
+                document_type=document_type,
+                effective_date=_effective_date(root.find(f"{Q}effectiveTime")),
+                title=title,
+                generic_name=generic_names[0] if generic_names else None,
+                brand_names=brand_names,
+                active_ingredients=_extract_active_ingredients(root),
+            )
+        except ODDError:
+            raise
+        except Exception as exc:  # pragma: no cover - defensive error boundary
+            raise ParserFailure(f"unexpected SPL parser failure: {exc}") from exc
 
     def parse(self, xml_bytes: bytes, identity: SourceIdentity) -> NormalizedDocument:
         try:

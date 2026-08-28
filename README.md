@@ -51,8 +51,17 @@ names, and re-verify any of it against the preserved bytes.
 
 ```console
 python -m pip install -e ".[mcp]"
+odd catalog build --data-dir data
+odd catalog verify --data-dir data
 python -m odd.mcp --data-dir data
 ```
+
+`odd_find_documents` reads only the rebuildable metadata catalog under
+`data/catalog`; it does not scan or parse preserved XML during a tool call. Run
+`odd catalog build` after adding documents. The catalog is a derived index, not
+primary evidence, and `odd catalog verify` checks it against raw manifests
+without parsing all XML files. A missing, damaged, or unsupported catalog is
+reported as a structured error rather than triggering an implicit scan.
 
 Four tools: `odd_find_documents`, `odd_get_section_index`,
 `odd_get_evidence_slice`, `odd_verify_document`. Several matching documents are

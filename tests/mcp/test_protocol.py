@@ -14,6 +14,7 @@ from typing import Any
 
 from mcp.shared.memory import create_connected_server_and_client_session
 
+from odd.catalog import build_document_catalog
 from odd.mcp.server import TOOL_DEFINITIONS, create_server
 from odd.mcp.tools import OddTools
 from tests.core.test_core_pipeline import ELIQUIS_SET_ID, ELIQUIS_VERSION, pipeline
@@ -41,6 +42,7 @@ def surface(
     core.acquire("Eliquis", set_id=ELIQUIS_SET_ID)
     if archive is not None:
         preserve_fixture_archive(core, archive)
+    build_document_catalog(core.data_root, parser=core.parser, clock=core.clock)
     return OddTools(core)
 
 
