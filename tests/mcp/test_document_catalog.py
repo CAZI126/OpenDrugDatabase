@@ -372,9 +372,15 @@ def test_build_prefers_preserved_normalized_evidence(
     }
 
 
-def test_title_missing_document_is_explicitly_unindexed_without_guessing(
+def test_a_title_missing_document_is_indexed_with_an_unknown_title(
     tmp_path: Path,
 ) -> None:
+    """A label that states no title is still a label, and still findable.
+
+    It is findable by what it does state -- its ingredient, its brand, its
+    generic name -- and never by a title invented from any of them.
+    """
+
     xml = ELIQUIS_XML.read_bytes()
     without_title = re.sub(br"\s*<title>.*?</title>", b"", xml, count=1)
     assert without_title != xml
@@ -384,13 +390,58 @@ def test_title_missing_document_is_explicitly_unindexed_without_guessing(
     built = build_document_catalog(core.data_root, parser=core.parser, clock=core.clock)
 
     assert built["source_document_count"] == 1
+    assert built["indexed_count"] == 1
+    assert built["unindexed_count"] == 0
+    assert built["unindexed"] == []
+
+    found = OddTools(core).find_documents("apixaban")
+    assert found["candidate_count"] == 1
+    candidate = found["candidates"][0]
+    assert candidate["set_id"] == ELIQUIS_SET_ID
+    assert candidate["raw_sha256"]
+    # The absent title is reported absent, not filled in from anything the
+    # document does say.
+    assert candidate["document_title"] == UNKNOWN
+    assert candidate["active_ingredients"] != UNKNOWN
+    for stated in (candidate["brand_names"], candidate["active_ingredients"]):
+        assert UNKNOWN not in stated
+
+
+def test_an_unknown_title_is_not_itself_searchable(tmp_path: Path) -> None:
+    """UNKNOWN marks an absence. It must not behave like a drug name."""
+
+    xml = ELIQUIS_XML.read_bytes()
+    without_title = re.sub(br"\s*<title>.*?</title>", b"", xml, count=1)
+    core = pipeline(tmp_path, xml_body=without_title)
+    fetch_by_set_id(core.connector, core.raw_store, ELIQUIS_SET_ID)
+    build_document_catalog(core.data_root, parser=core.parser, clock=core.clock)
+
+    surface = OddTools(core)
+
+    assert surface.find_documents("UNKNOWN")["candidate_count"] == 0
+    assert surface.find_documents("unknown")["candidate_count"] == 0
+    assert surface.find_documents("apixaban")["candidate_count"] == 1
+
+
+def test_a_document_missing_more_than_its_title_is_still_unindexed(
+    tmp_path: Path,
+) -> None:
+    """Allowing an absent title must not wave through a broken document."""
+
+    xml = ELIQUIS_XML.read_bytes()
+    without_code = re.sub(br"\s*<code[^>]*/>", b"", xml, count=1)
+    assert without_code != xml
+    core = pipeline(tmp_path, xml_body=without_code)
+    fetch_by_set_id(core.connector, core.raw_store, ELIQUIS_SET_ID)
+
+    built = build_document_catalog(core.data_root, parser=core.parser, clock=core.clock)
+
     assert built["indexed_count"] == 0
     assert built["unindexed_count"] == 1
     reason = built["unindexed"][0]
     assert reason["set_id"] == ELIQUIS_SET_ID
     assert reason["raw_sha256"]
     assert reason["reason_code"] == "UNSUPPORTED_DOCUMENT_STRUCTURE"
-    assert OddTools(core).find_documents("apixaban")["candidate_count"] == 0
 
 
 def test_catalog_cli_builds_and_verifies_without_network(

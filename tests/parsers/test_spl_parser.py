@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import replace
 from datetime import UTC, datetime
 
@@ -241,6 +242,107 @@ def test_doctype_is_rejected_before_xml_parsing() -> None:
     xml = b'<!DOCTYPE document><document xmlns="urn:hl7-org:v3"/>'
     with pytest.raises(UnsupportedDocumentStructure, match="DOCTYPE"):
         SPLParser().parse(xml, identity(xml))
+
+
+# -- a real label that states no title of its own --------------------------
+def titleless() -> bytes:
+    """The preserved fixture with its document title removed, and nothing else.
+
+    This is the shape the cohort run actually found: whole, valid SPLs that
+    simply carry no document-level ``<title>``.
+    """
+
+    xml = ELIQUIS_XML.read_bytes()
+    without = re.sub(rb"\s*<title>.*?</title>", b"", xml, count=1)
+    assert without != xml, "the fixture must carry a title to remove"
+    return without
+
+
+def test_a_document_stating_no_title_still_parses() -> None:
+    xml = titleless()
+
+    document = SPLParser().parse(xml, identity(xml)).document
+
+    assert document.title is None
+    assert document.source_identity.source_document_id == SET_ID
+    assert document.source_identity.source_version == SOURCE_VERSION
+    assert document.source_identity.raw_sha256 == sha256_bytes(xml)
+
+
+def test_a_missing_title_is_never_filled_in_from_what_the_label_does_say() -> None:
+    """The absence must not be repaired from the brand, generic name, or id."""
+
+    xml = titleless()
+
+    document = SPLParser().parse(xml, identity(xml)).document
+
+    assert document.title is None
+    # These are stated, and none of them may stand in for the title.
+    assert document.generic_name
+    assert document.brand_names
+    assert document.active_ingredients
+    for stated in (
+        document.generic_name,
+        *document.brand_names,
+        *document.active_ingredients,
+        SET_ID,
+        SOURCE_VERSION,
+    ):
+        assert document.title != stated
+
+
+def test_sections_are_still_extracted_from_a_titleless_document() -> None:
+    xml = titleless()
+
+    result = SPLParser().parse(xml, identity(xml))
+
+    assert result.sections
+    assert all(section.section_sha256 for section in result.sections)
+    assert all(section.source_locator for section in result.sections)
+    with_title = SPLParser().parse(ELIQUIS_XML.read_bytes(), identity())
+    assert len(result.sections) == len(with_title.sections)
+
+
+def test_a_stated_title_is_unchanged_by_allowing_absent_ones() -> None:
+    document = parsed().document
+
+    assert document.title == (
+        "ELIQUIS (apixaban) tablets, for oral use — reduced ODD test fixture"
+    )
+
+
+def test_an_empty_title_states_no_more_than_a_missing_one() -> None:
+    xml = re.sub(
+        rb"<title>.*?</title>", b"<title>   </title>", ELIQUIS_XML.read_bytes(), count=1
+    )
+
+    document = SPLParser().parse(xml, identity(xml)).document
+
+    assert document.title is None, "whitespace is not a title the label stated"
+
+
+def test_search_metadata_reads_a_titleless_document_the_same_way() -> None:
+    xml = titleless()
+
+    metadata = SPLParser().parse_document_search_metadata(xml, identity(xml))
+
+    assert metadata.title is None
+    assert metadata.document_type
+    assert metadata.active_ingredients
+
+
+def test_identity_and_type_are_still_required_when_the_title_is_not() -> None:
+    """Allowing an absent title must not wave through a broken document."""
+
+    without_code = re.sub(rb"\s*<code[^>]*/>", b"", ELIQUIS_XML.read_bytes(), count=1)
+    assert without_code != ELIQUIS_XML.read_bytes()
+    with pytest.raises(UnsupportedDocumentStructure):
+        SPLParser().parse(without_code, identity(without_code))
+
+    without_set_id = re.sub(rb'\s*<setId[^>]*/>', b"", ELIQUIS_XML.read_bytes(), count=1)
+    assert without_set_id != ELIQUIS_XML.read_bytes()
+    with pytest.raises(UnsupportedDocumentStructure):
+        SPLParser().parse(without_set_id, identity(without_set_id))
 
 
 def _walk(node: StructuredNode):

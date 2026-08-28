@@ -79,7 +79,10 @@ class DocumentSearchMetadata:
 
     document_type: str
     effective_date: date | None
-    title: str
+    # ``None`` where the SPL states no title of its own. A document that does not
+    # say what it is called is still that document; the absence is carried as an
+    # absence rather than filled in from something else it happens to say.
+    title: str | None
     generic_name: str | None
     brand_names: tuple[str, ...]
     active_ingredients: tuple[str, ...]
@@ -181,8 +184,7 @@ class SPLParser:
         try:
             root = parse_document_root(xml_bytes, expected_raw_sha256=identity.raw_sha256)
 
-            # Keep the same document-level guards as the full parser.  In
-            # particular, a title-less SPL remains unsupported for this change.
+            # Keep the same document-level guards as the full parser.
             _required_attribute(root, "id", "root")
             set_id = _required_attribute(root, "setId", "root")
             source_version = _required_attribute(root, "versionNumber", "value")
@@ -200,11 +202,7 @@ class SPLParser:
                     },
                 )
 
-            title = _element_text(root.find(f"{Q}title"))
-            if not title:
-                raise UnsupportedDocumentStructure(
-                    "SPL document title is required for ODD-001"
-                )
+            title = _stated_title(root)
             code = root.find(f"{Q}code")
             document_type = _attribute(code, "displayName") or _attribute(code, "code")
             if not document_type:
@@ -259,10 +257,7 @@ class SPLParser:
                 },
             )
 
-        title_element = root.find(f"{Q}title")
-        title = _element_text(title_element)
-        if not title:
-            raise UnsupportedDocumentStructure("SPL document title is required for ODD-001")
+        title = _stated_title(root)
         code = root.find(f"{Q}code")
         document_type = _attribute(code, "displayName") or _attribute(code, "code")
         if not document_type:
@@ -549,6 +544,25 @@ def _attribute(element: ElementTree.Element | None, name: str) -> str | None:
         return None
     value = element.attrib.get(name)
     return value.strip() if value and value.strip() else None
+
+
+def _stated_title(root: ElementTree.Element) -> str | None:
+    """The title the SPL states about itself, or ``None`` where it states none.
+
+    Real preserved labels exist with no document ``<title>`` at all, and one with
+    an empty title states no more than one with no title element. Both come back
+    as ``None``, which every consumer already renders as ``UNKNOWN``: the title
+    is missing from the source, so it is missing from the output. It is never
+    filled in from the brand name, the generic name, the ingredients, the file
+    name, or the set id -- a document that does not say what it is called is
+    still that document, and inventing the answer would make the catalog state
+    something the label does not.
+
+    Only the title is optional here. Every other document-level guard is
+    unchanged, so an SPL missing its identity or its type code still fails.
+    """
+
+    return _element_text(root.find(f"{Q}title")) or None
 
 
 def _element_text(element: ElementTree.Element | None) -> str | None:

@@ -47,7 +47,8 @@ class RegulatoryDocument:
     document_type: str
     language: str | None
     effective_date: date | None
-    title: str
+    # ``None`` where the SPL states no title of its own; rendered as UNKNOWN.
+    title: str | None
     generic_name: str | None
     brand_names: tuple[str, ...]
     dosage_forms: tuple[str, ...]
