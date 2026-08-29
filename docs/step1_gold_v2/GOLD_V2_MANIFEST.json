@@ -207,6 +207,38 @@
   "result": "BYTE_IDENTICAL 10, all other verdicts 0"
  },
  "supersedes": "docs/step1_gold/GOLD_MANIFEST.json",
- "v1_results_retroactively_changed": false,
+ "v1_outcome_history": {
+  "gold_v1_completeness_audit": {
+   "incomplete_cases": [
+    "S1-02",
+    "S1-09"
+   ]
+  },
+  "gold_v2": {
+   "mcp_rerun": false,
+   "pass_fail_recalculated": false,
+   "status": "FROZEN_UNSCORED"
+  },
+  "note": "The provisional comparison was made before any human audit. It is kept here as what it was -- a provisional reading -- and not as the outcome. The human audit of gold V1 found two cases whose gold record was itself incomplete, and the final V1 outcome is a fail.",
+  "v1_human_final": {
+   "fail": 2,
+   "failed_cases": [
+    "S1-02",
+    "S1-09"
+   ],
+   "human_signed_off": true,
+   "pass": 7,
+   "status": "STEP1_FAIL",
+   "valid_unknown": 1
+  },
+  "v1_provisional_comparison": {
+   "fail": 1,
+   "human_signed_off": false,
+   "pass": 8,
+   "status": "PROVISIONAL_STEP1_PASS",
+   "valid_unknown": 1
+  },
+  "v1_results_retroactively_changed": false
+ },
  "versions_changed": false
 }
