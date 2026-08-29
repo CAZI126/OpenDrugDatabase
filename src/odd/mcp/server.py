@@ -18,6 +18,7 @@ from typing import Any
 import mcp.types as types
 from mcp.server import Server
 
+from odd.mcp._defaults import DEFAULT_HTTP_PORT, HTTP_PATH, LOOPBACK_HOST
 from odd.mcp.tools import OddTools, ToolError
 
 SERVER_NAME = "odd"
@@ -213,3 +214,70 @@ async def run_stdio(*, data_root: Path | None = None) -> None:
     server = create_server(data_root=data_root)
     async with stdio_server() as (read_stream, write_stream):
         await server.run(read_stream, write_stream, server.create_initialization_options())
+
+
+def create_http_app(
+    *,
+    data_root: Path | None = None,
+    tools: OddTools | None = None,
+    host: str = LOOPBACK_HOST,
+    port: int = DEFAULT_HTTP_PORT,
+) -> Any:
+    """The same four tools, over MCP's streamable HTTP transport.
+
+    Only the transport differs. The tool surface is exactly the one stdio
+    serves -- the same ``create_server`` and the same read-only ``OddTools`` --
+    so a client cannot reach anything over HTTP that it could not reach over a
+    pipe. Retrieval, extraction and deletion are not exposed here because they
+    are not exposed there.
+
+    DNS-rebinding protection stays on, and the allowed hosts are the loopback
+    address this is meant to be bound to. A browser page on some other origin
+    therefore cannot drive this server by pointing at localhost.
+    """
+
+    import contextlib
+    from collections.abc import AsyncIterator
+
+    from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
+    from mcp.server.transport_security import TransportSecuritySettings
+    from starlette.applications import Starlette
+    from starlette.routing import Mount
+
+    server = create_server(data_root=data_root, tools=tools)
+    manager = StreamableHTTPSessionManager(
+        app=server,
+        security_settings=TransportSecuritySettings(
+            enable_dns_rebinding_protection=True,
+            allowed_hosts=[f"{host}:{port}", host, f"localhost:{port}", "localhost"],
+            allowed_origins=[f"http://{host}:{port}", f"http://localhost:{port}"],
+        ),
+    )
+
+    @contextlib.asynccontextmanager
+    async def lifespan(_: Starlette) -> AsyncIterator[None]:
+        async with manager.run():
+            yield
+
+    async def handle(scope: Any, receive: Any, send: Any) -> None:
+        await manager.handle_request(scope, receive, send)
+
+    return Starlette(routes=[Mount(HTTP_PATH, app=handle)], lifespan=lifespan)
+
+
+def run_http(
+    *,
+    data_root: Path | None = None,
+    host: str = LOOPBACK_HOST,
+    port: int = DEFAULT_HTTP_PORT,
+) -> None:
+    """Serve the four tools over HTTP on the loopback interface."""
+
+    import uvicorn
+
+    uvicorn.run(
+        create_http_app(data_root=data_root, host=host, port=port),
+        host=host,
+        port=port,
+        log_level="info",
+    )
