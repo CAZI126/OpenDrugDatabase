@@ -91,11 +91,12 @@ TOOL_DEFINITIONS: list[types.Tool] = [
     types.Tool(
         name="odd_get_evidence_slice",
         description=(
-            "Return only the sections whose code exactly matches one you name, "
-            "with the evidence locator and digests for each. A parent section is "
-            "never widened to its subsections. Name a passage by section_codes, or "
-            "by section_locators taken from the index when a section states no code "
-            "of its own; at least one of the two is required. Supply application_number to also "
+            "Return only the sections you name, matched exactly by section code or "
+            "by evidence locator, with the locator and digests for each. A parent "
+            "section is never widened to its subsections. Name a passage by "
+            "section_codes, or by section_locators taken from the index when a "
+            "section states no code of its own or several share one; at least one of "
+            "the two is required. Supply application_number to also "
             "return what an already-preserved Drugs@FDA archive states about that "
             "exact application; with no archive preserved the FDA half comes back "
             "as NOT_PRESERVED, which is not the same as NOT_FOUND."

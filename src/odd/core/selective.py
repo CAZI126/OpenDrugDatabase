@@ -24,10 +24,11 @@ from typing import Any
 from odd.constants import PARSER_VERSION
 from odd.core.evidence import UNKNOWN, relative_to_root
 from odd.models import NormalizedDocument, RawDocument, SourceSection
+from odd.provenance.canonical import canonical_json_bytes
 from odd.provenance.hashing import sha256_bytes
 
 CORE_INDEX_SCHEMA_VERSION = "odd-core-index/1.0.0"
-CORE_SLICE_SCHEMA_VERSION = "odd-core-evidence-slice/1.0.0"
+CORE_SLICE_SCHEMA_VERSION = "odd-core-evidence-slice/1.1.0"
 
 COMPLETE = "COMPLETE"
 INCOMPLETE = "INCOMPLETE"
@@ -36,8 +37,10 @@ NOT_FOUND = "NOT_FOUND"
 
 _INDEX_NOTE = (
     "This index states what the source contains. It carries no section text and no "
-    "FDA row text, and it does not recommend, rank, or select. Name the section codes "
-    "and application numbers you want, and ODD returns exactly those by exact match."
+    "FDA row text, and it does not recommend, rank, or select. Name the section codes, "
+    "the evidence locators, and the application numbers you want, and ODD returns "
+    "exactly those by exact match. A section that states no code of its own can still "
+    "be named: use the evidence_locator reported here."
 )
 
 __all__ = [
@@ -334,7 +337,33 @@ def _regulatory_completeness(regulatory_sources: list[dict[str, Any]]) -> str:
 
 
 def slice_fingerprint(payload: dict[str, Any]) -> str:
+    """Name a slice file after everything that decides what is in it.
+
+    Two different requests must not land on one file name, or writing the second
+    silently destroys the first. Locators decide the contents just as codes do,
+    so they belong in the name.
+
+    A request that names no locator keeps the fingerprint it has always had, so
+    slice files already written stay reachable. Anything naming a locator is
+    fingerprinted over canonical JSON instead, which separates the fields
+    structurally rather than by a delimiter a value could itself contain. The
+    two forms cannot be confused: canonical JSON begins with a brace, and no
+    section code does.
+
+    The request block is already sorted and de-duplicated, so [A, B] and
+    [B, A, A] arrive here identical and hash alike.
+    """
+
     request = payload.get("request", {})
-    codes = ",".join(request.get("requested_section_codes", []))
-    numbers = ",".join(request.get("requested_application_numbers", []))
-    return sha256_bytes(f"{codes}|{numbers}".encode())[:12]
+    codes = request.get("requested_section_codes", [])
+    locators = request.get("requested_section_locators", [])
+    numbers = request.get("requested_application_numbers", [])
+    if not locators:
+        material = f"{','.join(codes)}|{','.join(numbers)}".encode()
+    else:
+        material = canonical_json_bytes({
+            "requested_application_numbers": list(numbers),
+            "requested_section_codes": list(codes),
+            "requested_section_locators": list(locators),
+        })
+    return sha256_bytes(material)[:12]
