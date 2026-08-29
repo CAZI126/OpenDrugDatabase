@@ -1,0 +1,202 @@
+{
+ "cases": [
+  {
+   "case_file": "docs/step1_mcp_run/S1-01_atorvastatin.md",
+   "case_id": "S1-01",
+   "case_sha256": "4ffd6d0fd429c4e0f474a2aedaac1fbe8e0052c26ea65846a480159b1d8b36c5",
+   "errors": [],
+   "fixed_identity_in_candidates": true,
+   "ingredient": "atorvastatin",
+   "raw_output_file": "docs/step1_mcp_run/raw/S1-01_atorvastatin.json",
+   "raw_output_sha256": "fa873faf128bc08fcb81280c5f94d6ee8bd2442274c20d8def6bdac34835edee",
+   "section_codes_not_found": [],
+   "selected_section_codes": [
+    "34068-7",
+    "42229-5"
+   ],
+   "selection_performed": false,
+   "total_automated_seconds": 12.317,
+   "verify_result": "VERIFIED"
+  },
+  {
+   "case_file": "docs/step1_mcp_run/S1-02_metformin.md",
+   "case_id": "S1-02",
+   "case_sha256": "fb347064ad4c0c4b5368ed275e46078b549c3fb7abd1149eaf5f987ff4db763a",
+   "errors": [],
+   "fixed_identity_in_candidates": true,
+   "ingredient": "metformin",
+   "raw_output_file": "docs/step1_mcp_run/raw/S1-02_metformin.json",
+   "raw_output_sha256": "5037b55dd04a24d0260f8a8f96bb5dc74819129501e653066cf531e396e84b96",
+   "section_codes_not_found": [
+    "UNKNOWN"
+   ],
+   "selected_section_codes": [
+    "UNKNOWN",
+    "34070-3"
+   ],
+   "selection_performed": false,
+   "total_automated_seconds": 6.914,
+   "verify_result": "VERIFIED"
+  },
+  {
+   "case_file": "docs/step1_mcp_run/S1-03_levothyroxine.md",
+   "case_id": "S1-03",
+   "case_sha256": "c3cc54b5a66387bd42b70ab5d50888e53a80897ce7c460f4ecf2cc1a796045a6",
+   "errors": [],
+   "fixed_identity_in_candidates": true,
+   "ingredient": "levothyroxine",
+   "raw_output_file": "docs/step1_mcp_run/raw/S1-03_levothyroxine.json",
+   "raw_output_sha256": "5511b74921eaf18d23fe58ca8e1567ea9f581f445bea2e9b62178b3edc70e73c",
+   "section_codes_not_found": [],
+   "selected_section_codes": [
+    "34068-7",
+    "42229-5"
+   ],
+   "selection_performed": false,
+   "total_automated_seconds": 6.693,
+   "verify_result": "VERIFIED"
+  },
+  {
+   "case_file": "docs/step1_mcp_run/S1-04_lisinopril.md",
+   "case_id": "S1-04",
+   "case_sha256": "66bc4a3f6ef9ef93346ab3869d1f6a5d87959987281937284a58c1990358b2df",
+   "errors": [],
+   "fixed_identity_in_candidates": true,
+   "ingredient": "lisinopril",
+   "raw_output_file": "docs/step1_mcp_run/raw/S1-04_lisinopril.json",
+   "raw_output_sha256": "33b0a3080d71e442b02c60b5ad949a06c5db8346e6865853a487db112df40346",
+   "section_codes_not_found": [],
+   "selected_section_codes": [
+    "34070-3",
+    "34073-7"
+   ],
+   "selection_performed": false,
+   "total_automated_seconds": 6.127,
+   "verify_result": "VERIFIED"
+  },
+  {
+   "case_file": "docs/step1_mcp_run/S1-05_amlodipine.md",
+   "case_id": "S1-05",
+   "case_sha256": "7772298afc45107a6bd9403b1dff8c753d13de0f9768ae56648e35c51d170d32",
+   "errors": [],
+   "fixed_identity_in_candidates": true,
+   "ingredient": "amlodipine",
+   "raw_output_file": "docs/step1_mcp_run/raw/S1-05_amlodipine.json",
+   "raw_output_sha256": "e5fe644a7813f3b67f8feec6b128979f97bedc3a8b6d86c40606476f0dd14d1d",
+   "section_codes_not_found": [],
+   "selected_section_codes": [
+    "42229-5",
+    "34068-7"
+   ],
+   "selection_performed": false,
+   "total_automated_seconds": 5.954,
+   "verify_result": "VERIFIED"
+  },
+  {
+   "case_file": "docs/step1_mcp_run/S1-06_metoprolol.md",
+   "case_id": "S1-06",
+   "case_sha256": "a9f043e834a9ac01aea884b5d5f22f1cb60ebd073317b1715f2b373158501de2",
+   "errors": [],
+   "fixed_identity_in_candidates": true,
+   "ingredient": "metoprolol",
+   "raw_output_file": "docs/step1_mcp_run/raw/S1-06_metoprolol.json",
+   "raw_output_sha256": "a4d65a4fc882ffed57446898db2d3d7103804f8ceae1a9070459eb51319ba63e",
+   "section_codes_not_found": [],
+   "selected_section_codes": [
+    "34067-9",
+    "34068-7",
+    "43678-2",
+    "34070-3"
+   ],
+   "selection_performed": false,
+   "total_automated_seconds": 5.683,
+   "verify_result": "VERIFIED"
+  },
+  {
+   "case_file": "docs/step1_mcp_run/S1-07_albuterol.md",
+   "case_id": "S1-07",
+   "case_sha256": "a05a05df9f09bac251bf5879e7d78800fb84bfefc705abff26866a205f24b1f4",
+   "errors": [],
+   "fixed_identity_in_candidates": true,
+   "ingredient": "albuterol",
+   "raw_output_file": "docs/step1_mcp_run/raw/S1-07_albuterol.json",
+   "raw_output_sha256": "4fd724e635310860ab0a3f70d152b60d429b9ca0a3766a630551818d37c1af88",
+   "section_codes_not_found": [],
+   "selected_section_codes": [
+    "34068-7",
+    "42229-5",
+    "43685-7"
+   ],
+   "selection_performed": false,
+   "total_automated_seconds": 5.823,
+   "verify_result": "VERIFIED"
+  },
+  {
+   "case_file": "docs/step1_mcp_run/S1-08_losartan.md",
+   "case_id": "S1-08",
+   "case_sha256": "45bca036951a1eb1da8d5242d3a93bccbc9f79d0a1084cc4d2b2184ec183128b",
+   "errors": [],
+   "fixed_identity_in_candidates": true,
+   "ingredient": "losartan",
+   "raw_output_file": "docs/step1_mcp_run/raw/S1-08_losartan.json",
+   "raw_output_sha256": "d3cbc44b2411809e9c75209d71c41e38a726dc1177c90defe024358f47b3ed68",
+   "section_codes_not_found": [],
+   "selected_section_codes": [
+    "42229-5",
+    "34068-7"
+   ],
+   "selection_performed": false,
+   "total_automated_seconds": 5.999,
+   "verify_result": "VERIFIED"
+  },
+  {
+   "case_file": "docs/step1_mcp_run/S1-09_gabapentin.md",
+   "case_id": "S1-09",
+   "case_sha256": "3a285807821e257985ed3e9bc54ebb0b1a6fcabefc587f404cde0610f75c4543",
+   "errors": [],
+   "fixed_identity_in_candidates": true,
+   "ingredient": "gabapentin",
+   "raw_output_file": "docs/step1_mcp_run/raw/S1-09_gabapentin.json",
+   "raw_output_sha256": "a0ea2b555a2cd48c4635f86a0be26bf59246195ad1bbd5cc44bcce1943685132",
+   "section_codes_not_found": [],
+   "selected_section_codes": [
+    "42229-5"
+   ],
+   "selection_performed": false,
+   "total_automated_seconds": 6.894,
+   "verify_result": "VERIFIED"
+  },
+  {
+   "case_file": "docs/step1_mcp_run/S1-10_omeprazole.md",
+   "case_id": "S1-10",
+   "case_sha256": "76ae74940ec575ba7635ee97312c076adc9972f90f6b1552575d470e3a168237",
+   "errors": [],
+   "fixed_identity_in_candidates": true,
+   "ingredient": "omeprazole",
+   "raw_output_file": "docs/step1_mcp_run/raw/S1-10_omeprazole.json",
+   "raw_output_sha256": "e5e88466b7757c76ed57af28f16650d4e30be890c1dc8efef68498fdf6904b4f",
+   "section_codes_not_found": [],
+   "selected_section_codes": [
+    "42229-5",
+    "34073-7"
+   ],
+   "selection_performed": false,
+   "total_automated_seconds": 7.802,
+   "verify_result": "VERIFIED"
+  }
+ ],
+ "comparison_performed": false,
+ "gold_files_opened_during_run": false,
+ "gold_set_fingerprint_at_run_time": "3764fd95a8eb38d3a4f7d2b4fc50feaaaf9b604d93e89f0bcdb1f9712bd16151",
+ "mcp_output_fingerprint": "8c4dd4f6685bf61590cd97a0cd16a6c24676fa3523869fa257803dfe22f38a45",
+ "protocol_file": "docs/STEP1_MANUAL_VALIDATION_V1.md",
+ "protocol_sha256": "c0775cf92c49e685ec0a9deaf816a1198d72cd46996cbbc03193cef1ac60fed9",
+ "run_conditions": {
+  "data_files_after": 23417,
+  "data_files_before": 23417,
+  "data_tree_identical": true,
+  "network_attempts": 0
+ },
+ "schema": "odd-step1-mcp-run/1.0.0",
+ "verdicts_assigned": false
+}
