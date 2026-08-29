@@ -75,6 +75,27 @@ the server to serve, use the existing CLI first:
 odd run --drug Eliquis --set-id e9481622-7cc6-418a-acb6-c5450daae9b0
 ```
 
+### Over HTTP, on this machine only
+
+The same four tools are also served over MCP's streamable HTTP transport, for
+clients that speak HTTP rather than stdio:
+
+```console
+python -m odd.mcp --http --data-dir data
+```
+
+The endpoint is `http://127.0.0.1:8765/mcp`. It binds loopback by design, and
+`--host`/`--port` change that: binding anything else publishes an
+**unauthenticated** server, because no authentication is implemented here. The
+entry point says so on stderr when you do it.
+
+Only the transport differs. The HTTP app is built from the same `create_server`
+and the same read-only tool surface the stdio server uses, so nothing is
+reachable over HTTP that is not reachable over a pipe -- there is no retrieval,
+update or delete tool on either. DNS-rebinding protection is on and scoped to the
+bound loopback address, so a page served from another origin cannot drive the
+server by pointing at localhost.
+
 A client configuration entry looks like this:
 
 ```json
