@@ -1,0 +1,182 @@
+{
+ "cases": [
+  {
+   "case_id": "S1-01",
+   "ingredient": "atorvastatin",
+   "question": "The adult starting dose and the dose range.",
+   "raw_sha256": "c6748f079a3cf15a3d9fe19dde9012fb62746cd68ea8e21506daab8d6f2a32fd",
+   "section_codes": [
+    "34068-7",
+    "42229-5"
+   ],
+   "section_locators": [],
+   "selector_kind": "section_codes",
+   "set_id": "a60cc18b-0631-4cf0-b021-9f52224ece65",
+   "source_version": "8",
+   "why": "the same section request the V1 run used, unchanged"
+  },
+  {
+   "case_id": "S1-02",
+   "ingredient": "metformin",
+   "question": "Starting, continuation, and discontinuation criteria based on eGFR.",
+   "raw_sha256": "9adfa16cd77cad975fa8ee0d95ddc505f32d4d023a8c8e8c80d6a272b7c2a52d",
+   "section_codes": [],
+   "section_locators": [
+    "/document[1]/component[1]/structuredBody[1]/component[5]/section[1]/component[3]/section[1]",
+    "/document[1]/component[1]/structuredBody[1]/component[5]/section[1]/component[4]/section[1]"
+   ],
+   "selector_kind": "section_locators",
+   "set_id": "c82a10fa-1e8e-46b6-890a-737de3f34ee1",
+   "source_version": "17",
+   "why": "Both answering sections state no <code> of their own, so a code cannot name either of them. The two positions below are named exactly, as the index reports them."
+  },
+  {
+   "case_id": "S1-03",
+   "ingredient": "levothyroxine",
+   "question": "Timing relative to breakfast, and the dosing interval from drugs that affect its absorption.",
+   "raw_sha256": "de366bdd1a38c827eff6c082896ea88f8ffde929b647df38421f595d9437203a",
+   "section_codes": [
+    "34068-7",
+    "42229-5"
+   ],
+   "section_locators": [],
+   "selector_kind": "section_codes",
+   "set_id": "1e11ad30-1041-4520-10b0-8f9d30d30fcc",
+   "source_version": "1537",
+   "why": "the same section request the V1 run used, unchanged"
+  },
+  {
+   "case_id": "S1-04",
+   "ingredient": "lisinopril",
+   "question": "The contraindication on concomitant use with sacubitril/valsartan, and the washout interval required.",
+   "raw_sha256": "2e2b2246fbd5a0183f6559cdab91359616333318b650efa8941ede54827aa5aa",
+   "section_codes": [
+    "34070-3",
+    "34073-7"
+   ],
+   "section_locators": [],
+   "selector_kind": "section_codes",
+   "set_id": "838c2d78-d2d8-4981-9ec9-e50ef9e1a5d8",
+   "source_version": "2",
+   "why": "the same section request the V1 run used, unchanged"
+  },
+  {
+   "case_id": "S1-05",
+   "ingredient": "amlodipine",
+   "question": "The adult starting dose and maximum dose for hypertension.",
+   "raw_sha256": "2411f602c5819fb1c572b9a1fa5972476a3c242c046d46624995995cac3e7c51",
+   "section_codes": [
+    "42229-5",
+    "34068-7"
+   ],
+   "section_locators": [],
+   "selector_kind": "section_codes",
+   "set_id": "7367289c-b0b0-466a-83e2-558e2985c29f",
+   "source_version": "10",
+   "why": "the same section request the V1 run used, unchanged"
+  },
+  {
+   "case_id": "S1-06",
+   "ingredient": "metoprolol",
+   "question": "Identify this document's salt, immediate- or extended-release, and dosage form; then give the adult starting dose for hypertension.",
+   "raw_sha256": "7ee92b8303bf037f308f90f0d2c4bae1432af6d52331d793c762af84e507354e",
+   "section_codes": [
+    "34067-9",
+    "34068-7",
+    "43678-2",
+    "34070-3"
+   ],
+   "section_locators": [],
+   "selector_kind": "section_codes",
+   "set_id": "b5f4fed2-369c-4808-a682-8a5b8cfdbb4f",
+   "source_version": "3",
+   "why": "the same section request the V1 run used, unchanged"
+  },
+  {
+   "case_id": "S1-07",
+   "ingredient": "albuterol",
+   "question": "The dosing interval, the maximum frequency of use, and the label's warning when more frequent use than usual becomes necessary.",
+   "raw_sha256": "ea2e5e579f6fa81deb19c3561b5924f5e8ebaa830224f47403605c02b51278b2",
+   "section_codes": [
+    "34068-7",
+    "42229-5",
+    "43685-7"
+   ],
+   "section_locators": [],
+   "selector_kind": "section_codes",
+   "set_id": "d92c5d6b-ff10-4087-36a2-1cfc464cb967",
+   "source_version": "30",
+   "why": "the same section request the V1 run used, unchanged"
+  },
+  {
+   "case_id": "S1-08",
+   "ingredient": "losartan",
+   "question": "The adult starting dose and maximum dose for hypertension, and the starting dose in patients with intravascular volume depletion.",
+   "raw_sha256": "855caab1c9ba60a0a4b127d58f2f70ce4af4de37f13ef25f01bfb4dcc193178f",
+   "section_codes": [
+    "42229-5",
+    "34068-7"
+   ],
+   "section_locators": [],
+   "selector_kind": "section_codes",
+   "set_id": "9949448f-c3b9-44ee-94ed-c1aca8c90f39",
+   "source_version": "9",
+   "why": "the same section request the V1 run used, unchanged"
+  },
+  {
+   "case_id": "S1-09",
+   "ingredient": "gabapentin",
+   "question": "The renal dose-adjustment table by creatinine clearance.",
+   "raw_sha256": "5772dd19697484b7a98743b09f04cef551bff5caffd1eddd30ef7d89c0a7e9dc",
+   "section_codes": [
+    "42229-5"
+   ],
+   "section_locators": [],
+   "selector_kind": "section_codes",
+   "set_id": "97935fd9-1d4a-43b6-a5d9-de994591187b",
+   "source_version": "48",
+   "why": "the same section request the V1 run used, unchanged. This code returns the section carrying TABLE 1 whole -- in the V1 run it came back as a single 1592-character passage holding every band and every footnote -- so no narrower selector is needed to obtain the complete table."
+  },
+  {
+   "case_id": "S1-10",
+   "ingredient": "omeprazole",
+   "question": "The label's instruction regarding concomitant clopidogrel.",
+   "raw_sha256": "e0cab1df07d664405d45676c5375d8999f9e8c3ebb084fd620a60b871db96643",
+   "section_codes": [
+    "42229-5",
+    "34073-7"
+   ],
+   "section_locators": [],
+   "selector_kind": "section_codes",
+   "set_id": "b6761f84-53ac-4745-a8c8-1e5427d7e179",
+   "source_version": "8",
+   "why": "the same section request the V1 run used, unchanged"
+  }
+ ],
+ "code_commit": "c9698676d0ca8e74136efd69de904936ca51eccb",
+ "frozen_before_any_mcp_call": true,
+ "gold_v2_fingerprint": "864cd8707dab6b0c1bc543e5f1e1c1257808c2c713081081d0d22b2dd7e1d4bc",
+ "gold_v2_manifest_sha256": "060b2f8c6f0a72d56a7538e95c3a832eb6a8685e7a8e6f2590f3f91da43c798c",
+ "identities_and_questions_source": "identities from docs/step1_gold_v2/GOLD_V2_MANIFEST.json; questions from the frozen protocol table. No gold case file was opened.",
+ "per_case_conditions": [
+  "fixed identity used",
+  "selection_performed must be false",
+  "the planned code or locator must be present in the index",
+  "the slice names the planned selector and nothing else",
+  "no parent, sibling or subsection added automatically",
+  "network attempts 0, data writes 0",
+  "find_documents within 5 s, whole case within 15 s",
+  "execution errors recorded, never hidden"
+ ],
+ "protocol_sha256": "c0775cf92c49e685ec0a9deaf816a1198d72cd46996cbbc03193cef1ac60fed9",
+ "schema": "odd-step1-v2-run-plan/1.0.0",
+ "scored_material": "sections[].text as the slice returns it",
+ "will_not_do": [
+  "no gold answer text is generated",
+  "no AI summary or paraphrase",
+  "no comparison against gold",
+  "no claim scoring",
+  "no PASS/FAIL verdict",
+  "Drugs@FDA is not requested"
+ ]
+}
