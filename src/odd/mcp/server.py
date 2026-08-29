@@ -91,9 +91,12 @@ TOOL_DEFINITIONS: list[types.Tool] = [
     types.Tool(
         name="odd_get_evidence_slice",
         description=(
-            "Return only the sections whose code exactly matches one you name, "
-            "with the evidence locator and digests for each. A parent section is "
-            "never widened to its subsections. Supply application_number to also "
+            "Return only the sections you name, matched exactly by section code or "
+            "by evidence locator, with the locator and digests for each. A parent "
+            "section is never widened to its subsections. Name a passage by "
+            "section_codes, or by section_locators taken from the index when a "
+            "section states no code of its own or several share one; at least one of "
+            "the two is required. Supply application_number to also "
             "return what an already-preserved Drugs@FDA archive states about that "
             "exact application; with no archive preserved the FDA half comes back "
             "as NOT_PRESERVED, which is not the same as NOT_FOUND."
@@ -107,10 +110,20 @@ TOOL_DEFINITIONS: list[types.Tool] = [
                     "items": {"type": "string"},
                     "description": "official section codes, matched exactly",
                 },
+                "section_locators": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "section positions exactly as odd_get_section_index reported "
+                        "them in evidence_locator, matched exactly. Use these when a "
+                        "section states no code of its own, or when several sections "
+                        "share one code and you want one of them."
+                    ),
+                },
                 "application_number": _APPLICATION_NUMBER,
                 "source_version": _SOURCE_VERSION,
             },
-            "required": ["set_id", "section_codes"],
+            "required": ["set_id"],
         },
         annotations=_READ_ONLY,
     ),
@@ -152,11 +165,15 @@ def dispatch(tools: OddTools, name: str, arguments: dict[str, Any]) -> dict[str,
             codes = arguments.get("section_codes") or []
             if isinstance(codes, str):
                 codes = [codes]
+            locators = arguments.get("section_locators") or []
+            if isinstance(locators, str):
+                locators = [locators]
             return tools.get_evidence_slice(
                 str(arguments.get("set_id", "")),
                 [str(code) for code in codes],
                 arguments.get("application_number"),
                 arguments.get("source_version"),
+                [str(locator) for locator in locators],
             )
         if name == "odd_verify_document":
             return tools.verify_document(

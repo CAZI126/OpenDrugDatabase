@@ -1,0 +1,231 @@
+{
+ "ai_summary_written": false,
+ "calls": [
+  {
+   "seconds": 0.965,
+   "tool": "odd_get_section_index"
+  },
+  {
+   "arguments": {
+    "section_locators": [
+     "/document[1]/component[1]/structuredBody[1]/component[5]/section[1]/component[3]/section[1]",
+     "/document[1]/component[1]/structuredBody[1]/component[5]/section[1]/component[4]/section[1]"
+    ],
+    "set_id": "c82a10fa-1e8e-46b6-890a-737de3f34ee1",
+    "source_version": "17"
+   },
+   "seconds": 1.3,
+   "tool": "odd_get_evidence_slice"
+  },
+  {
+   "seconds": 1.37,
+   "tool": "odd_verify_document"
+  }
+ ],
+ "case_id": "S1-02",
+ "chosen_from_index": [
+  {
+   "evidence_locator": "/document[1]/component[1]/structuredBody[1]/component[5]/section[1]/component[3]/section[1]",
+   "section_code": "UNKNOWN",
+   "section_title": "2.3 Recommendations for Use in Renal Impairment",
+   "sequence_index": 7
+  },
+  {
+   "evidence_locator": "/document[1]/component[1]/structuredBody[1]/component[5]/section[1]/component[4]/section[1]",
+   "section_code": "UNKNOWN",
+   "section_title": "2.4 Discontinuation for Iodinated Contrast Imaging Procedures",
+   "sequence_index": 8
+  }
+ ],
+ "evidence_slice": {
+  "document": {
+   "active_ingredients": [
+    "METFORMIN HYDROCHLORIDE"
+   ],
+   "brand_names": [
+    "METFORMIN HYDROCHLORIDE"
+   ],
+   "document_title": "These highlights do not include all the information needed to use METFORMIN HYDROCHLORIDE TABLETS safely and effectively. See full prescribing information for METFORMIN HYDROCHLORIDE TABLETS . METFORMIN HYDROCHLORIDE tablets, for oral use Initial U.S. Approval: 1995",
+   "document_type": "HUMAN PRESCRIPTION DRUG LABEL",
+   "effective_date": "2026-07-15",
+   "fda_approval_status": "UNKNOWN",
+   "generic_name": "METFORMIN HYDROCHLORIDE",
+   "jurisdiction": "United States",
+   "label_publisher": "National Library of Medicine",
+   "label_repository": "DailyMed",
+   "raw_path": "raw/dailymed/c82a10fa-1e8e-46b6-890a-737de3f34ee1/17/label.xml",
+   "raw_sha256": "9adfa16cd77cad975fa8ee0d95ddc505f32d4d023a8c8e8c80d6a272b7c2a52d",
+   "regulatory_recipient": "FDA",
+   "set_id": "c82a10fa-1e8e-46b6-890a-737de3f34ee1",
+   "source_url": "https://dailymed.nlm.nih.gov/dailymed/services/v2/spls/c82a10fa-1e8e-46b6-890a-737de3f34ee1.xml",
+   "source_version": "17"
+  },
+  "drugs_fda": {
+   "network_attempted": false,
+   "note": "Drugs@FDA was not consulted. Not asking is not the same as asking and finding nothing.",
+   "requested_application_number": null,
+   "sources": [],
+   "status": "UNKNOWN"
+  },
+  "evidence_retrieval": "Open raw_path relative to the ODD data root, confirm its SHA-256 equals raw_sha256, then resolve evidence.xml_locator from the document root to re-retrieve this passage from the preserved source.",
+  "requested_section_codes": [],
+  "requested_section_locators": [
+   "/document[1]/component[1]/structuredBody[1]/component[5]/section[1]/component[3]/section[1]",
+   "/document[1]/component[1]/structuredBody[1]/component[5]/section[1]/component[4]/section[1]"
+  ],
+  "returned_section_codes": [
+   "UNKNOWN",
+   "UNKNOWN"
+  ],
+  "returned_section_locators": [
+   "/document[1]/component[1]/structuredBody[1]/component[5]/section[1]/component[3]/section[1]",
+   "/document[1]/component[1]/structuredBody[1]/component[5]/section[1]/component[4]/section[1]"
+  ],
+  "section_codes_not_found": [],
+  "section_locators_not_found": [],
+  "sections": [
+   {
+    "content_status": "present",
+    "evidence": {
+     "raw_path": "raw/dailymed/c82a10fa-1e8e-46b6-890a-737de3f34ee1/17/label.xml",
+     "raw_sha256": "9adfa16cd77cad975fa8ee0d95ddc505f32d4d023a8c8e8c80d6a272b7c2a52d",
+     "section_sha256": "914a57b4e566813c2c1c9ee6ab25fa795ec443413795b014a10a8783d17a320e",
+     "text_locator": "/document[1]/component[1]/structuredBody[1]/component[5]/section[1]/component[3]/section[1]/text[1]",
+     "text_sha256": "27811c691367f0c0472abf4c670ba45c503be79350597d29e9c331f1cbba83f3",
+     "xml_locator": "/document[1]/component[1]/structuredBody[1]/component[5]/section[1]/component[3]/section[1]"
+    },
+    "section_code": "UNKNOWN",
+    "section_title": "2.3 Recommendations for Use in Renal Impairment",
+    "text": "Assess renal function prior to initiation of metformin hydrochloride tablets and periodically thereafter. Metformin hydrochloride tablets are contraindicated in patients with an estimated glomerular filtration rate (eGFR) below 30 mL/minute/1.73 m2. Initiation of metformin hydrochloride tablets in patients with an eGFR between 30 mL/minute/1.73 m2to 45 mL/minute/1.73 m2is not recommended. In patients taking metformin hydrochloride tablets whose eGFR later falls below 45 mL/min/1.73 m2, assess the benefit risk of continuing therapy. Discontinue metformin hydrochloride tablets if the patient's eGFR later falls below 30 mL/minute/1.73 m2 [ s ee Warnings and Precautions (5.1)]."
+   },
+   {
+    "content_status": "present",
+    "evidence": {
+     "raw_path": "raw/dailymed/c82a10fa-1e8e-46b6-890a-737de3f34ee1/17/label.xml",
+     "raw_sha256": "9adfa16cd77cad975fa8ee0d95ddc505f32d4d023a8c8e8c80d6a272b7c2a52d",
+     "section_sha256": "996939d67a070ac2bf3d6fb3fbd895ea060da066871c72ce68237bdd481b04b5",
+     "text_locator": "/document[1]/component[1]/structuredBody[1]/component[5]/section[1]/component[4]/section[1]/text[1]",
+     "text_sha256": "633f31d794dd86f76d626dff800e91d8f0df7a3d743ff3f0999d1a835c6a676a",
+     "xml_locator": "/document[1]/component[1]/structuredBody[1]/component[5]/section[1]/component[4]/section[1]"
+    },
+    "section_code": "UNKNOWN",
+    "section_title": "2.4 Discontinuation for Iodinated Contrast Imaging Procedures",
+    "text": "Discontinue metformin hydrochloride tablets at the time of, or prior to, an iodinated contrast imaging procedure in patients with an eGFR between 30 mL/min/1.73 m2 and 60 mL/min/1.73 m2; in patients with a history of liver disease, alcoholism, or heart failure; or in patients who will be administered intra- arterial iodinated contrast. Re-evaluate eGFR 48 hours after the imaging procedure; restart metformin hydrochloride tablets if renal function is stable."
+   }
+  ],
+  "status": "ok",
+  "subsections_added_implicitly": false,
+  "unexpected_section_codes": []
+ },
+ "fixed_raw_sha256": "9adfa16cd77cad975fa8ee0d95ddc505f32d4d023a8c8e8c80d6a272b7c2a52d",
+ "fixed_set_id": "c82a10fa-1e8e-46b6-890a-737de3f34ee1",
+ "fixed_version": "17",
+ "ingredient": "metformin",
+ "run_conditions": {
+  "data_files_after": 23417,
+  "data_files_before": 23417,
+  "data_tree_identical": true,
+  "network_attempts": 0
+ },
+ "scored_material": "the primary-source text the slice returned, verbatim",
+ "section_index_entries": 45,
+ "selection_method": "section positions taken from the index output, matched exactly",
+ "total_automated_seconds": 10.418,
+ "verify": {
+  "checks": [
+   {
+    "message": "preserved raw source is readable at D:\\OpenDrugDatabase\\data\\raw\\dailymed\\c82a10fa-1e8e-46b6-890a-737de3f34ee1\\17\\label.xml",
+    "name": "raw_present",
+    "ok": true
+   },
+   {
+    "message": "raw SHA-256 re-verified: 9adfa16cd77cad975fa8ee0d95ddc505f32d4d023a8c8e8c80d6a272b7c2a52d",
+    "name": "raw_sha256",
+    "ok": true
+   },
+   {
+    "message": "bundle provenance matches the immutable raw manifest",
+    "name": "raw_metadata",
+    "ok": true
+   },
+   {
+    "message": "raw document declares set_id c82a10fa-1e8e-46b6-890a-737de3f34ee1 version 17",
+    "name": "document_identity",
+    "ok": true
+   },
+   {
+    "message": "re-retrieved 45 section(s) from the preserved raw source by evidence locator and re-verified their content hashes",
+    "name": "section_evidence",
+    "ok": true
+   },
+   {
+    "message": "bundle declares and carries 45 section(s)",
+    "name": "section_count",
+    "ok": true
+   }
+  ],
+  "document": {
+   "active_ingredients": [
+    "METFORMIN HYDROCHLORIDE"
+   ],
+   "brand_names": [
+    "METFORMIN HYDROCHLORIDE"
+   ],
+   "document_title": "These highlights do not include all the information needed to use METFORMIN HYDROCHLORIDE TABLETS safely and effectively. See full prescribing information for METFORMIN HYDROCHLORIDE TABLETS . METFORMIN HYDROCHLORIDE tablets, for oral use Initial U.S. Approval: 1995",
+   "document_type": "HUMAN PRESCRIPTION DRUG LABEL",
+   "effective_date": "2026-07-15",
+   "fda_approval_status": "UNKNOWN",
+   "generic_name": "METFORMIN HYDROCHLORIDE",
+   "jurisdiction": "United States",
+   "label_publisher": "National Library of Medicine",
+   "label_repository": "DailyMed",
+   "raw_path": "raw/dailymed/c82a10fa-1e8e-46b6-890a-737de3f34ee1/17/label.xml",
+   "raw_sha256": "9adfa16cd77cad975fa8ee0d95ddc505f32d4d023a8c8e8c80d6a272b7c2a52d",
+   "regulatory_recipient": "FDA",
+   "set_id": "c82a10fa-1e8e-46b6-890a-737de3f34ee1",
+   "source_url": "https://dailymed.nlm.nih.gov/dailymed/services/v2/spls/c82a10fa-1e8e-46b6-890a-737de3f34ee1.xml",
+   "source_version": "17"
+  },
+  "drugs_fda_linkage": {
+   "archive_sha256": {
+    "message": "this check did not run",
+    "observed": "UNKNOWN"
+   },
+   "link_status": {
+    "message": "this check did not run",
+    "observed": "UNKNOWN"
+   },
+   "network_attempted": false,
+   "note": "no application number was named, so no link was checked",
+   "requested_application_number": null,
+   "result": "UNKNOWN",
+   "row_evidence": {
+    "message": "this check did not run",
+    "observed": "UNKNOWN"
+   }
+  },
+  "failure_reasons": [],
+  "failures": [],
+  "raw_bytes_sha256": {
+   "message": "raw SHA-256 re-verified: 9adfa16cd77cad975fa8ee0d95ddc505f32d4d023a8c8e8c80d6a272b7c2a52d",
+   "observed": "VERIFIED"
+  },
+  "result": "VERIFIED",
+  "section_anchors": {
+   "message": "re-retrieved 45 section(s) from the preserved raw source by evidence locator and re-verified their content hashes",
+   "observed": "VERIFIED"
+  },
+  "source_version_consistency": {
+   "document_identity": {
+    "message": "raw document declares set_id c82a10fa-1e8e-46b6-890a-737de3f34ee1 version 17",
+    "observed": "VERIFIED"
+   },
+   "raw_metadata": {
+    "message": "bundle provenance matches the immutable raw manifest",
+    "observed": "VERIFIED"
+   }
+  },
+  "status": "ok",
+  "verified_artifact": "evidence.json"
+ }
+}

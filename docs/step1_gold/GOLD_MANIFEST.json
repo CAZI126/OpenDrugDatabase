@@ -1,0 +1,119 @@
+{
+ "built_from": "preserved raw SPL only; no ODD module, no network",
+ "cases": [
+  {
+   "case_id": "S1-01",
+   "gold_file": "docs/step1_gold/S1-01_atorvastatin.md",
+   "gold_sha256": "715d57e3f3fac37d8a4a3fbca2c918c4aef4bd56aeaadbef869e08360652cf9c",
+   "ingredient": "atorvastatin",
+   "raw_sha256_expected": "c6748f079a3cf15a3d9fe19dde9012fb62746cd68ea8e21506daab8d6f2a32fd",
+   "raw_sha256_recomputed": "c6748f079a3cf15a3d9fe19dde9012fb62746cd68ea8e21506daab8d6f2a32fd",
+   "set_id": "a60cc18b-0631-4cf0-b021-9f52224ece65",
+   "verdict": "SUPPORTED",
+   "version": "8"
+  },
+  {
+   "case_id": "S1-02",
+   "gold_file": "docs/step1_gold/S1-02_metformin.md",
+   "gold_sha256": "e39dcb19aee04005fdb54fb83bbad87c3e06b38277cd904361411e74ca304145",
+   "ingredient": "metformin",
+   "raw_sha256_expected": "9adfa16cd77cad975fa8ee0d95ddc505f32d4d023a8c8e8c80d6a272b7c2a52d",
+   "raw_sha256_recomputed": "9adfa16cd77cad975fa8ee0d95ddc505f32d4d023a8c8e8c80d6a272b7c2a52d",
+   "set_id": "c82a10fa-1e8e-46b6-890a-737de3f34ee1",
+   "verdict": "SUPPORTED",
+   "version": "17"
+  },
+  {
+   "case_id": "S1-03",
+   "gold_file": "docs/step1_gold/S1-03_levothyroxine.md",
+   "gold_sha256": "2c894ebc15b1b3d73bd75658cade295b95cd87bc71f45656b26202f77791bc85",
+   "ingredient": "levothyroxine",
+   "raw_sha256_expected": "de366bdd1a38c827eff6c082896ea88f8ffde929b647df38421f595d9437203a",
+   "raw_sha256_recomputed": "de366bdd1a38c827eff6c082896ea88f8ffde929b647df38421f595d9437203a",
+   "set_id": "1e11ad30-1041-4520-10b0-8f9d30d30fcc",
+   "verdict": "SUPPORTED",
+   "version": "1537"
+  },
+  {
+   "case_id": "S1-04",
+   "gold_file": "docs/step1_gold/S1-04_lisinopril.md",
+   "gold_sha256": "110d0730154b28740a42d9c785c5aae22a6b6064c65a7eca516bf412e0119443",
+   "ingredient": "lisinopril",
+   "raw_sha256_expected": "2e2b2246fbd5a0183f6559cdab91359616333318b650efa8941ede54827aa5aa",
+   "raw_sha256_recomputed": "2e2b2246fbd5a0183f6559cdab91359616333318b650efa8941ede54827aa5aa",
+   "set_id": "838c2d78-d2d8-4981-9ec9-e50ef9e1a5d8",
+   "verdict": "SUPPORTED",
+   "version": "2"
+  },
+  {
+   "case_id": "S1-05",
+   "gold_file": "docs/step1_gold/S1-05_amlodipine.md",
+   "gold_sha256": "f8fdd62a74a7a3fada01fb2bd706d50833cd23da96bd6ca816bd9c72084b1134",
+   "ingredient": "amlodipine",
+   "raw_sha256_expected": "2411f602c5819fb1c572b9a1fa5972476a3c242c046d46624995995cac3e7c51",
+   "raw_sha256_recomputed": "2411f602c5819fb1c572b9a1fa5972476a3c242c046d46624995995cac3e7c51",
+   "set_id": "7367289c-b0b0-466a-83e2-558e2985c29f",
+   "verdict": "SUPPORTED",
+   "version": "10"
+  },
+  {
+   "case_id": "S1-06",
+   "gold_file": "docs/step1_gold/S1-06_metoprolol.md",
+   "gold_sha256": "163263a3ce354db2f74de1210e9654f1b9de68d969cfc669378186e6103ed3b9",
+   "ingredient": "metoprolol",
+   "raw_sha256_expected": "7ee92b8303bf037f308f90f0d2c4bae1432af6d52331d793c762af84e507354e",
+   "raw_sha256_recomputed": "7ee92b8303bf037f308f90f0d2c4bae1432af6d52331d793c762af84e507354e",
+   "set_id": "b5f4fed2-369c-4808-a682-8a5b8cfdbb4f",
+   "verdict": "VALID_UNKNOWN",
+   "version": "3"
+  },
+  {
+   "case_id": "S1-07",
+   "gold_file": "docs/step1_gold/S1-07_albuterol.md",
+   "gold_sha256": "1cce62f055e08a6482c203fa3357effc5e290ea75ce82767a1158b639f6bd7b4",
+   "ingredient": "albuterol",
+   "raw_sha256_expected": "ea2e5e579f6fa81deb19c3561b5924f5e8ebaa830224f47403605c02b51278b2",
+   "raw_sha256_recomputed": "ea2e5e579f6fa81deb19c3561b5924f5e8ebaa830224f47403605c02b51278b2",
+   "set_id": "d92c5d6b-ff10-4087-36a2-1cfc464cb967",
+   "verdict": "SUPPORTED",
+   "version": "30"
+  },
+  {
+   "case_id": "S1-08",
+   "gold_file": "docs/step1_gold/S1-08_losartan.md",
+   "gold_sha256": "947dc2510b9424d055170e0625bf29110d669957b8ed7efc23fb86951f1da12f",
+   "ingredient": "losartan",
+   "raw_sha256_expected": "855caab1c9ba60a0a4b127d58f2f70ce4af4de37f13ef25f01bfb4dcc193178f",
+   "raw_sha256_recomputed": "855caab1c9ba60a0a4b127d58f2f70ce4af4de37f13ef25f01bfb4dcc193178f",
+   "set_id": "9949448f-c3b9-44ee-94ed-c1aca8c90f39",
+   "verdict": "SUPPORTED",
+   "version": "9"
+  },
+  {
+   "case_id": "S1-09",
+   "gold_file": "docs/step1_gold/S1-09_gabapentin.md",
+   "gold_sha256": "d0560701181cf51a1ebb16f736868f9e56100f6f02464b886a1986947d500e09",
+   "ingredient": "gabapentin",
+   "raw_sha256_expected": "5772dd19697484b7a98743b09f04cef551bff5caffd1eddd30ef7d89c0a7e9dc",
+   "raw_sha256_recomputed": "5772dd19697484b7a98743b09f04cef551bff5caffd1eddd30ef7d89c0a7e9dc",
+   "set_id": "97935fd9-1d4a-43b6-a5d9-de994591187b",
+   "verdict": "SUPPORTED",
+   "version": "48"
+  },
+  {
+   "case_id": "S1-10",
+   "gold_file": "docs/step1_gold/S1-10_omeprazole.md",
+   "gold_sha256": "69662cf3ff347f463a11a235c06b805b72e7027b95846c874636ac79a45a4040",
+   "ingredient": "omeprazole",
+   "raw_sha256_expected": "e0cab1df07d664405d45676c5375d8999f9e8c3ebb084fd620a60b871db96643",
+   "raw_sha256_recomputed": "e0cab1df07d664405d45676c5375d8999f9e8c3ebb084fd620a60b871db96643",
+   "set_id": "b6761f84-53ac-4745-a8c8-1e5427d7e179",
+   "verdict": "SUPPORTED",
+   "version": "8"
+  }
+ ],
+ "gold_set_fingerprint": "3764fd95a8eb38d3a4f7d2b4fc50feaaaf9b604d93e89f0bcdb1f9712bd16151",
+ "protocol_file": "docs/STEP1_MANUAL_VALIDATION_V1.md",
+ "protocol_sha256": "c0775cf92c49e685ec0a9deaf816a1198d72cd46996cbbc03193cef1ac60fed9",
+ "schema": "odd-step1-gold/1.0.0"
+}

@@ -1,0 +1,20 @@
+{
+ "canary_fingerprint": "7d515061a3f98dcf6bf0e7930b07d248b4780f70725a967b2f4050f657ee1dcf",
+ "case_id": "S1-02",
+ "files": {
+  "S1-02_canary.json": "7801e4d440de934c328f1bfed1dd530016c9bb24835140d872dd04e959b81f03",
+  "S1-02_canary.md": "8d55e3796a4fcb7bf7502f217d0b3740a200a14cb0d6225deeadf1d120822806"
+ },
+ "fixed_raw_sha256": "9adfa16cd77cad975fa8ee0d95ddc505f32d4d023a8c8e8c80d6a272b7c2a52d",
+ "fixed_set_id": "c82a10fa-1e8e-46b6-890a-737de3f34ee1",
+ "fixed_version": "17",
+ "run_conditions": {
+  "data_files_after": 23417,
+  "data_files_before": 23417,
+  "data_tree_identical": true,
+  "network_attempts": 0
+ },
+ "schema": "odd-step1-s1-02-canary/1.0.0",
+ "scope": "one case, one run; no re-test of the ten, no verdict, no AI summary",
+ "verify_result": "VERIFIED"
+}

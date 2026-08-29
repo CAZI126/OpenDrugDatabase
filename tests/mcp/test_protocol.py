@@ -83,7 +83,16 @@ def test_every_advertised_tool_declares_its_required_arguments() -> None:
 
     assert required["odd_find_documents"] == ["query"]
     assert required["odd_get_section_index"] == ["set_id"]
-    assert required["odd_get_evidence_slice"] == ["set_id", "section_codes"]
+    # A passage is named by its code or by its position, so neither is required
+    # on its own; naming neither is refused by the tool itself.
+    assert required["odd_get_evidence_slice"] == ["set_id"]
+    slice_properties = next(
+        tool.inputSchema["properties"]
+        for tool in TOOL_DEFINITIONS
+        if tool.name == "odd_get_evidence_slice"
+    )
+    assert "section_codes" in slice_properties
+    assert "section_locators" in slice_properties
     assert required["odd_verify_document"] == ["set_id"]
 
 

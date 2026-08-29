@@ -191,17 +191,31 @@ class OddTools:
     def get_evidence_slice(
         self,
         set_id: str,
-        section_codes: list[str],
+        section_codes: list[str] | None = None,
         application_number: str | None = None,
         source_version: str | None = None,
+        section_locators: list[str] | None = None,
     ) -> dict[str, Any]:
-        """Return exactly the named section codes, matched exactly."""
+        """Return exactly the sections that were named, matched exactly.
 
-        codes = tuple(value.strip() for value in section_codes if value and value.strip())
-        if not codes:
+        A passage can be named by its official section code or by the position
+        the index reported for it. The position is the identifier every section
+        has: a real label can carry sections with no code at all, and more than
+        one of them, so a code cannot always name one passage. Either way the
+        match is exact -- no widening to parents, siblings or subsections.
+        """
+
+        codes = tuple(
+            value.strip() for value in (section_codes or []) if value and value.strip()
+        )
+        locators = tuple(
+            value.strip() for value in (section_locators or []) if value and value.strip()
+        )
+        if not codes and not locators:
             raise ToolError(
                 NO_SECTION_CODES,
-                "name at least one section code; call the section index first to see them",
+                "name at least one section code or section locator; call the section "
+                "index first to see them",
             )
         stored = self._resolve(set_id, source_version)
         wanted_applications = (application_number.strip(),) if application_number else ()
@@ -209,27 +223,43 @@ class OddTools:
             stored,
             slice_only=True,
             section_codes=codes,
+            section_locators=locators,
             application_numbers=wanted_applications,
             include_drugsfda=bool(wanted_applications),
         ).payload
 
         returned = payload["label_evidence"]
         found = payload["completeness"]["requested_section_codes"]
+        found_locators = payload["completeness"]["requested_section_locators"]
+        wanted_codes = {code.casefold() for code in codes} | set(codes)
+        wanted_locators = set(locators)
+        # A returned section is expected when the caller named its code or its
+        # position. Anything else would be widening, which this slice never does.
+        unexpected = {
+            item["section_code"]
+            for item in returned
+            if (item["section_code"] or "").casefold() not in wanted_codes
+            and item["section_code"] not in wanted_codes
+            and item["evidence"]["xml_locator"] not in wanted_locators
+        }
         return {
             "status": "ok",
             "document": self._document_block(stored),
             "requested_section_codes": payload["request"]["requested_section_codes"],
+            "requested_section_locators": payload["request"]["requested_section_locators"],
             "returned_section_codes": [item["section_code"] for item in returned],
+            "returned_section_locators": [
+                item["evidence"]["xml_locator"] for item in returned
+            ],
             "section_codes_not_found": sorted(
                 code for code, state in found.items() if state != "FOUND"
             ),
-            # An exact-match slice returns named codes only, so anything outside
-            # the request is a contract breach the caller can check for itself.
-            "unexpected_section_codes": sorted(
-                {item["section_code"] for item in returned}
-                - {code.casefold() for code in codes}
-                - set(codes)
+            "section_locators_not_found": sorted(
+                locator for locator, state in found_locators.items() if state != "FOUND"
             ),
+            # An exact-match slice returns what was named only, so anything outside
+            # the request is a contract breach the caller can check for itself.
+            "unexpected_section_codes": sorted(unexpected),
             "subsections_added_implicitly": False,
             "sections": [
                 {
