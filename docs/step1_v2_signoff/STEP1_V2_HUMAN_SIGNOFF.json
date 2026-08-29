@@ -1,0 +1,148 @@
+{
+ "HUMAN_SIGNOFF": "STEP1_PASS",
+ "ai_summary_scored": false,
+ "cases": [
+  {
+   "case_id": "S1-01",
+   "counts_toward_pass_total": true,
+   "human_verdict": "PASS",
+   "ingredient": "atorvastatin",
+   "reason": "The adult starting dose and dose range were delivered from the document's own dosage section.",
+   "selector_kind": "section_codes",
+   "verify_result": "VERIFIED"
+  },
+  {
+   "case_id": "S1-02",
+   "counts_toward_pass_total": true,
+   "human_verdict": "PASS",
+   "ingredient": "metformin",
+   "reason": "The sections stating no code, 2.3 and 2.4, were both retrieved by position. The eGFR criteria and the contrast-imaging discontinuation, the 48-hour re-evaluation and the restart once renal function is stable are all present.",
+   "selector_kind": "section_locators",
+   "verify_result": "VERIFIED"
+  },
+  {
+   "case_id": "S1-03",
+   "counts_toward_pass_total": true,
+   "human_verdict": "PASS",
+   "ingredient": "levothyroxine",
+   "reason": "Timing relative to breakfast and the four-hour interval from drugs affecting absorption were both delivered.",
+   "selector_kind": "section_codes",
+   "verify_result": "VERIFIED"
+  },
+  {
+   "case_id": "S1-04",
+   "counts_toward_pass_total": true,
+   "human_verdict": "PASS",
+   "ingredient": "lisinopril",
+   "reason": "The neprilysin-inhibitor contraindication and the 36-hour interval were both delivered.",
+   "selector_kind": "section_codes",
+   "verify_result": "VERIFIED"
+  },
+  {
+   "case_id": "S1-05",
+   "counts_toward_pass_total": true,
+   "human_verdict": "PASS",
+   "ingredient": "amlodipine",
+   "reason": "The adult starting and maximum antihypertensive doses were delivered.",
+   "selector_kind": "section_codes",
+   "verify_result": "VERIFIED"
+  },
+  {
+   "case_id": "S1-06",
+   "counts_toward_pass_total": false,
+   "human_verdict": "VALID_UNKNOWN",
+   "ingredient": "metoprolol",
+   "reason": "The pinned document is a myocardial-infarction-only label. The adult hypertension starting dose and this product's release characteristic are genuinely absent from it, and ODD stopped at UNKNOWN rather than supplying either from outside the document. Does not count toward the pass total.",
+   "selector_kind": "section_codes",
+   "verify_result": "VERIFIED"
+  },
+  {
+   "case_id": "S1-07",
+   "counts_toward_pass_total": true,
+   "human_verdict": "PASS",
+   "ingredient": "albuterol",
+   "reason": "The dosing interval, the maximum frequency and the warning on needing more doses than usual were all delivered.",
+   "selector_kind": "section_codes",
+   "verify_result": "VERIFIED"
+  },
+  {
+   "case_id": "S1-08",
+   "counts_toward_pass_total": true,
+   "human_verdict": "PASS",
+   "ingredient": "losartan",
+   "reason": "The starting dose, the maximum dose and the 25 mg starting dose for possible intravascular depletion were all delivered.",
+   "selector_kind": "section_codes",
+   "verify_result": "VERIFIED"
+  },
+  {
+   "case_id": "S1-09",
+   "counts_toward_pass_total": true,
+   "human_verdict": "PASS",
+   "ingredient": "gabapentin",
+   "reason": "TABLE 1 arrived whole in sections[].text: every creatinine-clearance band, the proportional reduction below 15, the hemodialysis maintenance rule, and the post-dialysis supplements of 125/150/200/250/350 mg.",
+   "selector_kind": "section_codes",
+   "verify_result": "VERIFIED"
+  },
+  {
+   "case_id": "S1-10",
+   "counts_toward_pass_total": true,
+   "human_verdict": "PASS",
+   "ingredient": "omeprazole",
+   "reason": "The instruction to avoid concomitant clopidogrel and to consider alternative anti-platelet therapy was delivered.",
+   "selector_kind": "section_codes",
+   "verify_result": "VERIFIED"
+  }
+ ],
+ "comparison_performed_after_outputs_frozen": true,
+ "downstream_ai_paraphrase_scored": false,
+ "fingerprints": {
+  "code_commit": "c9698676d0ca8e74136efd69de904936ca51eccb",
+  "gold_v2_fingerprint": "864cd8707dab6b0c1bc543e5f1e1c1257808c2c713081081d0d22b2dd7e1d4bc",
+  "gold_v2_manifest_sha256": "060b2f8c6f0a72d56a7538e95c3a832eb6a8685e7a8e6f2590f3f91da43c798c",
+  "mcp_output_commit": "2b3239d",
+  "mcp_v2_output_fingerprint": "6bbf13eb0d02c569a75ecd9db6d0b139a1d733ab099276ce82fd593a2dd055df",
+  "protocol_sha256": "c0775cf92c49e685ec0a9deaf816a1198d72cd46996cbbc03193cef1ac60fed9",
+  "run_plan_commit": "b5631f8"
+ },
+ "human_signed_off": true,
+ "run_conditions": {
+  "data_files_after": 23417,
+  "data_files_before": 23417,
+  "data_tree_fingerprint_after": "643cbb284c8caf6d60e70c6d698968fad22cb70085e2000ea1b3b69279e6bb2a",
+  "data_tree_fingerprint_before": "643cbb284c8caf6d60e70c6d698968fad22cb70085e2000ea1b3b69279e6bb2a",
+  "data_tree_identical": true,
+  "network_attempts": 0
+ },
+ "run_plan_committed_before_execution": true,
+ "schema": "odd-step1-v2-human-signoff/1.0.0",
+ "scored_material": "sections[].text as the slice returned it",
+ "tally": {
+  "denominator": 10,
+  "fail": 0,
+  "pass": 9,
+  "valid_unknown": 1
+ },
+ "threshold": "8 of 10; VALID_UNKNOWN does not count toward the pass total",
+ "unchanged_by_this_signoff": [
+  "docs/STEP1_MANUAL_VALIDATION_V1.md",
+  "docs/step1_gold_v2/ (all 11 files)",
+  "docs/step1_v2_run/RUN_PLAN_V2.json and .md",
+  "docs/step1_v2_run/raw/ (all 10 MCP outputs)",
+  "docs/step1_v2_run/MCP_V2_RUN_MANIFEST.json",
+  "the V1 protocol, gold, outputs and comparison"
+ ],
+ "v1_history_unchanged": {
+  "note": "The V1 outcome is not revised by this. It stands as recorded.",
+  "v1_human_final": {
+   "fail": 2,
+   "failed_cases": [
+    "S1-02",
+    "S1-09"
+   ],
+   "human_signed_off": true,
+   "pass": 7,
+   "status": "STEP1_FAIL",
+   "valid_unknown": 1
+  }
+ }
+}
