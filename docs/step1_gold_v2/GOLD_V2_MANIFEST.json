@@ -1,0 +1,212 @@
+{
+ "applies_to": "the next Step 1 run only",
+ "cases": [
+  {
+   "case_id": "S1-01",
+   "change_from_v1": "unchanged from V1",
+   "gold_v1_sha256": "715d57e3f3fac37d8a4a3fbca2c918c4aef4bd56aeaadbef869e08360652cf9c",
+   "gold_v2_file": "docs/step1_gold_v2/S1-01_atorvastatin.md",
+   "gold_v2_sha256": "715d57e3f3fac37d8a4a3fbca2c918c4aef4bd56aeaadbef869e08360652cf9c",
+   "identical_to_v1": true,
+   "ingredient": "atorvastatin",
+   "raw_sha256": "c6748f079a3cf15a3d9fe19dde9012fb62746cd68ea8e21506daab8d6f2a32fd",
+   "set_id": "a60cc18b-0631-4cf0-b021-9f52224ece65",
+   "verdict": "SUPPORTED",
+   "version": "8"
+  },
+  {
+   "case_id": "S1-02",
+   "change_from_v1": "added section 2.4, the iodinated contrast criteria: discontinue at eGFR 30-60, re-evaluate eGFR at 48 hours, restart if renal function is stable",
+   "gold_v1_sha256": "e39dcb19aee04005fdb54fb83bbad87c3e06b38277cd904361411e74ca304145",
+   "gold_v2_file": "docs/step1_gold_v2/S1-02_metformin.md",
+   "gold_v2_sha256": "b9561d094f3b833506662b1ba45f362e10290be7eece44f3ce153e1ce5340d09",
+   "identical_to_v1": false,
+   "ingredient": "metformin",
+   "raw_sha256": "9adfa16cd77cad975fa8ee0d95ddc505f32d4d023a8c8e8c80d6a272b7c2a52d",
+   "set_id": "c82a10fa-1e8e-46b6-890a-737de3f34ee1",
+   "verdict": "SUPPORTED",
+   "version": "17"
+  },
+  {
+   "case_id": "S1-03",
+   "change_from_v1": "unchanged from V1",
+   "gold_v1_sha256": "2c894ebc15b1b3d73bd75658cade295b95cd87bc71f45656b26202f77791bc85",
+   "gold_v2_file": "docs/step1_gold_v2/S1-03_levothyroxine.md",
+   "gold_v2_sha256": "2c894ebc15b1b3d73bd75658cade295b95cd87bc71f45656b26202f77791bc85",
+   "identical_to_v1": true,
+   "ingredient": "levothyroxine",
+   "raw_sha256": "de366bdd1a38c827eff6c082896ea88f8ffde929b647df38421f595d9437203a",
+   "set_id": "1e11ad30-1041-4520-10b0-8f9d30d30fcc",
+   "verdict": "SUPPORTED",
+   "version": "1537"
+  },
+  {
+   "case_id": "S1-04",
+   "change_from_v1": "unchanged from V1",
+   "gold_v1_sha256": "110d0730154b28740a42d9c785c5aae22a6b6064c65a7eca516bf412e0119443",
+   "gold_v2_file": "docs/step1_gold_v2/S1-04_lisinopril.md",
+   "gold_v2_sha256": "110d0730154b28740a42d9c785c5aae22a6b6064c65a7eca516bf412e0119443",
+   "identical_to_v1": true,
+   "ingredient": "lisinopril",
+   "raw_sha256": "2e2b2246fbd5a0183f6559cdab91359616333318b650efa8941ede54827aa5aa",
+   "set_id": "838c2d78-d2d8-4981-9ec9-e50ef9e1a5d8",
+   "verdict": "SUPPORTED",
+   "version": "2"
+  },
+  {
+   "case_id": "S1-05",
+   "change_from_v1": "unchanged from V1",
+   "gold_v1_sha256": "f8fdd62a74a7a3fada01fb2bd706d50833cd23da96bd6ca816bd9c72084b1134",
+   "gold_v2_file": "docs/step1_gold_v2/S1-05_amlodipine.md",
+   "gold_v2_sha256": "f8fdd62a74a7a3fada01fb2bd706d50833cd23da96bd6ca816bd9c72084b1134",
+   "identical_to_v1": true,
+   "ingredient": "amlodipine",
+   "raw_sha256": "2411f602c5819fb1c572b9a1fa5972476a3c242c046d46624995995cac3e7c51",
+   "set_id": "7367289c-b0b0-466a-83e2-558e2985c29f",
+   "verdict": "SUPPORTED",
+   "version": "10"
+  },
+  {
+   "case_id": "S1-06",
+   "change_from_v1": "unchanged from V1",
+   "gold_v1_sha256": "163263a3ce354db2f74de1210e9654f1b9de68d969cfc669378186e6103ed3b9",
+   "gold_v2_file": "docs/step1_gold_v2/S1-06_metoprolol.md",
+   "gold_v2_sha256": "163263a3ce354db2f74de1210e9654f1b9de68d969cfc669378186e6103ed3b9",
+   "identical_to_v1": true,
+   "ingredient": "metoprolol",
+   "raw_sha256": "7ee92b8303bf037f308f90f0d2c4bae1432af6d52331d793c762af84e507354e",
+   "set_id": "b5f4fed2-369c-4808-a682-8a5b8cfdbb4f",
+   "verdict": "VALID_UNKNOWN",
+   "version": "3"
+  },
+  {
+   "case_id": "S1-07",
+   "change_from_v1": "unchanged from V1",
+   "gold_v1_sha256": "1cce62f055e08a6482c203fa3357effc5e290ea75ce82767a1158b639f6bd7b4",
+   "gold_v2_file": "docs/step1_gold_v2/S1-07_albuterol.md",
+   "gold_v2_sha256": "1cce62f055e08a6482c203fa3357effc5e290ea75ce82767a1158b639f6bd7b4",
+   "identical_to_v1": true,
+   "ingredient": "albuterol",
+   "raw_sha256": "ea2e5e579f6fa81deb19c3561b5924f5e8ebaa830224f47403605c02b51278b2",
+   "set_id": "d92c5d6b-ff10-4087-36a2-1cfc464cb967",
+   "verdict": "SUPPORTED",
+   "version": "30"
+  },
+  {
+   "case_id": "S1-08",
+   "change_from_v1": "unchanged from V1",
+   "gold_v1_sha256": "947dc2510b9424d055170e0625bf29110d669957b8ed7efc23fb86951f1da12f",
+   "gold_v2_file": "docs/step1_gold_v2/S1-08_losartan.md",
+   "gold_v2_sha256": "947dc2510b9424d055170e0625bf29110d669957b8ed7efc23fb86951f1da12f",
+   "identical_to_v1": true,
+   "ingredient": "losartan",
+   "raw_sha256": "855caab1c9ba60a0a4b127d58f2f70ce4af4de37f13ef25f01bfb4dcc193178f",
+   "set_id": "9949448f-c3b9-44ee-94ed-c1aca8c90f39",
+   "verdict": "SUPPORTED",
+   "version": "9"
+  },
+  {
+   "case_id": "S1-09",
+   "change_from_v1": "added every TABLE 1 row and every footnote: the >15-29, 15 and <15 bands, the hemodialysis maintenance rule, and the post-hemodialysis supplemental doses 125/150/200/250/350 mg",
+   "gold_v1_sha256": "d0560701181cf51a1ebb16f736868f9e56100f6f02464b886a1986947d500e09",
+   "gold_v2_file": "docs/step1_gold_v2/S1-09_gabapentin.md",
+   "gold_v2_sha256": "5806fa536b8ae55b443e9880a75b3be53f41a275392d91df7b18f4b48c870c3c",
+   "identical_to_v1": false,
+   "ingredient": "gabapentin",
+   "raw_sha256": "5772dd19697484b7a98743b09f04cef551bff5caffd1eddd30ef7d89c0a7e9dc",
+   "set_id": "97935fd9-1d4a-43b6-a5d9-de994591187b",
+   "verdict": "SUPPORTED",
+   "version": "48"
+  },
+  {
+   "case_id": "S1-10",
+   "change_from_v1": "unchanged from V1",
+   "gold_v1_sha256": "69662cf3ff347f463a11a235c06b805b72e7027b95846c874636ac79a45a4040",
+   "gold_v2_file": "docs/step1_gold_v2/S1-10_omeprazole.md",
+   "gold_v2_sha256": "69662cf3ff347f463a11a235c06b805b72e7027b95846c874636ac79a45a4040",
+   "identical_to_v1": true,
+   "ingredient": "omeprazole",
+   "raw_sha256": "e0cab1df07d664405d45676c5375d8999f9e8c3ebb084fd620a60b871db96643",
+   "set_id": "b6761f84-53ac-4745-a8c8-1e5427d7e179",
+   "verdict": "SUPPORTED",
+   "version": "8"
+  }
+ ],
+ "cases_amended": [
+  "S1-02",
+  "S1-09"
+ ],
+ "cases_identical_to_v1": [
+  "S1-01",
+  "S1-03",
+  "S1-04",
+  "S1-05",
+  "S1-06",
+  "S1-07",
+  "S1-08",
+  "S1-10"
+ ],
+ "cases_identical_to_v1_count": 8,
+ "changes_from_v1": [
+  {
+   "case_id": "S1-01",
+   "change": "unchanged from V1"
+  },
+  {
+   "case_id": "S1-02",
+   "change": "added section 2.4, the iodinated contrast criteria: discontinue at eGFR 30-60, re-evaluate eGFR at 48 hours, restart if renal function is stable"
+  },
+  {
+   "case_id": "S1-03",
+   "change": "unchanged from V1"
+  },
+  {
+   "case_id": "S1-04",
+   "change": "unchanged from V1"
+  },
+  {
+   "case_id": "S1-05",
+   "change": "unchanged from V1"
+  },
+  {
+   "case_id": "S1-06",
+   "change": "unchanged from V1"
+  },
+  {
+   "case_id": "S1-07",
+   "change": "unchanged from V1"
+  },
+  {
+   "case_id": "S1-08",
+   "change": "unchanged from V1"
+  },
+  {
+   "case_id": "S1-09",
+   "change": "added every TABLE 1 row and every footnote: the >15-29, 15 and <15 bands, the hemodialysis maintenance rule, and the post-hemodialysis supplemental doses 125/150/200/250/350 mg"
+  },
+  {
+   "case_id": "S1-10",
+   "change": "unchanged from V1"
+  }
+ ],
+ "gold_v1_fingerprint": "3764fd95a8eb38d3a4f7d2b4fc50feaaaf9b604d93e89f0bcdb1f9712bd16151",
+ "gold_v1_modified": false,
+ "gold_v2_fingerprint": "864cd8707dab6b0c1bc543e5f1e1c1257808c2c713081081d0d22b2dd7e1d4bc",
+ "identities_changed": false,
+ "measurement_scope": "STEP1 measures ODD's transport and provenance. It judges whether the complete primary-source passage needed to answer the question is delivered with its position and authenticity intact. Summarisation or paraphrase by a downstream AI is not scored.",
+ "pass_criteria_changed": false,
+ "protocol_file": "docs/STEP1_MANUAL_VALIDATION_V1.md",
+ "protocol_sha256_v1": "c0775cf92c49e685ec0a9deaf816a1198d72cd46996cbbc03193cef1ac60fed9",
+ "questions_changed": false,
+ "raw_sha256_changed": false,
+ "schema": "odd-step1-gold/2.0.0",
+ "set_ids_changed": false,
+ "source_acquisition_audit": {
+  "json_sha256": "d007e025742df100d0d3abc75d831fc0b85a43e17b4520dbf704904c56cebf7b",
+  "md_sha256": "b0bbd67314728ef2a662241385181d925bcbf05802d08e9dbde4614e22344eee",
+  "result": "BYTE_IDENTICAL 10, all other verdicts 0"
+ },
+ "supersedes": "docs/step1_gold/GOLD_MANIFEST.json",
+ "v1_results_retroactively_changed": false,
+ "versions_changed": false
+}
