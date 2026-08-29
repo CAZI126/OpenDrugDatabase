@@ -97,6 +97,25 @@ def select_exact_sections(
     )
 
 
+def select_exact_locators(
+    sections: tuple[SourceSection, ...], locators: tuple[str, ...]
+) -> tuple[SourceSection, ...]:
+    """Return only sections whose recorded position exactly matches one that was named.
+
+    A section position is the one identifier every section has. A section code is
+    not: real labels carry sections with no ``<code>`` at all, and one document can
+    hold several of them, so a code cannot name one passage. The position the index
+    already reports can.
+
+    The match is exact and nothing else. No prefix, no ancestor, no descendant, no
+    title, no guess: a locator naming a parent does not pull in its children, and
+    one naming a child does not pull in its siblings.
+    """
+
+    wanted = {value.strip() for value in locators if value.strip()}
+    return tuple(section for section in sections if section.source_locator in wanted)
+
+
 def build_index_payload(
     normalized: NormalizedDocument,
     raw: RawDocument,
@@ -207,6 +226,7 @@ def build_slice_payload(
     *,
     data_root: Path,
     requested_section_codes: tuple[str, ...],
+    requested_section_locators: tuple[str, ...] = (),
     requested_application_numbers: tuple[str, ...] = (),
     include_drugsfda: bool = False,
     regulatory_sources: list[dict[str, Any]] | None = None,
@@ -216,10 +236,16 @@ def build_slice_payload(
 
     identity = raw.identity
     raw_path = relative_to_root(raw.label_path, data_root)
-    selected = select_exact_sections(normalized.sections, requested_section_codes)
+    # Two ways of naming a passage exactly, and no third way of naming it loosely.
+    # A section reached by either is returned once, in the document's own order.
+    by_code = select_exact_sections(normalized.sections, requested_section_codes)
+    by_locator = select_exact_locators(normalized.sections, requested_section_locators)
+    chosen = {id(section) for section in (*by_code, *by_locator)}
+    selected = tuple(section for section in normalized.sections if id(section) in chosen)
     present_codes = {
         (section.source_section_code or "").casefold() for section in normalized.sections
     }
+    present_locators = {section.source_locator for section in normalized.sections}
     sources = regulatory_sources or []
     wanted_numbers = {value.strip().casefold() for value in requested_application_numbers}
     kept = [
@@ -235,6 +261,9 @@ def build_slice_payload(
             "source_version": identity.source_version,
             "requested_section_codes": sorted(
                 {value.strip() for value in requested_section_codes if value.strip()}
+            ),
+            "requested_section_locators": sorted(
+                {value.strip() for value in requested_section_locators if value.strip()}
             ),
             "requested_application_numbers": sorted(
                 {value.strip() for value in requested_application_numbers if value.strip()}
@@ -271,6 +300,12 @@ def build_slice_payload(
                 code: (FOUND if code.casefold() in present_codes else NOT_FOUND)
                 for code in sorted(
                     {value.strip() for value in requested_section_codes if value.strip()}
+                )
+            },
+            "requested_section_locators": {
+                locator: (FOUND if locator in present_locators else NOT_FOUND)
+                for locator in sorted(
+                    {value.strip() for value in requested_section_locators if value.strip()}
                 )
             },
             "returned_section_count": len(selected),
